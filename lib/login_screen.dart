@@ -44,25 +44,19 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return AuthScreen(
       showBack: false,
-      kicker: 'Sign in',
-      title: 'Your number,\nyour ride.',
-      subtitle:
-          'We’ll text a 6-digit code. Existing riders jump in. New riders continue to KYC — the same checks as evuddy.com.',
+      title: 'Enter your\nmobile number',
+      subtitle: 'We’ll send a 6-digit code. New riders continue to KYC after this.',
       error: error,
-      footer: EvuddyButton(label: 'Send OTP', onPressed: _sendOtp),
+      footer: EvuddyButton(label: 'Continue', onPressed: _sendOtp),
       children: [
         EvuddyField(
-          label: 'MOBILE NUMBER',
+          label: 'Mobile number',
           hint: '98765 43210',
           controller: phoneController,
           keyboardType: TextInputType.phone,
           maxLength: 10,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           prefix: const PhonePrefix(),
-        ),
-        const SizedBox(height: 16),
-        const InfoNote(
-          text: 'Used only for rider login and yard OTP. Never shown publicly.',
         ),
       ],
     );

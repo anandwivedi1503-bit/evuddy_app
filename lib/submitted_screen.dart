@@ -15,13 +15,11 @@ class SubmittedScreen extends StatelessWidget {
     final first = d.fullName.split(' ').first;
     return AuthScreen(
       showBack: false,
-      kicker: 'Application received',
-      title: first.isEmpty ? 'You’re in.' : 'You’re in,\n$first.',
-      subtitle:
-          'KYC sits with ops before Book EV opens. Nothing was sent to the server in this step.',
+      title: first.isEmpty ? 'You’re in.' : 'You’re in, $first.',
+      subtitle: 'Ops will review KYC before Book EV opens. Nothing was sent to the server yet.',
       footer: EvuddyButton(
-        label: 'Back to mobile',
-        icon: Icons.arrow_back_rounded,
+        label: 'Done',
+        icon: Icons.check_rounded,
         onPressed: () {
           Navigator.of(context).pushAndRemoveUntil(
             evuddyRoute(const LoginScreen()),
@@ -30,38 +28,22 @@ class SubmittedScreen extends StatelessWidget {
         },
       ),
       children: [
-        Center(
-          child: Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Evuddy.logoGreen, Evuddy.logoPink],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Evuddy.magenta.withOpacity(0.28),
-                  blurRadius: 28,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.check_rounded, size: 44, color: Colors.white),
+        Container(
+          width: 72,
+          height: 72,
+          decoration: const BoxDecoration(
+            color: Evuddy.greenSoft,
+            shape: BoxShape.circle,
           ),
+          child: const Icon(Icons.check_rounded, size: 36, color: Evuddy.green),
         ),
-        const SizedBox(height: 22),
-        Center(
-          child: Text(
-            d.phoneDisplay,
-            style: GoogleFonts.plusJakartaSans(
-              fontWeight: FontWeight.w800,
-              color: Evuddy.greenDeep,
-              letterSpacing: 0.4,
-              fontSize: 16,
-            ),
+        const SizedBox(height: 16),
+        Text(
+          d.phoneDisplay,
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            color: Evuddy.ink,
           ),
         ),
       ],

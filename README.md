@@ -1,18 +1,12 @@
-# EVUDDY Flutter app
+# EVUDDY
 
-Frontend-only rider app. **Backend is not connected.** Website APIs are unchanged.
+Rider app for EVUDDY. Frontend only — website APIs are not called yet.
 
-## Look
+White screens, black type, green for success, pink only inside the EVUDDY mark. Splash uses the real letters lockup at a readable size. Headers use a typeset **EV + bolt + UDDY** so the name never shrinks into mush.
 
-Splash uses the real green / pink EVUDDY wordmark on a night canvas with moving light orbs. Forms are light: floating cards, green focus rings, pill choices, and a sticky action bar.
+Splash → mobile → OTP → details → verified → KYC → documents → submitted.
 
-## Figma vs website (register / KYC)
-
-Splash → mobile → OTP → personal info → verification confirm → KYC → documents → received.
-
-OTP: any 6 digits. Documents: tap to mark attached. Nothing is uploaded.
-
-## Run
+OTP: any 6 digits. Documents: tap to mark attached.
 
 ```bash
 git pull origin main
@@ -20,4 +14,4 @@ flutter pub get
 flutter run
 ```
 
-Do a full restart (not hot reload) after this pull so splash assets load.
+Do a full restart after this pull (not hot reload) so the letters asset loads.

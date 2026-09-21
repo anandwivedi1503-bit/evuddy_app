@@ -57,6 +57,7 @@ flutter:
   assets:
     - assets/images/evuddy_logo.png
     - assets/images/evuddy_wordmark.png
+    - assets/images/evuddy_letters.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

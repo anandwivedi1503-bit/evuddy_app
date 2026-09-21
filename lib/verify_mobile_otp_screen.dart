@@ -59,10 +59,8 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
   Widget build(BuildContext context) {
     final phone = registrationDraft.phoneDisplay;
     return AuthScreen(
-      kicker: 'Secure sign in',
-      title: 'Enter your OTP',
-      subtitle:
-          'A 6-digit code is sent to your mobile. SMS is in preview — any 6 digits continue.',
+      title: 'Enter the code',
+      subtitle: 'Sent to ${phone.isEmpty ? "your number" : phone}. Any 6 digits work while SMS is in preview.',
       step: 1,
       error: error,
       footer: Row(
@@ -80,78 +78,18 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
         ],
       ),
       children: [
-        SurfaceCard(
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Evuddy.greenSoft,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Text('🇮🇳', style: TextStyle(fontSize: 22)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'CODE SENT TO',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
-                        letterSpacing: 1.4,
-                        fontWeight: FontWeight.w800,
-                        color: Evuddy.muted,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      phone.isEmpty ? '+91' : phone,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  'Change',
-                  style: GoogleFonts.plusJakartaSans(
-                    color: Evuddy.green,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 22),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('ENTER 6-DIGIT OTP', style: Theme.of(context).textTheme.labelSmall),
-            Text(
-              'Auto-read later',
-              style: GoogleFonts.plusJakartaSans(
-                color: Evuddy.green,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
         OtpRow(controllers: boxes, foci: foci),
         const SizedBox(height: 16),
-        InfoNote(
-          text:
-              'OTP will be sent to ${phone.isEmpty ? "your number" : phone} when the live network is connected.',
+        GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Text(
+            'Wrong number? Change',
+            style: GoogleFonts.inter(
+              color: Evuddy.green,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
         ),
       ],
     );
