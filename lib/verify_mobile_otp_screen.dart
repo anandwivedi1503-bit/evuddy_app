@@ -79,9 +79,8 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: Evuddy.paper,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Evuddy.line),
+                  color: Evuddy.wash,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
@@ -125,9 +124,12 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
                       margin: EdgeInsets.only(right: i == 5 ? 0 : 6),
                       height: 54,
                       decoration: BoxDecoration(
-                        color: Evuddy.paper,
+                        color: Evuddy.wash,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Evuddy.line),
+                        border: Border.all(
+                          color: boxes[i].text.isEmpty ? Colors.transparent : Evuddy.black,
+                          width: 1.4,
+                        ),
                       ),
                       child: TextField(
                         controller: boxes[i],
@@ -140,7 +142,7 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
                           counterText: '',
                           border: InputBorder.none,
                         ),
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
                         onChanged: (v) {
                           if (v.isNotEmpty && i < 5) foci[i + 1].requestFocus();
                           if (v.isEmpty && i > 0) foci[i - 1].requestFocus();

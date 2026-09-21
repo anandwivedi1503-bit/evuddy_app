@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
@@ -79,36 +80,24 @@ class _LoginScreenState extends State<LoginScreen> {
                       Container(
                         height: 60,
                         decoration: BoxDecoration(
-                          color: Evuddy.paper,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Evuddy.line),
+                          color: Evuddy.wash,
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           children: [
-                            const SizedBox(width: 14),
-                            Container(
-                              width: 36,
-                              height: 36,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: Evuddy.greenSoft,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Text('🇮🇳', style: TextStyle(fontSize: 18)),
-                            ),
-                            const SizedBox(width: 10),
-                            const Text(
+                            const SizedBox(width: 16),
+                            Text(
                               '+91',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
+                              style: GoogleFonts.manrope(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
                                 color: Evuddy.ink,
                               ),
                             ),
                             Container(
                               width: 1,
                               height: 22,
-                              margin: const EdgeInsets.symmetric(horizontal: 12),
+                              margin: const EdgeInsets.symmetric(horizontal: 14),
                               color: Evuddy.line,
                             ),
                             Expanded(

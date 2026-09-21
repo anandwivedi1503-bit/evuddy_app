@@ -32,9 +32,8 @@ class RegistrationOtpScreen extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Evuddy.paper,
+                  color: Evuddy.wash,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Evuddy.line),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,9 +73,8 @@ class RegistrationOtpScreen extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Evuddy.paper,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Evuddy.line),
+                  color: Evuddy.wash,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
                   'Your information is used for rider KYC and yard pickup. It is not shared as a public listing.',

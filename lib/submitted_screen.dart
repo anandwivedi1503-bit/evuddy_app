@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'login_screen.dart';
 import 'state/registration_draft.dart';
@@ -11,45 +12,55 @@ class SubmittedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final d = registrationDraft;
+    final first = d.fullName.split(' ').first;
     return Scaffold(
+      backgroundColor: Evuddy.black,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
+          padding: const EdgeInsets.fromLTRB(28, 12, 28, 28),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const EvuddyHeader(),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, color: Colors.white),
+              ),
               const Spacer(),
-              const WelcomeRule(caption: 'APPLICATION RECEIVED'),
-              const SizedBox(height: 28),
-              Container(
-                width: 72,
-                height: 72,
-                decoration: const BoxDecoration(
-                  color: Evuddy.greenSoft,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check_rounded, size: 36, color: Evuddy.green),
-              ),
-              const SizedBox(height: 22),
+              Container(width: 28, height: 3, color: Evuddy.green),
+              const SizedBox(height: 20),
               Text(
-                'Thank you, ${d.fullName.split(' ').first}',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineMedium,
+                first.isEmpty ? 'You’re in.' : 'You’re in,\n$first.',
+                style: GoogleFonts.manrope(
+                  fontSize: 40,
+                  height: 1.05,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1.4,
+                  color: Colors.white,
+                ),
               ),
-              const SizedBox(height: 10),
-              const Text(
-                'Your rider KYC is complete in the app. Ops still has to approve it before Book EV — same as evuddy.com. Nothing was sent to the server in this step.',
-                textAlign: TextAlign.center,
+              const SizedBox(height: 14),
+              Text(
+                'KYC sits with ops before Book EV — same rule as the website. Nothing was sent to the server in this step.',
+                style: GoogleFonts.manrope(
+                  fontSize: 15,
+                  height: 1.45,
+                  color: const Color(0xFF9A9A9A),
+                ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
               Text(
                 d.phoneDisplay,
-                style: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.4),
+                style: GoogleFonts.manrope(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                  color: Evuddy.green,
+                ),
               ),
               const Spacer(),
               EvuddyButton(
-                label: 'Back to mobile number',
-                icon: Icons.home_outlined,
+                label: 'Back to mobile',
+                icon: Icons.arrow_back_rounded,
+                dark: false,
                 onPressed: () {
                   Navigator.of(context).pushAndRemoveUntil(
                     evuddyRoute(const LoginScreen()),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/evuddy.dart';
 
@@ -8,65 +9,66 @@ class EvuddyHeader extends StatelessWidget {
     super.key,
     this.onBack,
     this.trailing,
+    this.showLogo = true,
   });
 
   final VoidCallback? onBack;
   final Widget? trailing;
+  final bool showLogo;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _RoundIcon(
-          icon: Icons.arrow_back_ios_new_rounded,
+        _IconBtn(
+          icon: Icons.arrow_back_rounded,
           onTap: onBack ??
               () {
                 if (Navigator.canPop(context)) Navigator.pop(context);
               },
         ),
         Expanded(
-          child: Center(
-            child: Image.asset(
-              'assets/images/evuddy_logo.png',
-              height: 44,
-              fit: BoxFit.contain,
-            ),
-          ),
+          child: showLogo
+              ? Center(
+                  child: Image.asset(
+                    'assets/images/evuddy_logo.png',
+                    height: 28,
+                    fit: BoxFit.contain,
+                  ),
+                )
+              : const SizedBox.shrink(),
         ),
-        trailing ?? const SizedBox(width: 48),
+        trailing ?? const SizedBox(width: 44),
       ],
     );
   }
 }
 
-class _RoundIcon extends StatelessWidget {
-  const _RoundIcon({required this.icon, required this.onTap});
+class _IconBtn extends StatelessWidget {
+  const _IconBtn({required this.icon, required this.onTap});
   final IconData icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Evuddy.paper,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: Evuddy.line),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Icon(icon, size: 16, color: Evuddy.ink),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: Ink(
+        width: 44,
+        height: 44,
+        decoration: const BoxDecoration(
+          color: Evuddy.wash,
+          shape: BoxShape.circle,
         ),
+        child: Icon(icon, size: 20, color: Evuddy.ink),
       ),
     );
   }
 }
 
 class WelcomeRule extends StatelessWidget {
-  const WelcomeRule({super.key, this.caption = 'WELCOME TO EVUDDY'});
+  const WelcomeRule({super.key, this.caption = 'EVUDDY'});
 
   final String caption;
 
@@ -74,20 +76,17 @@ class WelcomeRule extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Expanded(child: Divider(color: Evuddy.line, thickness: 1)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            caption,
-            style: const TextStyle(
-              fontSize: 10,
-              letterSpacing: 2.2,
-              fontWeight: FontWeight.w700,
-              color: Evuddy.gold,
-            ),
+        Container(width: 28, height: 3, color: Evuddy.green),
+        const SizedBox(width: 10),
+        Text(
+          caption.toUpperCase(),
+          style: GoogleFonts.manrope(
+            fontSize: 11,
+            letterSpacing: 2.4,
+            fontWeight: FontWeight.w700,
+            color: Evuddy.ink,
           ),
         ),
-        const Expanded(child: Divider(color: Evuddy.line, thickness: 1)),
       ],
     );
   }
@@ -100,19 +99,15 @@ class StepChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: Evuddy.paper,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Evuddy.line),
-      ),
+    return SizedBox(
+      width: 44,
       child: Text(
-        'Step $step of $of',
-        style: const TextStyle(
-          fontSize: 12,
+        '$step / $of',
+        textAlign: TextAlign.right,
+        style: GoogleFonts.manrope(
+          fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: Evuddy.ink,
+          color: Evuddy.muted,
         ),
       ),
     );
@@ -146,32 +141,33 @@ class EvuddyField extends StatelessWidget {
       children: [
         Text(label, style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: 8),
-        Container(
-          height: 56,
-          decoration: BoxDecoration(
-            color: Evuddy.paper,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Evuddy.line),
-          ),
-          alignment: Alignment.center,
-          child: TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            maxLength: maxLength,
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLength: maxLength,
             inputFormatters: inputFormatters,
-            textCapitalization: textCapitalization,
-            decoration: InputDecoration(
-              counterText: '',
-              hintText: hint,
-              hintStyle: const TextStyle(color: Color(0xFFA3AA9E), fontSize: 15),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          textCapitalization: textCapitalization,
+          cursorColor: Evuddy.green,
+          decoration: InputDecoration(
+            counterText: '',
+            hintText: hint,
+            hintStyle: GoogleFonts.manrope(color: const Color(0xFFB0B0B0), fontSize: 16),
+            filled: true,
+            fillColor: Evuddy.wash,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
             ),
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Evuddy.ink,
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Evuddy.black, width: 1.4),
             ),
+          ),
+          style: GoogleFonts.manrope(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Evuddy.ink,
           ),
         ),
       ],
@@ -185,35 +181,42 @@ class EvuddyButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.icon = Icons.arrow_forward_rounded,
+    this.dark = true,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData icon;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
+    final enabled = onPressed != null;
     return SizedBox(
       width: double.infinity,
       height: 56,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Evuddy.green,
-          disabledBackgroundColor: Evuddy.line,
+          backgroundColor: dark ? Evuddy.black : Evuddy.green,
+          disabledBackgroundColor: const Color(0xFFD9D9D9),
           foregroundColor: Colors.white,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              style: GoogleFonts.manrope(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: enabled ? Colors.white : const Color(0xFF8A8A8A),
+              ),
             ),
-            const SizedBox(width: 10),
-            Icon(icon, size: 20),
+            const SizedBox(width: 8),
+            Icon(icon, size: 18),
           ],
         ),
       ),
@@ -229,19 +232,36 @@ class InfoNote extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: Evuddy.greenSoft,
+        color: Evuddy.wash,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Color(0xFF0A6B30),
-          fontWeight: FontWeight.w500,
-          height: 1.35,
-          fontSize: 13,
-        ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            margin: const EdgeInsets.only(top: 6),
+            decoration: const BoxDecoration(
+              color: Evuddy.green,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.manrope(
+                color: Evuddy.ink,
+                fontWeight: FontWeight.w500,
+                height: 1.4,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -249,7 +269,7 @@ class InfoNote extends StatelessWidget {
 
 PageRouteBuilder<T> evuddyRoute<T>(Widget page) {
   return PageRouteBuilder<T>(
-    transitionDuration: const Duration(milliseconds: 320),
+    transitionDuration: const Duration(milliseconds: 280),
     pageBuilder: (_, __, ___) => page,
     transitionsBuilder: (_, animation, __, child) {
       final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
@@ -257,7 +277,7 @@ PageRouteBuilder<T> evuddyRoute<T>(Widget page) {
         opacity: curved,
         child: SlideTransition(
           position: Tween<Offset>(
-            begin: const Offset(0.04, 0),
+            begin: const Offset(0, 0.03),
             end: Offset.zero,
           ).animate(curved),
           child: child,

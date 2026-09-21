@@ -110,10 +110,13 @@ class _DocTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: Evuddy.paper,
+        color: Evuddy.wash,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: selected ? Evuddy.green : Evuddy.line),
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: selected ? Evuddy.black : Colors.transparent,
+            width: 1.4,
+          ),
         ),
         child: InkWell(
           onTap: onTap,
@@ -126,12 +129,12 @@ class _DocTile extends StatelessWidget {
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: Evuddy.greenSoft,
-                    borderRadius: BorderRadius.circular(12),
+                    color: selected ? Evuddy.black : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    selected ? Icons.check_rounded : Icons.upload_file_outlined,
-                    color: Evuddy.green,
+                    selected ? Icons.check_rounded : Icons.add_rounded,
+                    color: selected ? Colors.white : Evuddy.ink,
                   ),
                 ),
                 const SizedBox(width: 12),

@@ -112,9 +112,8 @@ class _PersonalInformationScreenState extends State<PersonalInformationScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: Evuddy.paper,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Evuddy.line),
+                  color: Evuddy.wash,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
