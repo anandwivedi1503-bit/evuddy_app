@@ -44,7 +44,7 @@ class RegistrationOtpScreen extends StatelessWidget {
                         fontSize: 10,
                         letterSpacing: 1.6,
                         fontWeight: FontWeight.w700,
-                        color: Evuddy.gold,
+                        color: Evuddy.green,
                       ),
                     ),
                     const SizedBox(height: 8),
