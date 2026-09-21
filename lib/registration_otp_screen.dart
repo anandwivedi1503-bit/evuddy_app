@@ -1,173 +1,98 @@
 import 'package:flutter/material.dart';
 
 import 'kyc_details_screen.dart';
+import 'state/registration_draft.dart';
+import 'theme/evuddy.dart';
+import 'widgets/chrome.dart';
 
-class RegistrationOtpScreen extends StatefulWidget {
+class RegistrationOtpScreen extends StatelessWidget {
   const RegistrationOtpScreen({super.key});
 
   @override
-  State<RegistrationOtpScreen> createState() => _RegistrationOtpScreenState();
-}
-
-class _RegistrationOtpScreenState extends State<RegistrationOtpScreen> {
-  final TextEditingController otpController = TextEditingController();
-
-  @override
-  void dispose() {
-    otpController.dispose();
-    super.dispose();
-  }
-
-  void _continue() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const KycDetailsScreen()),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final d = registrationDraft;
     return Scaffold(
-      backgroundColor: const Color(0xFFF4FBEF),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 30),
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  _backButton(),
-                  const Spacer(),
-                  const Text(
-                    'Step 2 of 4',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 35),
-
-              const Text(
-                'OTP Verification',
-                style: TextStyle(fontSize: 25, fontWeight: FontWeight.w700),
-              ),
-
+              const EvuddyHeader(trailing: StepChip(step: 2, of: 4)),
+              const SizedBox(height: 24),
+              const WelcomeRule(caption: 'PHONE VERIFIED'),
+              const SizedBox(height: 24),
+              Text('OTP verification', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 10),
-
               const Text(
-                'Verify your phone number to continue your EVUDDY registration.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF777777),
-                  height: 1.3,
-                ),
+                'The website sends one Firebase SMS. This Figma step is a confirmation only — no second code — so we do not invent a second OTP.',
               ),
-
-              const SizedBox(height: 30),
-
-              const Text(
-                'ENTER OTP',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-              ),
-
-              const SizedBox(height: 10),
-
-              TextField(
-                controller: otpController,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                textAlign: TextAlign.center,
-                decoration: InputDecoration(
-                  counterText: '',
-                  hintText: 'Enter 6-digit OTP',
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(11),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 15),
-
+              const SizedBox(height: 24),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE7F7EA),
-                  borderRadius: BorderRadius.circular(11),
+                  color: Evuddy.paper,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Evuddy.line),
                 ),
-                child: const Text(
-                  'Phone Number Verified',
-                  style: TextStyle(
-                    color: Color(0xFF078B36),
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'VERIFIED NUMBER',
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 1.6,
+                        fontWeight: FontWeight.w700,
+                        color: Evuddy.gold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      d.phoneDisplay,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      d.fullName.isEmpty ? 'Rider' : d.fullName,
+                      style: const TextStyle(color: Evuddy.muted),
+                    ),
+                  ],
                 ),
               ),
-
-              const SizedBox(height: 20),
-
+              const SizedBox(height: 14),
+              const InfoNote(
+                text: 'Phone Number Verified. KYC uploads will use this number when the backend is connected.',
+              ),
+              const SizedBox(height: 14),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  color: Evuddy.paper,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Evuddy.line),
                 ),
                 child: const Text(
-                  'Your information is securely protected and will only be used for account verification.',
-                  style: TextStyle(color: Color(0xFF666666), height: 1.35),
+                  'Your information is used for rider KYC and yard pickup. It is not shared as a public listing.',
+                  style: TextStyle(color: Evuddy.muted, height: 1.4),
                 ),
               ),
-
-              const SizedBox(height: 30),
-
-              SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
-                  onPressed: _continue,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF079C3B),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Continue to KYC',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      SizedBox(width: 10),
-                      Icon(Icons.arrow_forward),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 28),
+              EvuddyButton(
+                label: 'Continue to KYC',
+                onPressed: () {
+                  Navigator.push(context, evuddyRoute(const KycDetailsScreen()));
+                },
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _backButton() {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: IconButton(
-        icon: const Icon(Icons.chevron_left),
-        onPressed: () => Navigator.pop(context),
       ),
     );
   }

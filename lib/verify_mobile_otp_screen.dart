@@ -1,6 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'personal_information_screen.dart';
+import 'state/registration_draft.dart';
+import 'theme/evuddy.dart';
+import 'widgets/chrome.dart';
 
 class VerifyMobileOtpScreen extends StatefulWidget {
   const VerifyMobileOtpScreen({super.key});
@@ -10,268 +16,179 @@ class VerifyMobileOtpScreen extends StatefulWidget {
 }
 
 class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
-  final List<TextEditingController> controllers = List.generate(
-    6,
-    (_) => TextEditingController(),
-  );
+  final boxes = List.generate(6, (_) => TextEditingController());
+  final foci = List.generate(6, (_) => FocusNode());
+  int seconds = 45;
+  Timer? timer;
+  String? error;
 
-  int seconds = 42;
+  @override
+  void initState() {
+    super.initState();
+    timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (seconds == 0) return;
+      setState(() => seconds -= 1);
+    });
+  }
 
   @override
   void dispose() {
-    for (final controller in controllers) {
-      controller.dispose();
+    timer?.cancel();
+    for (final c in boxes) {
+      c.dispose();
+    }
+    for (final f in foci) {
+      f.dispose();
     }
     super.dispose();
   }
 
+  String get code => boxes.map((c) => c.text).join();
+
   void _verify() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const PersonalInformationScreen(),
-      ),
-    );
+    if (code.length != 6) {
+      setState(() => error = 'Enter the 6-digit OTP.');
+      return;
+    }
+    registrationDraft.phoneVerified = true;
+    Navigator.push(context, evuddyRoute(const PersonalInformationScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
+    final phone = registrationDraft.phoneDisplay;
     return Scaffold(
-      backgroundColor: const Color(0xFFF4FBEF),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 30),
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  _backButton(),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Step 2 of 3',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Help',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ],
+              EvuddyHeader(
+                trailing: const StepChip(step: 1, of: 4),
               ),
-
-              const SizedBox(height: 35),
-
-              const Text(
-                'Confirm your mobile number',
-                style: TextStyle(fontSize: 25, fontWeight: FontWeight.w700),
-              ),
-
-              const SizedBox(height: 10),
-
-              const Text(
-                'Enter the 6-digit OTP sent to your mobile number.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF777777),
-                  height: 1.3,
-                ),
-              ),
-
-              const SizedBox(height: 28),
-
+              const SizedBox(height: 24),
+              const WelcomeRule(caption: 'SECURE SIGN IN'),
+              const SizedBox(height: 24),
+              Text('Enter your OTP', style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 8),
+              const Text('A 6-digit code is sent to your mobile. SMS is not live yet — any 6 digits continue this frontend.'),
+              const SizedBox(height: 22),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Evuddy.paper,
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Evuddy.line),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Text('🇮🇳', style: TextStyle(fontSize: 24)),
-                    SizedBox(width: 10),
+                    const Text('🇮🇳', style: TextStyle(fontSize: 20)),
+                    const SizedBox(width: 10),
                     Text(
-                      '+91',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      phone.isEmpty ? '+91' : phone,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                     ),
-                    SizedBox(width: 12),
-                    Text('88818 70016', style: TextStyle(fontSize: 16)),
-                    Spacer(),
-                    Text(
-                      'Change',
-                      style: TextStyle(
-                        color: Color(0xFF079C3B),
-                        fontWeight: FontWeight.w600,
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Text(
+                        'Change',
+                        style: TextStyle(
+                          color: Evuddy.green,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 28),
-
-              const Row(
+              const SizedBox(height: 22),
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'ENTER 6-DIGIT OTP',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    'Auto-read SMS',
-                    style: TextStyle(color: Color(0xFF079C3B)),
+                  Text('ENTER 6-DIGIT OTP', style: Theme.of(context).textTheme.labelSmall),
+                  const Text(
+                    'Auto-read later',
+                    style: TextStyle(color: Evuddy.green, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
-
-              const SizedBox(height: 14),
-
+              const SizedBox(height: 12),
               Row(
-                children: List.generate(6, (index) {
+                children: List.generate(6, (i) {
                   return Expanded(
                     child: Container(
-                      margin: EdgeInsets.only(right: index == 5 ? 0 : 7),
+                      margin: EdgeInsets.only(right: i == 5 ? 0 : 6),
                       height: 54,
+                      decoration: BoxDecoration(
+                        color: Evuddy.paper,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Evuddy.line),
+                      ),
                       child: TextField(
-                        controller: controllers[index],
+                        controller: boxes[i],
+                        focusNode: foci[i],
                         textAlign: TextAlign.center,
                         keyboardType: TextInputType.number,
                         maxLength: 1,
-                        decoration: InputDecoration(
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        decoration: const InputDecoration(
                           counterText: '',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
+                          border: InputBorder.none,
                         ),
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                        onChanged: (v) {
+                          if (v.isNotEmpty && i < 5) foci[i + 1].requestFocus();
+                          if (v.isEmpty && i > 0) foci[i - 1].requestFocus();
+                        },
                       ),
                     ),
                   );
                 }),
               ),
-
-              const SizedBox(height: 18),
-
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(13),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE7F7EA),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  'OTP sent successfully to +918881870016',
-                  style: TextStyle(
-                    color: Color(0xFF078B36),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
+              if (error != null) ...[
+                const SizedBox(height: 10),
+                Text(error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 13)),
+              ],
+              const SizedBox(height: 16),
+              InfoNote(text: 'OTP will be sent to ${phone.isEmpty ? "your number" : phone} when backend is connected.'),
+              const SizedBox(height: 22),
               Center(
-                child: RichText(
-                  text: TextSpan(
-                    style: const TextStyle(
-                      color: Color(0xFF777777),
-                      fontSize: 15,
-                    ),
-                    children: [
-                      const TextSpan(text: "Didn't receive code? "),
-                      TextSpan(
-                        text: '00:$seconds',
-                        style: const TextStyle(
-                          color: Color(0xFF079C3B),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+                child: Text(
+                  seconds > 0 ? "Didn't receive code?  00:${seconds.toString().padLeft(2, '0')}" : 'You can resend the code.',
+                  style: const TextStyle(color: Evuddy.muted, fontSize: 14),
                 ),
               ),
-
-              const SizedBox(height: 25),
-
+              const SizedBox(height: 22),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () {},
+                      onPressed: seconds == 0
+                          ? () => setState(() => seconds = 45)
+                          : null,
                       style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 52),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
+                        minimumSize: const Size.fromHeight(52),
+                        side: const BorderSide(color: Evuddy.line),
+                        foregroundColor: Evuddy.ink,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       child: const Text('Resend'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: _verify,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF079C3B),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 52),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                      ),
-                      child: const Text('Verify OTP'),
-                    ),
+                    child: EvuddyButton(label: 'Verify OTP', onPressed: _verify),
                   ),
                 ],
-              ),
-
-              const SizedBox(height: 24),
-
-              const Center(
-                child: Text(
-                  'New rider? Complete registration',
-                  style: TextStyle(
-                    color: Color(0xFF079C3B),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _backButton() {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: IconButton(
-        icon: const Icon(Icons.chevron_left),
-        onPressed: () {
-          Navigator.pop(context);
-        },
       ),
     );
   }

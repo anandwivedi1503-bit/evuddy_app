@@ -1,160 +1,161 @@
 import 'package:flutter/material.dart';
 
-class UploadDocumentsScreen extends StatelessWidget {
+import 'state/registration_draft.dart';
+import 'submitted_screen.dart';
+import 'theme/evuddy.dart';
+import 'widgets/chrome.dart';
+
+class UploadDocumentsScreen extends StatefulWidget {
   const UploadDocumentsScreen({super.key});
 
   @override
+  State<UploadDocumentsScreen> createState() => _UploadDocumentsScreenState();
+}
+
+class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
+  String? error;
+
+  void _toggle(void Function() fn) {
+    setState(fn);
+  }
+
+  void _complete() {
+    final d = registrationDraft;
+    if (!d.aadhaarFront || !d.aadhaarBack || !d.profilePhoto) {
+      setState(() => error = 'Website requires Aadhaar front, Aadhaar back and a profile photo.');
+      return;
+    }
+    Navigator.push(context, evuddyRoute(const SubmittedScreen()));
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final d = registrationDraft;
     return Scaffold(
-      backgroundColor: const Color(0xFFF4FBEF),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 30),
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.chevron_left),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                  const Spacer(),
-                  const Text(
-                    'Step 4 of 4',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 35),
-
+              const EvuddyHeader(trailing: StepChip(step: 4, of: 4)),
+              const SizedBox(height: 24),
+              const WelcomeRule(caption: 'DOCUMENTS'),
+              const SizedBox(height: 24),
+              Text('Upload documents', style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 8),
               const Text(
-                'Upload Documents',
-                style: TextStyle(fontSize: 25, fontWeight: FontWeight.w700),
+                'Figma showed one licence card. The website needs Aadhaar front & back, profile photo, and optional licence front & back. Tap to mark attached — files are not sent to the server yet.',
               ),
-
-              const SizedBox(height: 10),
-
-              const Text(
-                'Upload clear images of the required documents to complete your verification.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF777777),
-                  height: 1.3,
-                ),
+              const SizedBox(height: 22),
+              _DocTile(
+                title: 'Aadhaar card — front',
+                subtitle: 'Required',
+                selected: d.aadhaarFront,
+                onTap: () => _toggle(() => d.aadhaarFront = !d.aadhaarFront),
               ),
-
-              const SizedBox(height: 28),
-
-              _documentCard(
-                title: 'Aadhaar Card - Front',
-                subtitle: 'Upload front side',
+              _DocTile(
+                title: 'Aadhaar card — back',
+                subtitle: 'Required',
+                selected: d.aadhaarBack,
+                onTap: () => _toggle(() => d.aadhaarBack = !d.aadhaarBack),
               ),
-
-              const SizedBox(height: 14),
-
-              _documentCard(
-                title: 'Aadhaar Card - Back',
-                subtitle: 'Upload back side',
+              _DocTile(
+                title: 'Driving licence — front',
+                subtitle: 'Optional on website',
+                selected: d.licenseFront,
+                onTap: () => _toggle(() => d.licenseFront = !d.licenseFront),
               ),
-
-              const SizedBox(height: 14),
-
-              _documentCard(
-                title: 'Driving Licence',
-                subtitle: 'Upload driving licence',
+              _DocTile(
+                title: 'Driving licence — back',
+                subtitle: 'Optional on website',
+                selected: d.licenseBack,
+                onTap: () => _toggle(() => d.licenseBack = !d.licenseBack),
               ),
-
-              const SizedBox(height: 14),
-
-              _documentCard(
-                title: 'Profile Photo',
-                subtitle: 'Upload a clear profile photo',
+              _DocTile(
+                title: 'Profile photo',
+                subtitle: 'Required',
+                selected: d.profilePhoto,
+                onTap: () => _toggle(() => d.profilePhoto = !d.profilePhoto),
               ),
-
-              const SizedBox(height: 30),
-
-              SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF079C3B),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: const Text(
-                    'Complete Registration',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
+              if (error != null) ...[
+                const SizedBox(height: 8),
+                Text(error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 13)),
+              ],
+              const SizedBox(height: 20),
+              EvuddyButton(label: 'Complete registration', onPressed: _complete),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _documentCard({required String title, required String subtitle}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE7F7EA),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.upload_file, color: Color(0xFF079C3B)),
-          ),
+class _DocTile extends StatelessWidget {
+  const _DocTile({
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
 
-          const SizedBox(width: 14),
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
 
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Evuddy.paper,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: selected ? Evuddy.green : Evuddy.line),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: Evuddy.greenSoft,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    selected ? Icons.check_rounded : Icons.upload_file_outlined,
+                    color: Evuddy.green,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Color(0xFF777777),
-                    fontSize: 13,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                      const SizedBox(height: 2),
+                      Text(
+                        selected ? 'Attached on this device' : subtitle,
+                        style: const TextStyle(color: Evuddy.muted, fontSize: 12),
+                      ),
+                    ],
                   ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: selected ? Evuddy.green : Evuddy.muted,
                 ),
               ],
             ),
           ),
-
-          const Icon(Icons.chevron_right, color: Color(0xFF777777)),
-        ],
+        ),
       ),
     );
   }

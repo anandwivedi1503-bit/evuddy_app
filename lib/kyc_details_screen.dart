@@ -1,165 +1,179 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import 'state/registration_draft.dart';
+import 'theme/evuddy.dart';
 import 'upload_documents_screen.dart';
+import 'widgets/chrome.dart';
 
-class KycDetailsScreen extends StatelessWidget {
+class KycDetailsScreen extends StatefulWidget {
   const KycDetailsScreen({super.key});
+
+  @override
+  State<KycDetailsScreen> createState() => _KycDetailsScreenState();
+}
+
+class _KycDetailsScreenState extends State<KycDetailsScreen> {
+  late final TextEditingController aadhaar;
+  late final TextEditingController pan;
+  late final TextEditingController license;
+  late final TextEditingController address;
+  late final TextEditingController pin;
+  late final TextEditingController r1n;
+  late final TextEditingController r1p;
+  late final TextEditingController r2n;
+  late final TextEditingController r2p;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    final d = registrationDraft;
+    aadhaar = TextEditingController(text: d.aadhaar);
+    pan = TextEditingController(text: d.pan);
+    license = TextEditingController(text: d.drivingLicense);
+    address = TextEditingController(text: d.address);
+    pin = TextEditingController(text: d.pinCode);
+    r1n = TextEditingController(text: d.reference1Name);
+    r1p = TextEditingController(text: d.reference1Phone);
+    r2n = TextEditingController(text: d.reference2Name);
+    r2p = TextEditingController(text: d.reference2Phone);
+  }
+
+  @override
+  void dispose() {
+    for (final c in [aadhaar, pan, license, address, pin, r1n, r1p, r2n, r2p]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _continue() {
+    final a = aadhaar.text.replaceAll(RegExp(r'\D'), '');
+    if (!RegExp(r'^\d{12}$').hasMatch(a)) {
+      setState(() => error = 'Aadhaar must be exactly 12 digits (same as the website).');
+      return;
+    }
+    final dl = license.text.toUpperCase().replaceAll(' ', '');
+    if (dl.isNotEmpty && !RegExp(r'^[A-Z]{2}\d{13}$').hasMatch(dl)) {
+      setState(() => error = 'Licence should look like UP1420110012345, or leave it blank.');
+      return;
+    }
+    if (r1n.text.trim().isEmpty || !RegExp(r'^[6-9]\d{9}$').hasMatch(r1p.text.replaceAll(RegExp(r'\D'), ''))) {
+      setState(() => error = 'Reference 1 name and a valid mobile are required on the website.');
+      return;
+    }
+    if (r2n.text.trim().isEmpty || !RegExp(r'^[6-9]\d{9}$').hasMatch(r2p.text.replaceAll(RegExp(r'\D'), ''))) {
+      setState(() => error = 'Reference 2 name and a valid mobile are required on the website.');
+      return;
+    }
+    registrationDraft
+      ..aadhaar = a
+      ..pan = pan.text.trim().toUpperCase()
+      ..drivingLicense = dl
+      ..address = address.text.trim()
+      ..pinCode = pin.text.trim()
+      ..reference1Name = r1n.text.trim()
+      ..reference1Phone = r1p.text.replaceAll(RegExp(r'\D'), '')
+      ..reference2Name = r2n.text.trim()
+      ..reference2Phone = r2p.text.replaceAll(RegExp(r'\D'), '');
+    Navigator.push(context, evuddyRoute(const UploadDocumentsScreen()));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4FBEF),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 30),
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  _backButton(context),
-                  const Spacer(),
-                  const Text(
-                    'Step 3 of 4',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 35),
-
+              const EvuddyHeader(trailing: StepChip(step: 3, of: 4)),
+              const SizedBox(height: 24),
+              const WelcomeRule(caption: 'IDENTITY  ·  KYC'),
+              const SizedBox(height: 24),
+              Text('KYC details', style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 8),
               const Text(
-                'KYC Details',
-                style: TextStyle(fontSize: 25, fontWeight: FontWeight.w700),
+                'Enter details as on your documents. Figma adds PAN, address and PIN. The website also needs driving licence (optional) and two references.',
               ),
-
-              const SizedBox(height: 10),
-
-              const Text(
-                'Enter your details exactly as they appear on your identity documents.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF777777),
-                  height: 1.3,
-                ),
+              const SizedBox(height: 24),
+              EvuddyField(
+                label: 'AADHAAR NUMBER',
+                hint: '12 digits',
+                controller: aadhaar,
+                keyboardType: TextInputType.number,
+                maxLength: 12,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
-
-              const SizedBox(height: 28),
-
-              _field('AADHAAR NUMBER', 'Enter Aadhaar number'),
-              const SizedBox(height: 18),
-              _field('PAN NUMBER', 'Enter PAN number'),
-              const SizedBox(height: 18),
-              _field('ADDRESS', 'Enter your address'),
-              const SizedBox(height: 18),
-              _field('PIN CODE', 'Enter PIN code'),
-
-              const SizedBox(height: 30),
-
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.lock_outline, color: Color(0xFF079C3B)),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Your KYC information is securely protected.',
-                        style: TextStyle(color: Color(0xFF666666)),
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 14),
+              EvuddyField(
+                label: 'PAN NUMBER',
+                hint: 'Optional on website · on Figma',
+                controller: pan,
+                textCapitalization: TextCapitalization.characters,
+                maxLength: 10,
               ),
-
-              const SizedBox(height: 28),
-
-              SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const UploadDocumentsScreen(),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF079C3B),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Continue',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      SizedBox(width: 10),
-                      Icon(Icons.arrow_forward),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 14),
+              EvuddyField(
+                label: 'DRIVING LICENCE',
+                hint: 'Optional · e.g. UP1420110012345',
+                controller: license,
+                textCapitalization: TextCapitalization.characters,
               ),
+              const SizedBox(height: 14),
+              EvuddyField(
+                label: 'ADDRESS',
+                hint: 'Residence address',
+                controller: address,
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: 14),
+              EvuddyField(
+                label: 'PIN CODE',
+                hint: '6 digits',
+                controller: pin,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+              const SizedBox(height: 22),
+              const WelcomeRule(caption: 'REFERENCES'),
+              const SizedBox(height: 16),
+              EvuddyField(label: 'REFERENCE 1 NAME', hint: 'Full name', controller: r1n),
+              const SizedBox(height: 14),
+              EvuddyField(
+                label: 'REFERENCE 1 MOBILE',
+                hint: '10 digits',
+                controller: r1p,
+                keyboardType: TextInputType.phone,
+                maxLength: 10,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+              const SizedBox(height: 14),
+              EvuddyField(label: 'REFERENCE 2 NAME', hint: 'Full name', controller: r2n),
+              const SizedBox(height: 14),
+              EvuddyField(
+                label: 'REFERENCE 2 MOBILE',
+                hint: '10 digits',
+                controller: r2p,
+                keyboardType: TextInputType.phone,
+                maxLength: 10,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+              const SizedBox(height: 16),
+              const InfoNote(text: 'Your KYC is reviewed by EVUDDY ops. Booking stays off until approval — same rule as the website.'),
+              if (error != null) ...[
+                const SizedBox(height: 12),
+                Text(error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 13)),
+              ],
+              const SizedBox(height: 24),
+              EvuddyButton(label: 'Continue', onPressed: _continue),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _backButton(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: IconButton(
-        icon: const Icon(Icons.chevron_left),
-        onPressed: () => Navigator.pop(context),
-      ),
-    );
-  }
-
-  Widget _field(String label, String hint) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 9),
-        Container(
-          height: 55,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(11),
-          ),
-          child: TextField(
-            decoration: InputDecoration(
-              hintText: hint,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 17,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
