@@ -45,6 +45,33 @@ class _PersonalInformationScreenState extends State<PersonalInformationScreen> {
     super.dispose();
   }
 
+  Future<void> _pickDob() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(now.year - 24, 1, 1),
+      firstDate: DateTime(1950),
+      lastDate: DateTime(now.year - 16, now.month, now.day),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Evuddy.green,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked == null) return;
+    final dd = picked.day.toString().padLeft(2, '0');
+    final mm = picked.month.toString().padLeft(2, '0');
+    dob.text = '$dd / $mm / ${picked.year}';
+    setState(() {});
+  }
+
   void _continue() {
     final n = name.text.trim();
     final e = email.text.trim().toLowerCase();
@@ -66,76 +93,48 @@ class _PersonalInformationScreenState extends State<PersonalInformationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const EvuddyHeader(trailing: StepChip(step: 2, of: 4)),
-              const SizedBox(height: 24),
-              const WelcomeRule(caption: 'CREATE YOUR RIDER ACCOUNT'),
-              const SizedBox(height: 24),
-              Text(
-                'Start your journey\nwith EVUDDY',
-                style: Theme.of(context).textTheme.displaySmall,
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'The website asks for name, email and how you came in. Date of birth is extra on this Figma flow and is stored only in the app for now.',
-              ),
-              const SizedBox(height: 26),
-              EvuddyField(
-                label: 'FULL NAME',
-                hint: 'As printed on Aadhaar',
-                controller: name,
-                textCapitalization: TextCapitalization.words,
-              ),
-              const SizedBox(height: 16),
-              EvuddyField(
-                label: 'EMAIL ADDRESS',
-                hint: 'name@email.com',
-                controller: email,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-              EvuddyField(
-                label: 'DATE OF BIRTH',
-                hint: 'DD / MM / YYYY',
-                controller: dob,
-                keyboardType: TextInputType.datetime,
-              ),
-              const SizedBox(height: 16),
-              Text('COMING THROUGH', style: Theme.of(context).textTheme.labelSmall),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: Evuddy.wash,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    isExpanded: true,
-                    value: comingThrough,
-                    items: comingThroughOptions
-                        .map((o) => DropdownMenuItem(value: o, child: Text(o)))
-                        .toList(),
-                    onChanged: (v) => setState(() => comingThrough = v!),
-                  ),
-                ),
-              ),
-              if (error != null) ...[
-                const SizedBox(height: 12),
-                Text(error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 13)),
-              ],
-              const SizedBox(height: 28),
-              EvuddyButton(label: 'Continue', onPressed: _continue),
-            ],
+    return AuthScreen(
+      kicker: 'Create your rider account',
+      title: 'Start your journey\nwith EVUDDY',
+      subtitle: 'Name and email match the website. Date of birth stays on this device for now.',
+      step: 2,
+      error: error,
+      footer: EvuddyButton(label: 'Continue', onPressed: _continue),
+      children: [
+        EvuddyField(
+          label: 'FULL NAME',
+          hint: 'As printed on Aadhaar',
+          controller: name,
+          textCapitalization: TextCapitalization.words,
+        ),
+        const SizedBox(height: 16),
+        EvuddyField(
+          label: 'EMAIL ADDRESS',
+          hint: 'name@email.com',
+          controller: email,
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 16),
+        EvuddyField(
+          label: 'DATE OF BIRTH',
+          hint: 'DD / MM / YYYY',
+          controller: dob,
+          readOnly: true,
+          onTap: _pickDob,
+          suffix: const Padding(
+            padding: EdgeInsets.only(right: 14),
+            child: Icon(Icons.calendar_today_rounded, size: 18, color: Evuddy.muted),
           ),
         ),
-      ),
+        const SizedBox(height: 20),
+        Text('COMING THROUGH', style: Theme.of(context).textTheme.labelSmall),
+        const SizedBox(height: 10),
+        ChoicePills(
+          options: comingThroughOptions,
+          value: comingThrough,
+          onChanged: (v) => setState(() => comingThrough = v),
+        ),
+      ],
     );
   }
 }

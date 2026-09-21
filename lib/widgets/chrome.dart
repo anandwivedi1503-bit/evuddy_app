@@ -4,6 +4,113 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/evuddy.dart';
 
+class AuthScreen extends StatelessWidget {
+  const AuthScreen({
+    super.key,
+    required this.title,
+    required this.children,
+    this.kicker = 'EVUDDY',
+    this.subtitle,
+    this.showBack = true,
+    this.footer,
+    this.step,
+    this.of = 4,
+    this.error,
+    this.titleStyle,
+  });
+
+  final String title;
+  final String kicker;
+  final String? subtitle;
+  final bool showBack;
+  final List<Widget> children;
+  final Widget? footer;
+  final int? step;
+  final int of;
+  final String? error;
+  final TextStyle? titleStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarColor: Evuddy.wash,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: Evuddy.wash,
+        body: Stack(
+          children: [
+            const MeshBackdrop(),
+            Positioned(
+              top: -90,
+              right: -50,
+              child: GlowOrb(color: Evuddy.logoGreen, size: 220, opacity: 0.18),
+            ),
+            Positioned(
+              bottom: 80,
+              left: -70,
+              child: GlowOrb(color: Evuddy.logoPink, size: 240, opacity: 0.12),
+            ),
+            SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+                    child: EvuddyHeader(
+                      showBack: showBack,
+                      trailing: step == null
+                          ? null
+                          : StepChip(step: step!, of: of),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => FocusScope.of(context).unfocus(),
+                      behavior: HitTestBehavior.translucent,
+                      child: ListView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(22, 18, 22, 16),
+                        children: [
+                          WelcomeRule(caption: kicker),
+                          const SizedBox(height: 14),
+                          Text(
+                            title,
+                            style: titleStyle ??
+                                Theme.of(context).textTheme.displaySmall,
+                          ),
+                          if (subtitle != null) ...[
+                            const SizedBox(height: 10),
+                            Text(subtitle!),
+                          ],
+                          const SizedBox(height: 26),
+                          ...children,
+                          if (error != null) ...[
+                            const SizedBox(height: 14),
+                            _ErrorBanner(text: error!),
+                          ],
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (footer != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(22, 4, 22, 18),
+                      child: footer,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class EvuddyHeader extends StatelessWidget {
   const EvuddyHeader({
     super.key,
@@ -33,13 +140,13 @@ class EvuddyHeader extends StatelessWidget {
                   },
             )
           else
-            const SizedBox(width: 44),
+            const EvuddyBoltMark(size: 40),
           Expanded(
             child: showLogo
-                ? const Center(child: EvuddyLogo(height: 34))
+                ? const Center(child: EvuddyLogo(height: 38))
                 : const SizedBox.shrink(),
           ),
-          trailing ?? const SizedBox(width: 44),
+          trailing ?? const SizedBox(width: 40),
         ],
       ),
     );
@@ -56,17 +163,23 @@ class _IconBtn extends StatelessWidget {
     return Material(
       color: Evuddy.paper,
       shape: const CircleBorder(),
-      elevation: 0,
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
         child: Ink(
-          width: 44,
-          height: 44,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Evuddy.paper,
             border: Border.all(color: Evuddy.line),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0A07110C),
+                blurRadius: 10,
+                offset: Offset(0, 3),
+              ),
+            ],
           ),
           child: Icon(icon, size: 20, color: Evuddy.ink),
         ),
@@ -85,7 +198,7 @@ class WelcomeRule extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 36,
+          width: 28,
           height: 3,
           decoration: const BoxDecoration(
             borderRadius: BorderRadius.all(Radius.circular(99)),
@@ -99,8 +212,8 @@ class WelcomeRule extends StatelessWidget {
           caption.toUpperCase(),
           style: GoogleFonts.plusJakartaSans(
             fontSize: 11,
-            letterSpacing: 1.8,
-            fontWeight: FontWeight.w700,
+            letterSpacing: 1.9,
+            fontWeight: FontWeight.w800,
             color: Evuddy.muted,
           ),
         ),
@@ -116,13 +229,43 @@ class StepChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      '$step / $of',
-      textAlign: TextAlign.right,
-      style: GoogleFonts.plusJakartaSans(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: Evuddy.muted,
+    return SizedBox(
+      width: 88,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            '$step of $of',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Evuddy.muted,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: List.generate(of, (i) {
+              final on = i < step;
+              return Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 280),
+                  height: 3,
+                  margin: EdgeInsets.only(left: i == 0 ? 0 : 3),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(99),
+                    gradient: on
+                        ? const LinearGradient(
+                            colors: [Evuddy.logoGreen, Evuddy.logoPink],
+                          )
+                        : null,
+                    color: on ? null : Evuddy.line,
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
       ),
     );
   }
@@ -139,6 +282,9 @@ class EvuddyField extends StatefulWidget {
     this.inputFormatters,
     this.textCapitalization = TextCapitalization.none,
     this.prefix,
+    this.suffix,
+    this.readOnly = false,
+    this.onTap,
   });
 
   final String label;
@@ -149,6 +295,9 @@ class EvuddyField extends StatefulWidget {
   final List<TextInputFormatter>? inputFormatters;
   final TextCapitalization textCapitalization;
   final Widget? prefix;
+  final Widget? suffix;
+  final bool readOnly;
+  final VoidCallback? onTap;
 
   @override
   State<EvuddyField> createState() => _EvuddyFieldState();
@@ -175,33 +324,35 @@ class _EvuddyFieldState extends State<EvuddyField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(widget.label, style: Theme.of(context).textTheme.labelSmall),
+        Text(
+          widget.label,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            letterSpacing: 1.3,
+            fontWeight: FontWeight.w800,
+            color: focused ? Evuddy.greenDeep : Evuddy.muted,
+          ),
+        ),
         const SizedBox(height: 8),
         AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
             color: Evuddy.paper,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: focused ? Evuddy.green : Evuddy.line,
-              width: focused ? 1.6 : 1,
+              width: focused ? 1.7 : 1,
             ),
             boxShadow: focused
                 ? [
                     BoxShadow(
-                      color: Evuddy.green.withOpacity(0.12),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
+                      color: Evuddy.green.withOpacity(0.16),
+                      blurRadius: 22,
+                      offset: const Offset(0, 8),
                     ),
                   ]
-                : [
-                    const BoxShadow(
-                      color: Color(0x0A0F172A),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
+                : Evuddy.lift,
           ),
           child: Row(
             children: [
@@ -214,13 +365,16 @@ class _EvuddyFieldState extends State<EvuddyField> {
                   maxLength: widget.maxLength,
                   inputFormatters: widget.inputFormatters,
                   textCapitalization: widget.textCapitalization,
+                  readOnly: widget.readOnly,
+                  onTap: widget.onTap,
                   cursorColor: Evuddy.magenta,
+                  cursorWidth: 2,
                   decoration: InputDecoration(
                     counterText: '',
                     hintText: widget.hint,
                     hintStyle: GoogleFonts.plusJakartaSans(
                       color: const Color(0xFF94A3B8),
-                      fontSize: 15,
+                      fontSize: 15.5,
                       fontWeight: FontWeight.w500,
                     ),
                     border: InputBorder.none,
@@ -230,12 +384,14 @@ class _EvuddyFieldState extends State<EvuddyField> {
                     ),
                   ),
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 16,
+                    fontSize: 16.5,
                     fontWeight: FontWeight.w600,
                     color: Evuddy.ink,
+                    letterSpacing: -0.2,
                   ),
                 ),
               ),
+              if (widget.suffix != null) widget.suffix!,
             ],
           ),
         ),
@@ -244,7 +400,44 @@ class _EvuddyFieldState extends State<EvuddyField> {
   }
 }
 
-class EvuddyButton extends StatelessWidget {
+class PhonePrefix extends StatelessWidget {
+  const PhonePrefix({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: Evuddy.greenSoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '🇮🇳  +91',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+                color: Evuddy.greenDeep,
+              ),
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 22,
+            margin: const EdgeInsets.symmetric(horizontal: 10),
+            color: Evuddy.line,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class EvuddyButton extends StatefulWidget {
   const EvuddyButton({
     super.key,
     required this.label,
@@ -259,49 +452,100 @@ class EvuddyButton extends StatelessWidget {
   final bool dark;
 
   @override
+  State<EvuddyButton> createState() => _EvuddyButtonState();
+}
+
+class _EvuddyButtonState extends State<EvuddyButton> {
+  bool _down = false;
+
+  @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: dark
-                ? const [Color(0xFF16A34A), Color(0xFF15803D)]
-                : const [Evuddy.logoGreen, Evuddy.logoPink],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Evuddy.green.withOpacity(0.28),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
+    return AnimatedScale(
+      scale: _down ? 0.98 : 1,
+      duration: const Duration(milliseconds: 120),
+      child: SizedBox(
+        width: double.infinity,
+        height: 56,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: widget.dark
+                  ? const [Color(0xFF16A34A), Color(0xFF047857)]
+                  : const [Evuddy.logoGreen, Evuddy.logoPink],
             ),
-          ],
-        ),
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                label,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: Evuddy.green.withOpacity(0.32),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
               ),
-              const SizedBox(width: 8),
-              Icon(icon, size: 18),
             ],
           ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onHighlightChanged: (v) => setState(() => _down = v),
+              onTap: widget.onPressed == null
+                  ? null
+                  : () {
+                      HapticFeedback.lightImpact();
+                      widget.onPressed!();
+                    },
+              child: Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      widget.label,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(widget.icon, size: 18, color: Colors.white),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class EvuddyGhostButton extends StatelessWidget {
+  const EvuddyGhostButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 56,
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Evuddy.ink,
+          side: const BorderSide(color: Evuddy.line),
+          backgroundColor: Evuddy.paper,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
         ),
       ),
     );
@@ -316,10 +560,10 @@ class InfoNote extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       decoration: BoxDecoration(
-        color: Evuddy.paper,
-        borderRadius: BorderRadius.circular(14),
+        color: Evuddy.paper.withOpacity(0.78),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Evuddy.line),
       ),
       child: Row(
@@ -354,10 +598,288 @@ class InfoNote extends StatelessWidget {
   }
 }
 
+class SurfaceCard extends StatelessWidget {
+  const SurfaceCard({super.key, required this.child, this.padding});
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: padding ?? const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Evuddy.paper,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Evuddy.line),
+        boxShadow: Evuddy.lift,
+      ),
+      child: child,
+    );
+  }
+}
+
+class OtpRow extends StatefulWidget {
+  const OtpRow({super.key, required this.controllers, required this.foci});
+  final List<TextEditingController> controllers;
+  final List<FocusNode> foci;
+
+  @override
+  State<OtpRow> createState() => _OtpRowState();
+}
+
+class _OtpRowState extends State<OtpRow> {
+  @override
+  void initState() {
+    super.initState();
+    for (final f in widget.foci) {
+      f.addListener(() => setState(() {}));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: List.generate(widget.controllers.length, (i) {
+        final filled = widget.controllers[i].text.isNotEmpty;
+        final focused = widget.foci[i].hasFocus;
+        return Expanded(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            margin: EdgeInsets.only(right: i == widget.controllers.length - 1 ? 0 : 7),
+            height: 58,
+            decoration: BoxDecoration(
+              color: Evuddy.paper,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: focused
+                    ? Evuddy.green
+                    : filled
+                        ? Evuddy.logoGreen
+                        : Evuddy.line,
+                width: focused || filled ? 1.7 : 1,
+              ),
+              boxShadow: focused
+                  ? [
+                      BoxShadow(
+                        color: Evuddy.green.withOpacity(0.16),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ]
+                  : Evuddy.lift,
+            ),
+            child: TextField(
+              controller: widget.controllers[i],
+              focusNode: widget.foci[i],
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              maxLength: 1,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                counterText: '',
+                border: InputBorder.none,
+              ),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: Evuddy.ink,
+              ),
+              onChanged: (v) {
+                setState(() {});
+                if (v.isNotEmpty && i < widget.controllers.length - 1) {
+                  widget.foci[i + 1].requestFocus();
+                }
+                if (v.isEmpty && i > 0) widget.foci[i - 1].requestFocus();
+              },
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class ChoicePills extends StatelessWidget {
+  const ChoicePills({
+    super.key,
+    required this.options,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final List<String> options;
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: options.map((o) {
+        final sel = o == value;
+        return GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onChanged(o);
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: sel ? Evuddy.greenSoft : Evuddy.paper,
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(
+                color: sel ? Evuddy.green : Evuddy.line,
+                width: sel ? 1.4 : 1,
+              ),
+              boxShadow: sel ? Evuddy.lift : null,
+            ),
+            child: Text(
+              o,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: sel ? Evuddy.greenDeep : Evuddy.ink,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class DocTile extends StatelessWidget {
+  const DocTile({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+    this.icon = Icons.photo_outlined,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: selected ? Evuddy.greenSoft : Evuddy.paper,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: selected ? Evuddy.green : Evuddy.line,
+                width: selected ? 1.6 : 1,
+              ),
+              boxShadow: Evuddy.lift,
+            ),
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: selected
+                        ? const LinearGradient(
+                            colors: [Evuddy.logoGreen, Evuddy.greenDeep],
+                          )
+                        : null,
+                    color: selected ? null : const Color(0xFFF8FAFC),
+                    border: selected ? null : Border.all(color: Evuddy.line),
+                  ),
+                  child: Icon(
+                    selected ? Icons.check_rounded : icon,
+                    color: selected ? Colors.white : Evuddy.muted,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: Evuddy.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        selected ? 'Attached on this device' : subtitle,
+                        style: GoogleFonts.plusJakartaSans(
+                          color: selected ? Evuddy.greenDeep : Evuddy.muted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  selected ? Icons.verified_rounded : Icons.add_rounded,
+                  color: selected ? Evuddy.green : Evuddy.muted,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF3F2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFECACA)),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.plusJakartaSans(
+          color: Evuddy.danger,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
 PageRouteBuilder<T> evuddyRoute<T>(Widget page) {
   return PageRouteBuilder<T>(
-    transitionDuration: const Duration(milliseconds: 420),
-    reverseTransitionDuration: const Duration(milliseconds: 280),
+    transitionDuration: const Duration(milliseconds: 520),
+    reverseTransitionDuration: const Duration(milliseconds: 320),
     pageBuilder: (_, __, ___) => page,
     transitionsBuilder: (_, animation, __, child) {
       final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
@@ -365,7 +887,7 @@ PageRouteBuilder<T> evuddyRoute<T>(Widget page) {
         opacity: curved,
         child: SlideTransition(
           position: Tween<Offset>(
-            begin: const Offset(0.04, 0),
+            begin: const Offset(0, 0.035),
             end: Offset.zero,
           ).animate(curved),
           child: child,

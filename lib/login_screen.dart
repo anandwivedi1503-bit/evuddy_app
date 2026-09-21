@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'state/registration_draft.dart';
-import 'theme/evuddy.dart';
 import 'verify_mobile_otp_screen.dart';
 import 'widgets/chrome.dart';
 
@@ -44,89 +42,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Evuddy.wash,
-      ),
-      child: Scaffold(
-        body: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(22, 8, 22, 28),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight - 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const EvuddyHeader(showBack: false),
-                      const SizedBox(height: 36),
-                      const WelcomeRule(caption: 'Sign in'),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Your number,\nyour ride.',
-                        style: Theme.of(context).textTheme.displaySmall,
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Riders already on EVUDDY verify OTP, then book. New riders continue to registration — same KYC the website uses.',
-                      ),
-                      const SizedBox(height: 32),
-                      EvuddyField(
-                        label: 'MOBILE NUMBER',
-                        hint: '10-digit mobile',
-                        controller: phoneController,
-                        keyboardType: TextInputType.phone,
-                        maxLength: 10,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        prefix: Padding(
-                          padding: const EdgeInsets.only(left: 16),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '+91',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Container(
-                                width: 1,
-                                height: 22,
-                                margin: const EdgeInsets.symmetric(horizontal: 12),
-                                color: Evuddy.line,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      if (error != null) ...[
-                        const SizedBox(height: 10),
-                        Text(
-                          error!,
-                          style: const TextStyle(color: Color(0xFFB42318), fontSize: 13),
-                        ),
-                      ],
-                      const SizedBox(height: 28),
-                      EvuddyButton(label: 'Send OTP', onPressed: _sendOtp),
-                      const SizedBox(height: 16),
-                      const Center(
-                        child: Text(
-                          'Used only for rider login and yard OTP.',
-                          style: TextStyle(fontSize: 12, color: Evuddy.muted),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+    return AuthScreen(
+      showBack: false,
+      kicker: 'Sign in',
+      title: 'Your number,\nyour ride.',
+      subtitle:
+          'We’ll text a 6-digit code. Existing riders jump in. New riders continue to KYC — the same checks as evuddy.com.',
+      error: error,
+      footer: EvuddyButton(label: 'Send OTP', onPressed: _sendOtp),
+      children: [
+        EvuddyField(
+          label: 'MOBILE NUMBER',
+          hint: '98765 43210',
+          controller: phoneController,
+          keyboardType: TextInputType.phone,
+          maxLength: 10,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          prefix: const PhonePrefix(),
         ),
-      ),
+        const SizedBox(height: 16),
+        const InfoNote(
+          text: 'Used only for rider login and yard OTP. Never shown publicly.',
+        ),
+      ],
     );
   }
 }

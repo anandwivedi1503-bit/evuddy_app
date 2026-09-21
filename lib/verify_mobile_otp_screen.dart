@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'personal_information_screen.dart';
 import 'state/registration_draft.dart';
@@ -58,147 +58,102 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
   @override
   Widget build(BuildContext context) {
     final phone = registrationDraft.phoneDisplay;
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return AuthScreen(
+      kicker: 'Secure sign in',
+      title: 'Enter your OTP',
+      subtitle:
+          'A 6-digit code is sent to your mobile. SMS is in preview — any 6 digits continue.',
+      step: 1,
+      error: error,
+      footer: Row(
+        children: [
+          Expanded(
+            child: EvuddyGhostButton(
+              label: seconds == 0 ? 'Resend' : '00:${seconds.toString().padLeft(2, '0')}',
+              onPressed: seconds == 0 ? () => setState(() => seconds = 45) : null,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: EvuddyButton(label: 'Verify', onPressed: _verify),
+          ),
+        ],
+      ),
+      children: [
+        SurfaceCard(
+          child: Row(
             children: [
-              EvuddyHeader(
-                trailing: const StepChip(step: 1, of: 4),
-              ),
-              const SizedBox(height: 24),
-              const WelcomeRule(caption: 'SECURE SIGN IN'),
-              const SizedBox(height: 24),
-              Text('Enter your OTP', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 8),
-              const Text('A 6-digit code is sent to your mobile. SMS is not live yet — any 6 digits continue this frontend.'),
-              const SizedBox(height: 22),
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Evuddy.wash,
-                  borderRadius: BorderRadius.circular(12),
+                  color: Evuddy.greenSoft,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Row(
+                child: const Text('🇮🇳', style: TextStyle(fontSize: 22)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('🇮🇳', style: TextStyle(fontSize: 20)),
-                    const SizedBox(width: 10),
+                    Text(
+                      'CODE SENT TO',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        letterSpacing: 1.4,
+                        fontWeight: FontWeight.w800,
+                        color: Evuddy.muted,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
                     Text(
                       phone.isEmpty ? '+91' : phone,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Text(
-                        'Change',
-                        style: TextStyle(
-                          color: Evuddy.green,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 22),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('ENTER 6-DIGIT OTP', style: Theme.of(context).textTheme.labelSmall),
-                  const Text(
-                    'Auto-read later',
-                    style: TextStyle(color: Evuddy.green, fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: List.generate(6, (i) {
-                  return Expanded(
-                    child: Container(
-                      margin: EdgeInsets.only(right: i == 5 ? 0 : 6),
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: Evuddy.paper,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: boxes[i].text.isEmpty ? Evuddy.line : Evuddy.green,
-                          width: boxes[i].text.isEmpty ? 1 : 1.6,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x0A0F172A),
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: boxes[i],
-                        focusNode: foci[i],
-                        textAlign: TextAlign.center,
-                        keyboardType: TextInputType.number,
-                        maxLength: 1,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        decoration: const InputDecoration(
-                          counterText: '',
-                          border: InputBorder.none,
-                        ),
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-                        onChanged: (v) {
-                          if (v.isNotEmpty && i < 5) foci[i + 1].requestFocus();
-                          if (v.isEmpty && i > 0) foci[i - 1].requestFocus();
-                        },
-                      ),
-                    ),
-                  );
-                }),
-              ),
-              if (error != null) ...[
-                const SizedBox(height: 10),
-                Text(error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 13)),
-              ],
-              const SizedBox(height: 16),
-              InfoNote(text: 'OTP will be sent to ${phone.isEmpty ? "your number" : phone} when backend is connected.'),
-              const SizedBox(height: 22),
-              Center(
+              TextButton(
+                onPressed: () => Navigator.pop(context),
                 child: Text(
-                  seconds > 0 ? "Didn't receive code?  00:${seconds.toString().padLeft(2, '0')}" : 'You can resend the code.',
-                  style: const TextStyle(color: Evuddy.muted, fontSize: 14),
+                  'Change',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Evuddy.green,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 22),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: seconds == 0
-                          ? () => setState(() => seconds = 45)
-                          : null,
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(52),
-                        side: const BorderSide(color: Evuddy.line),
-                        foregroundColor: Evuddy.ink,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      child: const Text('Resend'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: EvuddyButton(label: 'Verify OTP', onPressed: _verify),
-                  ),
-                ],
               ),
             ],
           ),
         ),
-      ),
+        const SizedBox(height: 22),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('ENTER 6-DIGIT OTP', style: Theme.of(context).textTheme.labelSmall),
+            Text(
+              'Auto-read later',
+              style: GoogleFonts.plusJakartaSans(
+                color: Evuddy.green,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        OtpRow(controllers: boxes, foci: foci),
+        const SizedBox(height: 16),
+        InfoNote(
+          text:
+              'OTP will be sent to ${phone.isEmpty ? "your number" : phone} when the live network is connected.',
+        ),
+      ],
     );
   }
 }
