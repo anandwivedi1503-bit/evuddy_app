@@ -74,7 +74,8 @@ class _LoginScreenState extends State<LoginScreen> {
       ..phone = p
       ..email = e
       ..comingThrough = comingThrough
-      ..phoneVerified = false;
+      ..phoneVerified = false
+      ..otpGate = 'register';
     setState(() {
       error = null;
       busy = true;

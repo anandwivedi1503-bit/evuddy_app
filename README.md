@@ -1,35 +1,16 @@
-# EVUDDY app vs website
+# EVUDDY rider app
 
-The **website is one product with two kinds of pages**. The **app is the rider product**, not a copy of every marketing block.
+Same APIs as [evuddy.com](https://www.evuddy.com). Website source is not modified.
 
-## What the website landing page is for
+## What you get
 
-`https://www.evuddy.com` is the shop window: slogan, partner logos, fare cards, city map story, dealer/distributor pitch, reviews, Book EV / Register buttons.
+- **Home** — real EVUDDY scooter, live hubs, fares, Book EV
+- **Book EV** — confirm mobile → OTP → if **already approved**, rental vs Rent to Own (website `/ride-options`). New numbers continue KYC.
+- **OTP** — Firebase Recaptcha **inside the app** (same project as the site). This avoids the Android SHA-1 / Play Integrity error.
+- **Register / KYC / documents** — `POST /api/upload` + `POST /api/riders`
+- **Account** — status + logout
 
-Those buttons are **doors**, not extra backends:
-
-| On the website | Goes to | In the app |
-| --- | --- | --- |
-| **Register** | `/register` | Register / KYC flow we already wired |
-| **Book EV** | `/ride-options` | **Book EV** screen (this slice) |
-| Fares ₹60 / ₹230 / … | Same catalog Book EV uses | Shown on Home |
-| Lucknow / Kanpur hubs | `/api/cities`, `/api/hubs` | Live list on Home and Book EV |
-| Partners, careers, about | `/partners`, `/about`… | **Not in the rider app** (B2B / brochure) |
-| Pay / Razorpay | `/book-bike` after KYC | **Next slice** — not charged yet |
-
-Nothing from the landing page is “wasted.” Marketing stays on the website. The app reuses the **same APIs and the same rider steps**.
-
-## Rider path (both clients)
-
-1. Splash  
-2. **Home** — Book EV + Register, live hubs, fares  
-3. Register → OTP → KYC → documents (same `POST /api/riders`)  
-4. Book EV → pick **Normal booking** or **Rent to Own** → city + hub  
-5. Later: scooter + Razorpay (website `/book-bike`) — we have not enabled pay yet  
-
-Ops still approve KYC. Book EV checkout only unlocks when `bookingEnabled` is true, same as the site.
-
-## Run
+Razorpay pay-at-hub is the next connect, not this slice.
 
 ```bash
 git pull origin main
@@ -37,4 +18,4 @@ flutter pub get
 flutter run
 ```
 
-Website source is not modified.
+Full restart. On OTP, complete the checkbox if it appears, then enter the SMS code.

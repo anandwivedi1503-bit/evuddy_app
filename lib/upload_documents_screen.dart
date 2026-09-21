@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -42,13 +41,9 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
   }
 
   Future<String> _token() async {
-    final user = FirebaseAuth.instance.currentUser;
-    final fresh = await user?.getIdToken(true);
-    if (fresh == null || fresh.isEmpty) {
-      throw ApiException('Phone OTP expired. Go back and verify again.');
-    }
-    registrationDraft.firebaseIdToken = fresh;
-    return fresh;
+    final stored = registrationDraft.firebaseIdToken;
+    if (stored != null && stored.isNotEmpty) return stored;
+    throw ApiException('Phone OTP expired. Go back and verify again.');
   }
 
   Future<void> _complete() async {

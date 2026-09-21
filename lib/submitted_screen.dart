@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'home_screen.dart';
+import 'shell.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
@@ -29,7 +29,7 @@ class SubmittedScreen extends StatelessWidget {
         icon: Icons.arrow_back_rounded,
         onPressed: () {
           Navigator.of(context).pushAndRemoveUntil(
-            evuddyRoute(const HomeScreen()),
+            evuddyRoute(const RiderShell()),
             (route) => false,
           );
         },

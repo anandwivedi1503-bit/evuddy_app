@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
 import 'api/firebase_phone.dart';
-import 'home_screen.dart';
+import 'shell.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 
@@ -69,7 +69,7 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
 
   void _go() {
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(evuddyRoute(const HomeScreen()));
+    Navigator.of(context).pushReplacement(evuddyRoute(const RiderShell()));
   }
 
   @override

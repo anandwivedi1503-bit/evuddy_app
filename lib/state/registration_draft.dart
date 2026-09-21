@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class RegistrationDraft {
   String phone = '';
   bool phoneVerified = false;
@@ -31,6 +33,12 @@ class RegistrationDraft {
   String? chosenPlan;
   String? chosenCity;
   String? chosenHubId;
+  String? chosenDuration;
+  String otpGate = 'register'; // register | book
+  int shellTab = 0;
+
+  bool get canBook =>
+      phoneVerified && (bookingEnabled || approvalStatus == 'Approved');
 
   bool get aadhaarFront => aadhaarFrontPath != null;
   bool get aadhaarBack => aadhaarBackPath != null;
@@ -45,3 +53,4 @@ class RegistrationDraft {
 }
 
 final registrationDraft = RegistrationDraft();
+final riderSessionTick = ValueNotifier(0);

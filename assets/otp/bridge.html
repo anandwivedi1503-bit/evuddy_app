@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body { margin: 0; padding: 0; background: #F3F7F4; }
+    #recaptcha { transform: scale(0.92); transform-origin: 0 0; }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+  <div id="recaptcha"></div>
+  <script>
+    firebase.initializeApp({
+      apiKey: "AIzaSyBlwZI_QVvI3mnEs1sgtIS_YQvpp5rU8Gk",
+      authDomain: "kebuone-otp.firebaseapp.com",
+      projectId: "kebuone-otp",
+      storageBucket: "kebuone-otp.firebasestorage.app",
+      messagingSenderId: "548462513436",
+      appId: "1:548462513436:web:21cbd32f00c8a892a93ed9"
+    });
+    var confirmation = null;
+    var verifier = new firebase.auth.RecaptchaVerifier("recaptcha", { size: "normal" });
+    function post(obj) {
+      if (window.OtpBridge && window.OtpBridge.postMessage) {
+        window.OtpBridge.postMessage(JSON.stringify(obj));
+      }
+    }
+    function sendOtp(phone) {
+      firebase.auth().signInWithPhoneNumber(phone, verifier)
+        .then(function (c) { confirmation = c; post({ type: "sent" }); })
+        .catch(function (e) { post({ type: "error", message: String(e.message || e) }); });
+    }
+    function confirmOtp(code) {
+      if (!confirmation) { post({ type: "error", message: "Request a new OTP first." }); return; }
+      confirmation.confirm(code)
+        .then(function (res) {
+          return res.user.getIdToken(true).then(function (token) {
+            post({ type: "verified", uid: res.user.uid, token: token });
+          });
+        })
+        .catch(function (e) { post({ type: "error", message: String(e.message || e) }); });
+    }
+    post({ type: "ready" });
+  </script>
+</body>
+</html>

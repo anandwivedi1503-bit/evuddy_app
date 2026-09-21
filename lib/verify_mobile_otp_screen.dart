@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
-import 'api/firebase_phone.dart';
+import 'api/web_otp.dart';
 import 'kyc_details_screen.dart';
+import 'login_screen.dart';
 import 'state/registration_draft.dart';
 import 'submitted_screen.dart';
 import 'theme/evuddy.dart';
@@ -22,11 +22,13 @@ class VerifyMobileOtpScreen extends StatefulWidget {
 class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
   final boxes = List.generate(6, (_) => TextEditingController());
   final foci = List.generate(6, (_) => FocusNode());
+  final webOtp = WebOtpController();
   int seconds = 45;
   Timer? timer;
   String? error;
-  bool sending = true;
+  bool sending = false;
   bool verifying = false;
+  bool sentOk = false;
 
   @override
   void initState() {
@@ -36,7 +38,7 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       if (seconds == 0) return;
       setState(() => seconds -= 1);
     });
-    _send();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _send());
   }
 
   @override
@@ -58,26 +60,22 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       sending = true;
       error = null;
       seconds = 45;
+      sentOk = false;
     });
-    await EvuddyFirebase.sendOtp(
-      phone10: registrationDraft.phone,
-      onCodeSent: (id) {
-        if (!mounted) return;
-        registrationDraft.verificationId = id;
-        setState(() => sending = false);
-      },
-      onError: (m) {
-        if (!mounted) return;
-        setState(() {
-          sending = false;
-          error = m;
-        });
-      },
-      onAutoVerified: () {
-        if (!mounted) return;
-        _afterFirebaseUser();
-      },
-    );
+    try {
+      await webOtp.send(registrationDraft.phone);
+      if (!mounted) return;
+      setState(() {
+        sending = false;
+        sentOk = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        sending = false;
+        error = e.toString();
+      });
+    }
   }
 
   Future<void> _verify() async {
@@ -85,57 +83,31 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       setState(() => error = 'Enter the 6-digit OTP.');
       return;
     }
-    final id = registrationDraft.verificationId;
-    if (id == null) {
-      setState(() => error = 'Request a new OTP first.');
-      return;
-    }
     setState(() {
       verifying = true;
       error = null;
     });
     try {
-      await EvuddyFirebase.confirmOtp(verificationId: id, smsCode: code);
-      await _afterFirebaseUser();
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        verifying = false;
-        error = e.code == 'invalid-verification-code'
-            ? 'Invalid OTP. Check the SMS and try again.'
-            : (e.message ?? 'OTP failed.');
-      });
+      final session = await webOtp.confirm(code);
+      registrationDraft
+        ..phoneVerified = true
+        ..firebaseUid = session.uid
+        ..firebaseIdToken = session.token;
+      await _routeAfterOtp();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         verifying = false;
-        error = e.toString();
+        error = e.toString().contains('invalid')
+            ? 'Invalid OTP. Check the SMS and try again.'
+            : e.toString();
       });
     }
   }
 
-  Future<void> _afterFirebaseUser() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() {
-        verifying = false;
-        error = 'Phone sign-in did not complete.';
-      });
-      return;
-    }
-    final token = await user.getIdToken(true);
-    if (token == null || token.isEmpty) {
-      setState(() {
-        verifying = false;
-        error = 'Could not read the Firebase session. Resend OTP.';
-      });
-      return;
-    }
-    registrationDraft
-      ..phoneVerified = true
-      ..firebaseUid = user.uid
-      ..firebaseIdToken = token;
-
+  Future<void> _routeAfterOtp() async {
+    final token = registrationDraft.firebaseIdToken;
+    if (token == null) return;
     try {
       final lookup = await EvuddyApi.lookupRider(
         phone: registrationDraft.phone,
@@ -154,24 +126,31 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
           });
           return;
         }
+        if (registrationDraft.canBook) {
+          registrationDraft.shellTab = 1;
+          riderSessionTick.value++;
+          Navigator.of(context).popUntil((r) => r.isFirst);
+          return;
+        }
         Navigator.pushReplacement(context, evuddyRoute(const SubmittedScreen()));
         return;
       }
-    } catch (_) {
-      // New riders 404 — continue to KYC.
-    }
+    } catch (_) {}
     if (!mounted) return;
-    Navigator.pushReplacement(context, evuddyRoute(const KycDetailsScreen()));
+    if (registrationDraft.fullName.isNotEmpty && registrationDraft.email.isNotEmpty) {
+      Navigator.pushReplacement(context, evuddyRoute(const KycDetailsScreen()));
+      return;
+    }
+    Navigator.pushReplacement(context, evuddyRoute(const LoginScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
     final phone = registrationDraft.phoneDisplay;
     return AuthScreen(
-      kicker: 'OTP  ·  Step 2 of 4',
+      kicker: 'OTP',
       title: 'OTP Verification',
-      subtitle: 'Firebase SMS to ${phone.isEmpty ? "your number" : phone} — the same check as the website.',
-      step: 2,
+      subtitle: 'SMS to ${phone.isEmpty ? "your number" : phone}. Same Firebase recaptcha as evuddy.com — tap the checkbox if it appears below.',
       error: error,
       footer: Row(
         children: [
@@ -192,19 +171,23 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
         ],
       ),
       children: [
-        if (sending)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Text(
-              'Sending OTP…',
-              style: GoogleFonts.plusJakartaSans(
-                color: Evuddy.greenDeep,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
         OtpRow(controllers: boxes, foci: foci),
         const SizedBox(height: 16),
+        Text(
+          sending
+              ? 'Sending OTP… complete the security check if asked.'
+              : sentOk
+                  ? 'OTP sent. Enter the 6 digits from SMS.'
+                  : 'Preparing secure SMS…',
+          style: GoogleFonts.plusJakartaSans(
+            color: Evuddy.greenDeep,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
+        const SizedBox(height: 12),
+        WebOtpPanel(controller: webOtp),
+        const SizedBox(height: 12),
         GestureDetector(
           onTap: () => Navigator.pop(context),
           child: Text(
@@ -212,7 +195,6 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
             style: GoogleFonts.plusJakartaSans(
               color: Evuddy.green,
               fontWeight: FontWeight.w700,
-              fontSize: 14,
             ),
           ),
         ),

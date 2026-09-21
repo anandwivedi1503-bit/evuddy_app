@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
-import 'login_screen.dart';
+import 'confirm_mobile_screen.dart';
+import 'ride_ready_screen.dart';
 import 'state/registration_draft.dart';
 import 'submitted_screen.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 
 class BookEvScreen extends StatefulWidget {
-  const BookEvScreen({super.key});
+  const BookEvScreen({super.key, this.showBack = true});
+  final bool showBack;
 
   @override
   State<BookEvScreen> createState() => _BookEvScreenState();
@@ -71,7 +73,7 @@ class _BookEvScreenState extends State<BookEvScreen> {
 
   void _pickPlan(String plan) {
     if (!registrationDraft.phoneVerified) {
-      Navigator.push(context, evuddyRoute(const LoginScreen()));
+      Navigator.push(context, evuddyRoute(const ConfirmMobileScreen()));
       return;
     }
     if (waitingKyc) {
@@ -79,7 +81,7 @@ class _BookEvScreenState extends State<BookEvScreen> {
       return;
     }
     if (!canBook) {
-      Navigator.push(context, evuddyRoute(const LoginScreen()));
+      Navigator.push(context, evuddyRoute(const ConfirmMobileScreen()));
       return;
     }
     setState(() => registrationDraft.chosenPlan = plan);
@@ -89,10 +91,11 @@ class _BookEvScreenState extends State<BookEvScreen> {
   Widget build(BuildContext context) {
     final plan = registrationDraft.chosenPlan;
     return AuthScreen(
+      showBack: widget.showBack,
       kicker: 'Book EV',
       title: 'How do you want to ride?',
       subtitle:
-          'Same choice as evuddy.com/ride-options. Flexible rental or Rent to Own. Pay (Razorpay) is the next slice — not charged here.',
+          'Approved riders land here after OTP — same as the website. Pick rental or Rent to Own, then your hub.',
       error: error,
       footer: EvuddyButton(
         label: plan == null ? 'Choose a plan above' : 'Continue',
@@ -101,26 +104,14 @@ class _BookEvScreenState extends State<BookEvScreen> {
             : () {
                 registrationDraft.chosenCity = city;
                 registrationDraft.chosenHubId = hubId;
-                showDialog<void>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Plan saved'),
-                    content: Text(
-                      plan == 'rto'
-                          ? 'Rent to Own · ${city ?? ""} hub selected. Checkout on Book EV is Razorpay — we will wire that next, without changing the website.'
-                          : 'Flexible rental · ${city ?? ""} hub selected. Hourly / daily / weekly / monthly checkout is next.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ),
-                );
+                Navigator.push(context, evuddyRoute(const RideReadyScreen()));
               },
       ),
       children: [
+        Center(
+          child: Image.asset(Evuddy.scooterAsset, height: 120, fit: BoxFit.contain),
+        ),
+        const SizedBox(height: 12),
         if (loading) const InfoNote(text: 'Loading live cities…'),
         if (!registrationDraft.phoneVerified)
           const Padding(

@@ -24,6 +24,7 @@ class Evuddy {
   static const logoPink = Color(0xFFEC4899);
 
   static const wordmarkAsset = 'assets/images/evuddy_wordmark.png';
+  static const scooterAsset = 'assets/images/evuddy_scooter.png';
 
   static List<BoxShadow> get lift => const [
         BoxShadow(
