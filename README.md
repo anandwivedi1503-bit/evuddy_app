@@ -1,15 +1,33 @@
-# EVUDDY
+# EVUDDY app vs website
 
-Flutter rider app. It talks to **https://www.evuddy.com** the same way the website register page does. **The website repo and server code were not changed.**
+The **website is one product with two kinds of pages**. The **app is the rider product**, not a copy of every marketing block.
 
-## Screens (match `/register`)
+## What the website landing page is for
 
-1. Personal information — name, mobile, email, coming through  
-2. Firebase phone OTP (`kebuone-otp`)  
-3. KYC — Aadhaar, optional licence / social / references  
-4. Documents — upload via `POST /api/upload`, then `POST /api/riders`
+`https://www.evuddy.com` is the shop window: slogan, partner logos, fare cards, city map story, dealer/distributor pitch, reviews, Book EV / Register buttons.
 
-Existing numbers: after OTP, `GET /api/riders?phone=` with the Firebase token. Approved riders skip KYC.
+Those buttons are **doors**, not extra backends:
+
+| On the website | Goes to | In the app |
+| --- | --- | --- |
+| **Register** | `/register` | Register / KYC flow we already wired |
+| **Book EV** | `/ride-options` | **Book EV** screen (this slice) |
+| Fares ₹60 / ₹230 / … | Same catalog Book EV uses | Shown on Home |
+| Lucknow / Kanpur hubs | `/api/cities`, `/api/hubs` | Live list on Home and Book EV |
+| Partners, careers, about | `/partners`, `/about`… | **Not in the rider app** (B2B / brochure) |
+| Pay / Razorpay | `/book-bike` after KYC | **Next slice** — not charged yet |
+
+Nothing from the landing page is “wasted.” Marketing stays on the website. The app reuses the **same APIs and the same rider steps**.
+
+## Rider path (both clients)
+
+1. Splash  
+2. **Home** — Book EV + Register, live hubs, fares  
+3. Register → OTP → KYC → documents (same `POST /api/riders`)  
+4. Book EV → pick **Normal booking** or **Rent to Own** → city + hub  
+5. Later: scooter + Razorpay (website `/book-bike`) — we have not enabled pay yet  
+
+Ops still approve KYC. Book EV checkout only unlocks when `bookingEnabled` is true, same as the site.
 
 ## Run
 
@@ -19,10 +37,4 @@ flutter pub get
 flutter run
 ```
 
-Full restart after this pull.
-
-Phone OTP needs a real Android/iPhone and the `kebuone-otp` Firebase app. If SMS fails with app-not-authorized, add this app’s SHA-1 in Firebase (console only — still no website code change).
-
-## Not in this slice
-
-Book EV, wallet, map, Razorpay — next pages after this register path is confirmed live.
+Website source is not modified.

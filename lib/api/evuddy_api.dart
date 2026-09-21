@@ -102,6 +102,75 @@ class EvuddyApi {
           (j['data'] is Map ? (j['data'] as Map)['approvalStatus']?.toString() : null),
     );
   }
+
+  static Future<List<EvuddyCity>> cities() async {
+    final r = await http.get(_u('/api/cities')).timeout(const Duration(seconds: 12));
+    final j = _json(r);
+    final data = j['data'];
+    if (j['success'] != true || data is! List) return [];
+    return data
+        .whereType<Map>()
+        .map((e) => EvuddyCity(
+              id: e['_id']?.toString() ?? '',
+              name: e['cityName']?.toString() ?? '',
+              state: e['state']?.toString() ?? '',
+            ))
+        .where((c) => c.name.isNotEmpty)
+        .toList();
+  }
+
+  static Future<List<EvuddyHub>> hubs() async {
+    final r = await http.get(_u('/api/hubs')).timeout(const Duration(seconds: 12));
+    final j = _json(r);
+    final data = j['data'];
+    if (j['success'] != true || data is! List) return [];
+    return data
+        .whereType<Map>()
+        .map(
+          (e) => EvuddyHub(
+            id: e['_id']?.toString() ?? '',
+            name: e['hubName']?.toString() ?? '',
+            code: e['hubCode']?.toString() ?? '',
+            location: e['hubLocation']?.toString() ?? '',
+            city: e['city']?.toString() ?? '',
+          ),
+        )
+        .where((h) => h.name.isNotEmpty)
+        .toList();
+  }
+}
+
+/// Public fare card on the website landing / Book EV catalog.
+class CatalogRates {
+  static const hourly = 60;
+  static const daily = 230;
+  static const weekly = 1610;
+  static const monthly = 6900;
+  static const rtoDaily = 280;
+  static const rtoMonths = 18;
+  static const gstNote = 'GST 5% on rent only';
+}
+
+class EvuddyCity {
+  const EvuddyCity({required this.id, required this.name, required this.state});
+  final String id;
+  final String name;
+  final String state;
+}
+
+class EvuddyHub {
+  const EvuddyHub({
+    required this.id,
+    required this.name,
+    required this.code,
+    required this.location,
+    required this.city,
+  });
+  final String id;
+  final String name;
+  final String code;
+  final String location;
+  final String city;
 }
 
 class ApiException implements Exception {

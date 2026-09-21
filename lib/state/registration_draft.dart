@@ -28,6 +28,9 @@ class RegistrationDraft {
   String approvalStatus = '';
   bool bookingEnabled = false;
   bool apiOnline = false;
+  String? chosenPlan;
+  String? chosenCity;
+  String? chosenHubId;
 
   bool get aadhaarFront => aadhaarFrontPath != null;
   bool get aadhaarBack => aadhaarBackPath != null;
