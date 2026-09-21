@@ -47,12 +47,12 @@ class AuthScreen extends StatelessWidget {
             Positioned(
               top: -90,
               right: -50,
-              child: GlowOrb(color: Evuddy.logoGreen, size: 220, opacity: 0.18),
+              child: GlowOrb(color: Evuddy.logoGreen, size: 200, opacity: 0.10),
             ),
             Positioned(
               bottom: 80,
               left: -70,
-              child: GlowOrb(color: Evuddy.logoPink, size: 240, opacity: 0.12),
+              child: GlowOrb(color: Evuddy.logoPink, size: 220, opacity: 0.07),
             ),
             SafeArea(
               child: Column(
@@ -447,12 +447,14 @@ class EvuddyButton extends StatefulWidget {
     required this.onPressed,
     this.icon = Icons.arrow_forward_rounded,
     this.dark = true,
+    this.busy = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData icon;
   final bool dark;
+  final bool busy;
 
   @override
   State<EvuddyButton> createState() => _EvuddyButtonState();
@@ -492,28 +494,37 @@ class _EvuddyButtonState extends State<EvuddyButton> {
             child: InkWell(
               borderRadius: BorderRadius.circular(18),
               onHighlightChanged: (v) => setState(() => _down = v),
-              onTap: widget.onPressed == null
+              onTap: widget.busy || widget.onPressed == null
                   ? null
                   : () {
                       HapticFeedback.lightImpact();
                       widget.onPressed!();
                     },
               child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      widget.label,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                child: widget.busy
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.4,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            widget.label,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(widget.icon, size: 18, color: Colors.white),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(widget.icon, size: 18, color: Colors.white),
-                  ],
-                ),
               ),
             ),
           ),

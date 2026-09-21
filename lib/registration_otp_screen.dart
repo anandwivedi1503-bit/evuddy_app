@@ -14,9 +14,8 @@ class RegistrationOtpScreen extends StatelessWidget {
     final d = registrationDraft;
     return AuthScreen(
       kicker: 'Phone verified',
-      title: 'You’re confirmed',
-      subtitle:
-          'This step matches the website: one phone check, then KYC. No second SMS.',
+      title: 'Number verified',
+      subtitle: 'Same as the website: one Firebase SMS, then KYC.',
       step: 2,
       footer: EvuddyButton(
         label: 'Continue to KYC',
@@ -30,55 +29,29 @@ class RegistrationOtpScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const EvuddyBoltMark(size: 44),
-                  const SizedBox(width: 12),
-                  Text(
-                    'VERIFIED NUMBER',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      letterSpacing: 1.5,
-                      fontWeight: FontWeight.w800,
-                      color: Evuddy.greenDeep,
-                    ),
-                  ),
-                ],
+              Text(
+                'VERIFIED NUMBER',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w800,
+                  color: Evuddy.greenDeep,
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Text(
                 d.phoneDisplay,
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 26,
+                  fontSize: 22,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: -0.4,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 d.fullName.isEmpty ? 'Rider' : d.fullName,
-                style: GoogleFonts.plusJakartaSans(
-                  color: Evuddy.muted,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: GoogleFonts.plusJakartaSans(color: Evuddy.muted),
               ),
             ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        const InfoNote(
-          text:
-              'Phone number verified. KYC uploads will use this number when the backend is connected.',
-        ),
-        const SizedBox(height: 14),
-        SurfaceCard(
-          child: Text(
-            'Your information is used for rider KYC and yard pickup. It is not shared as a public listing.',
-            style: GoogleFonts.plusJakartaSans(
-              color: Evuddy.muted,
-              height: 1.45,
-              fontWeight: FontWeight.w500,
-            ),
           ),
         ),
       ],

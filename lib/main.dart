@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'api/evuddy_api.dart';
+import 'api/firebase_phone.dart';
 import 'login_screen.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await EvuddyFirebase.ensure();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -60,6 +63,7 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
       CurvedAnimation(parent: _c, curve: Curves.easeOutCubic),
     );
     _c.forward();
+    EvuddyApi.health();
     Timer(const Duration(milliseconds: 2400), _go);
   }
 

@@ -1,10 +1,14 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'personal_information_screen.dart';
+import 'api/evuddy_api.dart';
+import 'api/firebase_phone.dart';
+import 'kyc_details_screen.dart';
 import 'state/registration_draft.dart';
+import 'submitted_screen.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 
@@ -21,6 +25,8 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
   int seconds = 45;
   Timer? timer;
   String? error;
+  bool sending = true;
+  bool verifying = false;
 
   @override
   void initState() {
@@ -30,6 +36,7 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       if (seconds == 0) return;
       setState(() => seconds -= 1);
     });
+    _send();
   }
 
   @override
@@ -46,112 +53,168 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
 
   String get code => boxes.map((c) => c.text).join();
 
-  void _verify() {
+  Future<void> _send() async {
+    setState(() {
+      sending = true;
+      error = null;
+      seconds = 45;
+    });
+    await EvuddyFirebase.sendOtp(
+      phone10: registrationDraft.phone,
+      onCodeSent: (id) {
+        if (!mounted) return;
+        registrationDraft.verificationId = id;
+        setState(() => sending = false);
+      },
+      onError: (m) {
+        if (!mounted) return;
+        setState(() {
+          sending = false;
+          error = m;
+        });
+      },
+      onAutoVerified: () {
+        if (!mounted) return;
+        _afterFirebaseUser();
+      },
+    );
+  }
+
+  Future<void> _verify() async {
     if (code.length != 6) {
       setState(() => error = 'Enter the 6-digit OTP.');
       return;
     }
-    registrationDraft.phoneVerified = true;
-    Navigator.push(context, evuddyRoute(const PersonalInformationScreen()));
+    final id = registrationDraft.verificationId;
+    if (id == null) {
+      setState(() => error = 'Request a new OTP first.');
+      return;
+    }
+    setState(() {
+      verifying = true;
+      error = null;
+    });
+    try {
+      await EvuddyFirebase.confirmOtp(verificationId: id, smsCode: code);
+      await _afterFirebaseUser();
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        verifying = false;
+        error = e.code == 'invalid-verification-code'
+            ? 'Invalid OTP. Check the SMS and try again.'
+            : (e.message ?? 'OTP failed.');
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        verifying = false;
+        error = e.toString();
+      });
+    }
+  }
+
+  Future<void> _afterFirebaseUser() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() {
+        verifying = false;
+        error = 'Phone sign-in did not complete.';
+      });
+      return;
+    }
+    final token = await user.getIdToken(true);
+    if (token == null || token.isEmpty) {
+      setState(() {
+        verifying = false;
+        error = 'Could not read the Firebase session. Resend OTP.';
+      });
+      return;
+    }
+    registrationDraft
+      ..phoneVerified = true
+      ..firebaseUid = user.uid
+      ..firebaseIdToken = token;
+
+    try {
+      final lookup = await EvuddyApi.lookupRider(
+        phone: registrationDraft.phone,
+        idToken: token,
+      );
+      if (!mounted) return;
+      if (lookup.found) {
+        registrationDraft
+          ..riderId = lookup.riderId
+          ..approvalStatus = lookup.approvalStatus
+          ..bookingEnabled = lookup.bookingEnabled;
+        if (lookup.approvalStatus == 'Rejected') {
+          setState(() {
+            verifying = false;
+            error = 'This number was rejected. Contact EVUDDY support.';
+          });
+          return;
+        }
+        Navigator.pushReplacement(context, evuddyRoute(const SubmittedScreen()));
+        return;
+      }
+    } catch (_) {
+      // New riders 404 — continue to KYC.
+    }
+    if (!mounted) return;
+    Navigator.pushReplacement(context, evuddyRoute(const KycDetailsScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
     final phone = registrationDraft.phoneDisplay;
     return AuthScreen(
-      kicker: 'Secure sign in',
-      title: 'Enter your OTP',
-      subtitle:
-          'A 6-digit code is sent to your mobile. SMS is in preview — any 6 digits continue.',
-      step: 1,
+      kicker: 'OTP  ·  Step 2 of 4',
+      title: 'OTP Verification',
+      subtitle: 'Firebase SMS to ${phone.isEmpty ? "your number" : phone} — the same check as the website.',
+      step: 2,
       error: error,
       footer: Row(
         children: [
           Expanded(
             child: EvuddyGhostButton(
               label: seconds == 0 ? 'Resend' : '00:${seconds.toString().padLeft(2, '0')}',
-              onPressed: seconds == 0 ? () => setState(() => seconds = 45) : null,
+              onPressed: seconds == 0 && !sending ? _send : null,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: EvuddyButton(label: 'Verify', onPressed: _verify),
+            child: EvuddyButton(
+              label: 'Verify OTP',
+              busy: verifying || sending,
+              onPressed: verifying || sending ? null : _verify,
+            ),
           ),
         ],
       ),
       children: [
-        SurfaceCard(
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Evuddy.greenSoft,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Text('🇮🇳', style: TextStyle(fontSize: 22)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'CODE SENT TO',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
-                        letterSpacing: 1.4,
-                        fontWeight: FontWeight.w800,
-                        color: Evuddy.muted,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      phone.isEmpty ? '+91' : phone,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  'Change',
-                  style: GoogleFonts.plusJakartaSans(
-                    color: Evuddy.green,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 22),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('ENTER 6-DIGIT OTP', style: Theme.of(context).textTheme.labelSmall),
-            Text(
-              'Auto-read later',
+        if (sending)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Text(
+              'Sending OTP…',
               style: GoogleFonts.plusJakartaSans(
-                color: Evuddy.green,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
+                color: Evuddy.greenDeep,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
+          ),
         OtpRow(controllers: boxes, foci: foci),
         const SizedBox(height: 16),
-        InfoNote(
-          text:
-              'OTP will be sent to ${phone.isEmpty ? "your number" : phone} when the live network is connected.',
+        GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Text(
+            'Wrong number? Change',
+            style: GoogleFonts.plusJakartaSans(
+              color: Evuddy.green,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
         ),
       ],
     );
