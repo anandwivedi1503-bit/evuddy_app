@@ -33,40 +33,42 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
   Widget build(BuildContext context) {
     final d = registrationDraft;
     return AuthScreen(
-      title: 'Documents',
-      subtitle: 'Tap to mark attached. Files stay on this phone until upload is live.',
+      kicker: 'Documents',
+      title: 'Upload documents',
+      subtitle:
+          'Tap to mark attached. Files stay on this device until the live upload is connected.',
       step: 4,
       error: error,
       footer: EvuddyButton(
-        label: 'Submit',
+        label: 'Complete registration',
         onPressed: _complete,
       ),
       children: [
         DocTile(
-          title: 'Aadhaar — front',
+          title: 'Aadhaar card — front',
           subtitle: 'Required',
           icon: Icons.badge_outlined,
           selected: d.aadhaarFront,
           onTap: () => _toggle(() => d.aadhaarFront = !d.aadhaarFront),
         ),
         DocTile(
-          title: 'Aadhaar — back',
+          title: 'Aadhaar card — back',
           subtitle: 'Required',
           icon: Icons.badge_outlined,
           selected: d.aadhaarBack,
           onTap: () => _toggle(() => d.aadhaarBack = !d.aadhaarBack),
         ),
         DocTile(
-          title: 'Licence — front',
+          title: 'Driving licence — front',
           subtitle: 'Optional',
-          icon: Icons.directions_car_outlined,
+          icon: Icons.directions_car_filled_outlined,
           selected: d.licenseFront,
           onTap: () => _toggle(() => d.licenseFront = !d.licenseFront),
         ),
         DocTile(
-          title: 'Licence — back',
+          title: 'Driving licence — back',
           subtitle: 'Optional',
-          icon: Icons.directions_car_outlined,
+          icon: Icons.directions_car_filled_outlined,
           selected: d.licenseBack,
           onTap: () => _toggle(() => d.licenseBack = !d.licenseBack),
         ),

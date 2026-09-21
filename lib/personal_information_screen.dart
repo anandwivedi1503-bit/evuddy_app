@@ -94,41 +94,42 @@ class _PersonalInformationScreenState extends State<PersonalInformationScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthScreen(
-      title: 'Your details',
-      subtitle: 'Use the name on your Aadhaar.',
+      kicker: 'Create your rider account',
+      title: 'Start your journey\nwith EVUDDY',
+      subtitle: 'Name and email match the website. Date of birth stays on this device for now.',
       step: 2,
       error: error,
       footer: EvuddyButton(label: 'Continue', onPressed: _continue),
       children: [
         EvuddyField(
-          label: 'Full name',
+          label: 'FULL NAME',
           hint: 'As printed on Aadhaar',
           controller: name,
           textCapitalization: TextCapitalization.words,
         ),
         const SizedBox(height: 16),
         EvuddyField(
-          label: 'Email',
+          label: 'EMAIL ADDRESS',
           hint: 'name@email.com',
           controller: email,
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
         EvuddyField(
-          label: 'Date of birth',
+          label: 'DATE OF BIRTH',
           hint: 'DD / MM / YYYY',
           controller: dob,
           readOnly: true,
           onTap: _pickDob,
           suffix: const Padding(
             padding: EdgeInsets.only(right: 14),
-            child: Icon(Icons.calendar_today_outlined, size: 18, color: Evuddy.muted),
+            child: Icon(Icons.calendar_today_rounded, size: 18, color: Evuddy.muted),
           ),
         ),
-        const SizedBox(height: 22),
-        Text('Coming through', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 20),
+        Text('COMING THROUGH', style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: 10),
-        SelectList(
+        ChoicePills(
           options: comingThroughOptions,
           value: comingThrough,
           onChanged: (v) => setState(() => comingThrough = v),

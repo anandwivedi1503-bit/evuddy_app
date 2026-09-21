@@ -14,7 +14,7 @@ void main() {
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.white,
+      systemNavigationBarColor: Evuddy.wash,
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
@@ -46,17 +46,21 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c;
   late final Animation<double> _fade;
+  late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
     _c = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 900),
     );
     _fade = CurvedAnimation(parent: _c, curve: Curves.easeOut);
+    _scale = Tween<double>(begin: 0.96, end: 1).animate(
+      CurvedAnimation(parent: _c, curve: Curves.easeOutCubic),
+    );
     _c.forward();
-    Timer(const Duration(milliseconds: 2200), _go);
+    Timer(const Duration(milliseconds: 2400), _go);
   }
 
   void _go() {
@@ -76,49 +80,68 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Colors.white,
+        systemNavigationBarColor: Evuddy.wash,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: Colors.white,
-        body: FadeTransition(
-          opacity: _fade,
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(32, 24, 32, 36),
-              child: Column(
-                children: [
-                  const Spacer(flex: 3),
-                  const SizedBox(
-                    height: 68,
-                    width: double.infinity,
-                    child: FittedBox(
-                      fit: BoxFit.contain,
-                      child: EvuddyLogo(height: 80),
+        backgroundColor: Evuddy.wash,
+        body: Stack(
+          children: [
+            const MeshBackdrop(),
+            FadeTransition(
+              opacity: _fade,
+              child: ScaleTransition(
+                scale: _scale,
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(28, 20, 28, 36),
+                    child: Column(
+                      children: [
+                        const Spacer(flex: 2),
+                        const SizedBox(
+                          width: double.infinity,
+                          height: 128,
+                          child: FittedBox(
+                            fit: BoxFit.contain,
+                            child: EvuddyLogo(height: 160, hero: true),
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        Text(
+                          'Ride the city. Own the journey.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Evuddy.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Smart electric mobility',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Evuddy.muted,
+                          ),
+                        ),
+                        const Spacer(flex: 3),
+                        Text(
+                          'Lucknow  ·  Kanpur',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Evuddy.muted,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Smart electric mobility',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Evuddy.muted,
-                    ),
-                  ),
-                  const Spacer(flex: 4),
-                  Text(
-                    'Lucknow  ·  Kanpur',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Evuddy.muted,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
