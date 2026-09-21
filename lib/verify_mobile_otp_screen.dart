@@ -124,12 +124,19 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
                       margin: EdgeInsets.only(right: i == 5 ? 0 : 6),
                       height: 54,
                       decoration: BoxDecoration(
-                        color: Evuddy.wash,
-                        borderRadius: BorderRadius.circular(12),
+                        color: Evuddy.paper,
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: boxes[i].text.isEmpty ? Colors.transparent : Evuddy.black,
-                          width: 1.4,
+                          color: boxes[i].text.isEmpty ? Evuddy.line : Evuddy.green,
+                          width: boxes[i].text.isEmpty ? 1 : 1.6,
                         ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0A0F172A),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: TextField(
                         controller: boxes[i],

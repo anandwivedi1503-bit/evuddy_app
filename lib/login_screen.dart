@@ -46,9 +46,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
-        statusBarColor: Evuddy.cream,
         statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Evuddy.cream,
+        systemNavigationBarColor: Evuddy.wash,
       ),
       child: Scaffold(
         body: SafeArea(
@@ -56,82 +55,67 @@ class _LoginScreenState extends State<LoginScreen> {
             builder: (context, constraints) {
               return SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(22, 12, 22, 28),
+                padding: const EdgeInsets.fromLTRB(22, 8, 22, 28),
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight - 24),
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight - 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const EvuddyHeader(),
-                      const SizedBox(height: 28),
-                      const WelcomeRule(),
-                      const SizedBox(height: 28),
+                      const EvuddyHeader(showBack: false),
+                      const SizedBox(height: 36),
+                      const WelcomeRule(caption: 'Sign in'),
+                      const SizedBox(height: 16),
                       Text(
-                        'Confirm your\nmobile number',
+                        'Your number,\nyour ride.',
                         style: Theme.of(context).textTheme.displaySmall,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       const Text(
                         'Riders already on EVUDDY verify OTP, then book. New riders continue to registration — same KYC the website uses.',
                       ),
                       const SizedBox(height: 32),
-                      Text('MOBILE NUMBER', style: Theme.of(context).textTheme.labelSmall),
-                      const SizedBox(height: 10),
-                      Container(
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: Evuddy.wash,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const SizedBox(width: 16),
-                            Text(
-                              '+91',
-                              style: GoogleFonts.manrope(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                                color: Evuddy.ink,
-                              ),
-                            ),
-                            Container(
-                              width: 1,
-                              height: 22,
-                              margin: const EdgeInsets.symmetric(horizontal: 14),
-                              color: Evuddy.line,
-                            ),
-                            Expanded(
-                              child: TextField(
-                                controller: phoneController,
-                                keyboardType: TextInputType.phone,
-                                maxLength: 10,
-                                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  counterText: '',
-                                  hintText: '10-digit mobile',
-                                  hintStyle: TextStyle(color: Color(0xFFA3AA9E)),
-                                ),
-                                style: const TextStyle(
+                      EvuddyField(
+                        label: 'MOBILE NUMBER',
+                        hint: '10-digit mobile',
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone,
+                        maxLength: 10,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        prefix: Padding(
+                          padding: const EdgeInsets.only(left: 16),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '+91',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontWeight: FontWeight.w700,
                                   fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.4,
                                 ),
                               ),
-                            ),
-                          ],
+                              Container(
+                                width: 1,
+                                height: 22,
+                                margin: const EdgeInsets.symmetric(horizontal: 12),
+                                color: Evuddy.line,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       if (error != null) ...[
                         const SizedBox(height: 10),
-                        Text(error!, style: const TextStyle(color: Color(0xFFB42318), fontSize: 13)),
+                        Text(
+                          error!,
+                          style: const TextStyle(color: Color(0xFFB42318), fontSize: 13),
+                        ),
                       ],
                       const SizedBox(height: 28),
                       EvuddyButton(label: 'Send OTP', onPressed: _sendOtp),
                       const SizedBox(height: 16),
                       const Center(
                         child: Text(
-                          'Your number is used only for rider login and yard OTP.',
+                          'Used only for rider login and yard OTP.',
                           style: TextStyle(fontSize: 12, color: Evuddy.muted),
                         ),
                       ),

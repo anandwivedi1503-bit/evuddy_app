@@ -13,9 +13,9 @@ void main() {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Evuddy.black,
-      systemNavigationBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Evuddy.wash,
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
   runApp(const EvuddyApp());
@@ -42,102 +42,111 @@ class EvuddySplashScreen extends StatefulWidget {
   State<EvuddySplashScreen> createState() => _EvuddySplashScreenState();
 }
 
-class _EvuddySplashScreenState extends State<EvuddySplashScreen> {
+class _EvuddySplashScreenState extends State<EvuddySplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+  late final Animation<double> _fade;
+  late final Animation<double> _scale;
+  late final Animation<double> _bar;
+
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(milliseconds: 2400), () {
-      if (!mounted) return;
-      SystemChrome.setSystemUIOverlayStyle(
-        const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark,
-          systemNavigationBarColor: Evuddy.paper,
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
-      );
-      Navigator.of(context).pushReplacement(evuddyRoute(const LoginScreen()));
-    });
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+    _fade = CurvedAnimation(parent: _c, curve: Curves.easeOut);
+    _scale = Tween<double>(begin: 0.92, end: 1).animate(
+      CurvedAnimation(parent: _c, curve: Curves.easeOutCubic),
+    );
+    _bar = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _c,
+        curve: const Interval(0.35, 1, curve: Curves.easeOutCubic),
+      ),
+    );
+    _c.forward();
+    Timer(const Duration(milliseconds: 2600), _go);
+  }
+
+  void _go() {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(evuddyRoute(const LoginScreen()));
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Evuddy.black,
-      body: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            child: Container(width: 5, color: Evuddy.green),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(32, 24, 32, 36),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'EVUDDY',
-                    style: GoogleFonts.manrope(
-                      fontSize: 13,
-                      letterSpacing: 4,
-                      fontWeight: FontWeight.w700,
-                      color: Evuddy.green,
+      backgroundColor: Evuddy.wash,
+      body: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) {
+          return FadeTransition(
+            opacity: _fade,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(28, 20, 28, 36),
+                child: Column(
+                  children: [
+                    const Spacer(flex: 2),
+                    Transform.scale(
+                      scale: _scale.value,
+                      child: const EvuddyLogo(height: 78),
                     ),
-                  ),
-                  const Spacer(),
-                  Image.asset(
-                    'assets/images/evuddy_logo.png',
-                    height: 72,
-                    color: Colors.white,
-                    colorBlendMode: BlendMode.srcATop,
-                  ),
-                  const SizedBox(height: 28),
-                  Text(
-                    'Move\nelectric.',
-                    style: GoogleFonts.manrope(
-                      fontSize: 52,
-                      height: 0.95,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -2,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Hub pickup · live GPS · Rent to Own',
-                    style: GoogleFonts.manrope(
-                      fontSize: 14,
-                      color: const Color(0xFF9A9A9A),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(height: 2, color: const Color(0xFF2A2A2A)),
+                    const SizedBox(height: 28),
+                    Text(
+                      'Smart electric mobility',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Evuddy.muted,
                       ),
-                      Container(width: 72, height: 2, color: Evuddy.green),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'LUCKNOW   KANPUR',
-                    style: GoogleFonts.manrope(
-                      fontSize: 11,
-                      letterSpacing: 3,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF6A6A6A),
                     ),
-                  ),
-                ],
+                    const Spacer(flex: 3),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(99),
+                      child: SizedBox(
+                        height: 3,
+                        child: Stack(
+                          children: [
+                            Container(color: Evuddy.line),
+                            FractionallySizedBox(
+                              widthFactor: _bar.value,
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [Evuddy.logoGreen, Evuddy.logoPink],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      'LUCKNOW  ·  KANPUR',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        letterSpacing: 2.2,
+                        fontWeight: FontWeight.w700,
+                        color: Evuddy.muted,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
