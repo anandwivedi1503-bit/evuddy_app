@@ -63,7 +63,10 @@ flutter:
     - assets/images/evuddy_logo.png
     - assets/images/evuddy_wordmark.png
     - assets/images/evuddy_letters.png
-    - assets/images/evuddy_scooter.png
+    - assets/images/rider_city.png
+    - assets/images/rider_evening.png
+    - assets/images/scooter_yellow.png
+    - assets/images/evuddy_hub.jpg
     - assets/otp/bridge.html
 
   # To add assets to your application, add an assets section, like this:

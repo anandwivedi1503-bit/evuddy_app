@@ -17,6 +17,7 @@ class AuthScreen extends StatelessWidget {
     this.of = 4,
     this.error,
     this.titleStyle,
+    this.expanded,
   });
 
   final String title;
@@ -29,6 +30,8 @@ class AuthScreen extends StatelessWidget {
   final int of;
   final String? error;
   final TextStyle? titleStyle;
+  /// Fills leftover height (used so Recaptcha image grids are not clipped).
+  final Widget? expanded;
 
   @override
   Widget build(BuildContext context) {
@@ -41,20 +44,9 @@ class AuthScreen extends StatelessWidget {
       ),
       child: Scaffold(
         backgroundColor: Evuddy.wash,
-        body: Stack(
-          children: [
-            const MeshBackdrop(),
-            Positioned(
-              top: -90,
-              right: -50,
-              child: GlowOrb(color: Evuddy.logoGreen, size: 200, opacity: 0.10),
-            ),
-            Positioned(
-              bottom: 80,
-              left: -70,
-              child: GlowOrb(color: Evuddy.logoPink, size: 220, opacity: 0.07),
-            ),
-            SafeArea(
+        body: ColoredBox(
+          color: Evuddy.wash,
+          child: SafeArea(
               child: Column(
                 children: [
                   Padding(
@@ -67,34 +59,74 @@ class AuthScreen extends StatelessWidget {
                     ),
                   ),
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () => FocusScope.of(context).unfocus(),
-                      behavior: HitTestBehavior.translucent,
-                      child: ListView(
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(22, 18, 22, 16),
-                        children: [
-                          WelcomeRule(caption: kicker),
-                          const SizedBox(height: 14),
-                          Text(
-                            title,
-                            style: titleStyle ??
-                                Theme.of(context).textTheme.displaySmall,
+                    child: expanded == null
+                        ? GestureDetector(
+                            onTap: () => FocusScope.of(context).unfocus(),
+                            behavior: HitTestBehavior.translucent,
+                            child: ListView(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(22, 18, 22, 16),
+                              children: [
+                                WelcomeRule(caption: kicker),
+                                const SizedBox(height: 14),
+                                Text(
+                                  title,
+                                  style: titleStyle ??
+                                      Theme.of(context).textTheme.displaySmall,
+                                ),
+                                if (subtitle != null) ...[
+                                  const SizedBox(height: 10),
+                                  Text(subtitle!),
+                                ],
+                                const SizedBox(height: 22),
+                                ...children,
+                                if (error != null) ...[
+                                  const SizedBox(height: 14),
+                                  _ErrorBanner(text: error!),
+                                ],
+                                const SizedBox(height: 8),
+                              ],
+                            ),
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(22, 12, 22, 8),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    WelcomeRule(caption: kicker),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      title,
+                                      style: titleStyle ??
+                                          Theme.of(context)
+                                              .textTheme
+                                              .headlineMedium,
+                                    ),
+                                    if (subtitle != null) ...[
+                                      const SizedBox(height: 8),
+                                      Text(subtitle!),
+                                    ],
+                                    const SizedBox(height: 16),
+                                    ...children,
+                                    if (error != null) ...[
+                                      const SizedBox(height: 10),
+                                      _ErrorBanner(text: error!),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                                  child: expanded!,
+                                ),
+                              ),
+                            ],
                           ),
-                          if (subtitle != null) ...[
-                            const SizedBox(height: 10),
-                            Text(subtitle!),
-                          ],
-                          const SizedBox(height: 26),
-                          ...children,
-                          if (error != null) ...[
-                            const SizedBox(height: 14),
-                            _ErrorBanner(text: error!),
-                          ],
-                          const SizedBox(height: 8),
-                        ],
-                      ),
-                    ),
                   ),
                   if (footer != null)
                     Padding(
@@ -104,7 +136,6 @@ class AuthScreen extends StatelessWidget {
                 ],
               ),
             ),
-          ],
         ),
       ),
     );

@@ -91,7 +91,7 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
         backgroundColor: Evuddy.wash,
         body: Stack(
           children: [
-            const MeshBackdrop(),
+            const ColoredBox(color: Evuddy.wash, child: SizedBox.expand()),
             FadeTransition(
               opacity: _fade,
               child: ScaleTransition(

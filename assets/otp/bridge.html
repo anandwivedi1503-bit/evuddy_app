@@ -2,10 +2,25 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <style>
-    html, body { margin: 0; padding: 0; background: #F3F7F4; }
-    #recaptcha { transform: scale(0.92); transform-origin: 0 0; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      background: #F7F4EE;
+      overflow: auto;
+    }
+    #recaptcha {
+      min-height: 78px;
+      padding: 8px 4px 24px;
+    }
+    /* Recaptcha image challenge (cars, buses, …) must not be clipped. */
+    body > div,
+    iframe {
+      max-width: none !important;
+    }
   </style>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -22,13 +37,17 @@
       appId: "1:548462513436:web:21cbd32f00c8a892a93ed9"
     });
     var confirmation = null;
-    var verifier = new firebase.auth.RecaptchaVerifier("recaptcha", { size: "normal" });
+    var verifier = null;
     function post(obj) {
       if (window.OtpBridge && window.OtpBridge.postMessage) {
         window.OtpBridge.postMessage(JSON.stringify(obj));
       }
     }
     function sendOtp(phone) {
+      if (!verifier) {
+        post({ type: "error", message: "Security check is still loading." });
+        return;
+      }
       firebase.auth().signInWithPhoneNumber(phone, verifier)
         .then(function (c) { confirmation = c; post({ type: "sent" }); })
         .catch(function (e) { post({ type: "error", message: String(e.message || e) }); });
@@ -43,7 +62,17 @@
         })
         .catch(function (e) { post({ type: "error", message: String(e.message || e) }); });
     }
-    post({ type: "ready" });
+    try {
+      verifier = new firebase.auth.RecaptchaVerifier("recaptcha", {
+        size: "normal",
+        callback: function () { post({ type: "captcha" }); },
+        "expired-callback": function () { post({ type: "expired" }); }
+      });
+      verifier.render().then(function () { post({ type: "ready" }); })
+        .catch(function (e) { post({ type: "error", message: String(e.message || e) }); });
+    } catch (e) {
+      post({ type: "error", message: String(e.message || e) });
+    }
   </script>
 </body>
 </html>

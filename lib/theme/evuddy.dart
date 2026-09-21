@@ -1,15 +1,13 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class Evuddy {
-  static const black = Color(0xFF07110C);
-  static const ink = Color(0xFF0B1220);
-  static const muted = Color(0xFF64748B);
-  static const wash = Color(0xFFF3F7F4);
+  static const black = Color(0xFF1C1917);
+  static const ink = Color(0xFF1C1917);
+  static const muted = Color(0xFF78716C);
+  static const wash = Color(0xFFF7F4EE);
   static const paper = Color(0xFFFFFFFF);
-  static const line = Color(0xFFE2E8E4);
+  static const line = Color(0xFFE7E5E4);
   static const green = Color(0xFF16A34A);
   static const greenDeep = Color(0xFF047857);
   static const magenta = Color(0xFFE11D8F);
@@ -24,7 +22,11 @@ class Evuddy {
   static const logoPink = Color(0xFFEC4899);
 
   static const wordmarkAsset = 'assets/images/evuddy_wordmark.png';
-  static const scooterAsset = 'assets/images/evuddy_scooter.png';
+  static const riderCityAsset = 'assets/images/rider_city.png';
+  static const riderEveningAsset = 'assets/images/rider_evening.png';
+  static const yellowScooterAsset = 'assets/images/scooter_yellow.png';
+  static const hubAsset = 'assets/images/evuddy_hub.jpg';
+  static const scooterAsset = yellowScooterAsset;
 
   static List<BoxShadow> get lift => const [
         BoxShadow(
@@ -37,17 +39,17 @@ class Evuddy {
   static TextTheme _text(Color color) {
     return GoogleFonts.plusJakartaSansTextTheme().copyWith(
       displaySmall: GoogleFonts.plusJakartaSans(
-        fontSize: 34,
-        height: 1.08,
+        fontSize: 32,
+        height: 1.12,
         fontWeight: FontWeight.w800,
-        letterSpacing: -1.4,
+        letterSpacing: -1.2,
         color: color,
       ),
       headlineMedium: GoogleFonts.plusJakartaSans(
-        fontSize: 26,
-        height: 1.18,
+        fontSize: 24,
+        height: 1.2,
         fontWeight: FontWeight.w800,
-        letterSpacing: -0.7,
+        letterSpacing: -0.5,
         color: color,
       ),
       titleMedium: GoogleFonts.plusJakartaSans(
@@ -106,6 +108,36 @@ class EvuddyLogo extends StatelessWidget {
   }
 }
 
+class ScenePhoto extends StatelessWidget {
+  const ScenePhoto({
+    super.key,
+    required this.asset,
+    this.height = 210,
+    this.fit = BoxFit.cover,
+  });
+
+  final String asset;
+  final double height;
+  final BoxFit fit;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: SizedBox(
+        height: height,
+        width: double.infinity,
+        child: Image.asset(
+          asset,
+          fit: fit,
+          alignment: Alignment.center,
+          filterQuality: FilterQuality.high,
+        ),
+      ),
+    );
+  }
+}
+
 class MeshBackdrop extends StatelessWidget {
   const MeshBackdrop({super.key, this.dark = false});
   final bool dark;
@@ -113,104 +145,8 @@ class MeshBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (dark) {
-      return const DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(-0.6, -0.75),
-            radius: 1.25,
-            colors: [Color(0xFF0C3B24), Evuddy.night],
-          ),
-        ),
-      );
+      return const ColoredBox(color: Evuddy.night);
     }
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFF7FBF8), Color(0xFFF3F7F4), Color(0xFFFDF6FA)],
-        ),
-      ),
-    );
+    return const ColoredBox(color: Evuddy.wash);
   }
-}
-
-class GlowOrb extends StatelessWidget {
-  const GlowOrb({
-    super.key,
-    required this.color,
-    required this.size,
-    this.opacity = 0.55,
-  });
-
-  final Color color;
-  final double size;
-  final double opacity;
-
-  @override
-  Widget build(BuildContext context) {
-    return ImageFiltered(
-      imageFilter: ImageFilter.blur(sigmaX: 42, sigmaY: 42),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: color.withOpacity(opacity),
-        ),
-      ),
-    );
-  }
-}
-
-class EvuddyBoltMark extends StatelessWidget {
-  const EvuddyBoltMark({super.key, this.size = 56});
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size * 0.28),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Evuddy.logoGreen, Color(0xFF059669), Evuddy.logoPink],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Evuddy.logoGreen.withOpacity(0.35),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: CustomPaint(painter: _BoltPainter()),
-    );
-  }
-}
-
-class _BoltPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-    final w = size.width;
-    final h = size.height;
-    final path = Path()
-      ..moveTo(w * 0.58, h * 0.18)
-      ..lineTo(w * 0.34, h * 0.52)
-      ..lineTo(w * 0.50, h * 0.52)
-      ..lineTo(w * 0.40, h * 0.82)
-      ..lineTo(w * 0.68, h * 0.46)
-      ..lineTo(w * 0.52, h * 0.46)
-      ..close();
-    canvas.drawPath(path, p);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

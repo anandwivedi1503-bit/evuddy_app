@@ -94,21 +94,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     animation: _bob,
                     builder: (context, child) {
                       return Transform.translate(
-                        offset: Offset(0, (_bob.value - 0.5) * 10),
+                        offset: Offset(0, (_bob.value - 0.5) * 6),
                         child: child,
                       );
                     },
-                    child: SizedBox(
-                      height: 200,
-                      width: double.infinity,
-                      child: Image.asset(
-                        Evuddy.scooterAsset,
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.high,
-                      ),
+                    child: const ScenePhoto(
+                      asset: Evuddy.riderCityAsset,
+                      height: 228,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
+                  const ScenePhoto(
+                    asset: Evuddy.yellowScooterAsset,
+                    height: 168,
+                  ),
+                  const SizedBox(height: 12),
                   SurfaceCard(
                     child: Row(
                       children: [

@@ -4,8 +4,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../theme/evuddy.dart';
+
 /// Website-style Firebase phone OTP (Recaptcha in a WebView).
 /// Avoids the Android SHA-1 block on native Play Integrity.
+///
+/// Recaptcha image challenges (select cars, buses, …) render in a large
+/// overlay. They were clipped when this panel was 124px with CSS scale.
 class WebOtpPanel extends StatefulWidget {
   const WebOtpPanel({super.key, required this.controller});
   final WebOtpController controller;
@@ -16,6 +21,8 @@ class WebOtpPanel extends StatefulWidget {
 
 class WebOtpController {
   _WebOtpPanelState? _state;
+
+  bool get ready => _state?.ready ?? false;
 
   Future<void> send(String phone10) {
     final s = _state;
@@ -47,13 +54,19 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
     widget.controller._state = this;
     _web = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Evuddy.wash)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onNavigationRequest: (_) => NavigationDecision.navigate,
+        ),
+      )
       ..addJavaScriptChannel(
         'OtpBridge',
         onMessageReceived: (m) {
           final raw = jsonDecode(m.message);
           if (raw is! Map) return;
           final type = raw['type']?.toString();
-          if (type == 'ready') {
+          if (type == 'ready' || type == 'captcha') {
             setState(() => ready = true);
           } else if (type == 'sent') {
             _sent?.complete();
@@ -97,12 +110,18 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
   }
 
   Future<void> send(String phone10) async {
-    for (var i = 0; i < 40 && !ready; i++) {
+    for (var i = 0; i < 80 && !ready; i++) {
       await Future.delayed(const Duration(milliseconds: 150));
+    }
+    if (!ready) {
+      return Future.error('Security check did not load. Check the network and retry.');
     }
     _sent = Completer<void>();
     await _web.runJavaScript("sendOtp('+91$phone10');");
-    return _sent!.future.timeout(const Duration(seconds: 50));
+    return _sent!.future.timeout(
+      const Duration(seconds: 120),
+      onTimeout: () => throw 'Timed out waiting for the security images. Complete “select all cars” then wait for SMS.',
+    );
   }
 
   Future<({String uid, String token})> confirm(String code) {
@@ -119,15 +138,25 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: SizedBox(
-        height: 124,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Evuddy.paper,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Evuddy.line),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.none,
         child: Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.none,
           children: [
             WebViewWidget(controller: _web),
             if (!ready)
-              const Center(child: LinearProgressIndicator(minHeight: 2)),
+              const Align(
+                alignment: Alignment.topCenter,
+                child: LinearProgressIndicator(minHeight: 2),
+              ),
           ],
         ),
       ),

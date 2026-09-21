@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'state/registration_draft.dart';
+import 'theme/evuddy.dart';
 import 'verify_mobile_otp_screen.dart';
 import 'widgets/chrome.dart';
 
@@ -52,6 +53,8 @@ class _ConfirmMobileScreenState extends State<ConfirmMobileScreen> {
       error: error,
       footer: EvuddyButton(label: 'Send OTP', onPressed: _send),
       children: [
+        const ScenePhoto(asset: Evuddy.yellowScooterAsset, height: 160),
+        const SizedBox(height: 18),
         EvuddyField(
           label: 'MOBILE NUMBER',
           hint: '10-digit mobile',

@@ -63,10 +63,10 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         },
       ),
       children: [
-        Center(
-          child: Image.asset(Evuddy.scooterAsset, height: 160, fit: BoxFit.contain),
-        ),
-        const SizedBox(height: 8),
+        const ScenePhoto(asset: Evuddy.riderEveningAsset, height: 200),
+        const SizedBox(height: 14),
+        const ScenePhoto(asset: Evuddy.hubAsset, height: 140),
+        const SizedBox(height: 16),
         Center(
           child: Text(
             'EVUDDY Electric Scooter',

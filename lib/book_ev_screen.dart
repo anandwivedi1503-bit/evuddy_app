@@ -108,10 +108,8 @@ class _BookEvScreenState extends State<BookEvScreen> {
               },
       ),
       children: [
-        Center(
-          child: Image.asset(Evuddy.scooterAsset, height: 120, fit: BoxFit.contain),
-        ),
-        const SizedBox(height: 12),
+        const ScenePhoto(asset: Evuddy.yellowScooterAsset, height: 168),
+        const SizedBox(height: 16),
         if (loading) const InfoNote(text: 'Loading live cities…'),
         if (!registrationDraft.phoneVerified)
           const Padding(

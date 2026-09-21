@@ -150,32 +150,38 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
     return AuthScreen(
       kicker: 'OTP',
       title: 'OTP Verification',
-      subtitle: 'SMS to ${phone.isEmpty ? "your number" : phone}. Same Firebase recaptcha as evuddy.com — tap the checkbox if it appears below.',
+      subtitle:
+          'SMS to ${phone.isEmpty ? "your number" : phone}. If Google asks you to select cars or buses, use the large box below — it is the same recaptcha as evuddy.com.',
       error: error,
-      footer: Row(
+      expanded: WebOtpPanel(controller: webOtp),
+      footer: Column(
         children: [
-          Expanded(
-            child: EvuddyGhostButton(
-              label: seconds == 0 ? 'Resend' : '00:${seconds.toString().padLeft(2, '0')}',
-              onPressed: seconds == 0 && !sending ? _send : null,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: EvuddyButton(
-              label: 'Verify OTP',
-              busy: verifying || sending,
-              onPressed: verifying || sending ? null : _verify,
-            ),
+          OtpRow(controllers: boxes, foci: foci),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: EvuddyGhostButton(
+                  label: seconds == 0 ? 'Resend' : '00:${seconds.toString().padLeft(2, '0')}',
+                  onPressed: seconds == 0 && !sending ? _send : null,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: EvuddyButton(
+                  label: 'Verify OTP',
+                  busy: verifying || sending,
+                  onPressed: verifying || sending ? null : _verify,
+                ),
+              ),
+            ],
           ),
         ],
       ),
       children: [
-        OtpRow(controllers: boxes, foci: foci),
-        const SizedBox(height: 16),
         Text(
           sending
-              ? 'Sending OTP… complete the security check if asked.'
+              ? 'Sending OTP… complete the security check in the box below if asked.'
               : sentOk
                   ? 'OTP sent. Enter the 6 digits from SMS.'
                   : 'Preparing secure SMS…',
@@ -185,9 +191,7 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
             fontSize: 13,
           ),
         ),
-        const SizedBox(height: 12),
-        WebOtpPanel(controller: webOtp),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         GestureDetector(
           onTap: () => Navigator.pop(context),
           child: Text(
