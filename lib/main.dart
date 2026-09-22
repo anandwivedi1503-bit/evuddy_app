@@ -107,7 +107,7 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
                           height: 128,
                           child: FittedBox(
                             fit: BoxFit.contain,
-                            child: EvuddyLogo(height: 160, hero: true),
+                            child: EvuddyLogo(height: 160),
                           ),
                         ),
                         const SizedBox(height: 28),

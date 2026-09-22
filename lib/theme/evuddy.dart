@@ -88,22 +88,17 @@ class Evuddy {
 }
 
 class EvuddyLogo extends StatelessWidget {
-  const EvuddyLogo({super.key, this.height = 36, this.hero = true});
+  const EvuddyLogo({super.key, this.height = 36, this.hero = false});
   final double height;
   final bool hero;
 
   @override
   Widget build(BuildContext context) {
-    final image = Image.asset(
+    return Image.asset(
       Evuddy.wordmarkAsset,
       height: height,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.high,
-    );
-    if (!hero) return image;
-    return Hero(
-      tag: 'evuddy-wordmark',
-      child: Material(type: MaterialType.transparency, child: image),
     );
   }
 }
