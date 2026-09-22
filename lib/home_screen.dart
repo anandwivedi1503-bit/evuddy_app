@@ -5,9 +5,12 @@ import 'api/evuddy_api.dart';
 import 'book_ev_screen.dart';
 import 'confirm_mobile_screen.dart';
 import 'login_screen.dart';
+import 'open_link.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
+import 'widgets/fares.dart';
+import 'widgets/promo.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,24 +19,14 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> {
   List<EvuddyHub> hubs = [];
-  late final AnimationController _bob;
+  bool loadingHubs = true;
 
   @override
   void initState() {
     super.initState();
-    _bob = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..repeat(reverse: true);
     _load();
-  }
-
-  @override
-  void dispose() {
-    _bob.dispose();
-    super.dispose();
   }
 
   Future<void> _load() async {
@@ -44,11 +37,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       setState(() {
         registrationDraft.apiOnline = online;
         hubs = h;
+        loadingHubs = false;
       });
-    } catch (_) {}
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => loadingHubs = false);
+    }
   }
 
-  void _book() {
+  void _book({FareOffer? fare}) {
+    if (fare != null) {
+      registrationDraft.chosenPlan = fare.plan;
+      registrationDraft.chosenDuration = fare.plan == 'rto' ? 'Rent to Own' : fare.id;
+    }
     if (registrationDraft.phoneVerified && registrationDraft.canBook) {
       Navigator.push(context, evuddyRoute(const BookEvScreen()));
       return;
@@ -60,198 +61,192 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Evuddy.wash,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            backgroundColor: Evuddy.wash,
-            elevation: 0,
-            title: const EvuddyLogo(height: 40),
-            centerTitle: true,
-            automaticallyImplyLeading: false,
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Where are you\nriding today?',
-                    style: Theme.of(context).textTheme.displaySmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Hub pickup · Live GPS · EV only',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: Evuddy.muted,
-                      fontWeight: FontWeight.w600,
+      body: RefreshIndicator(
+        color: Evuddy.green,
+        onRefresh: _load,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              backgroundColor: Evuddy.wash,
+              elevation: 0,
+              title: const EvuddyLogo(height: 40),
+              centerTitle: true,
+              automaticallyImplyLeading: false,
+              actions: [
+                IconButton(
+                  tooltip: 'Call helpdesk',
+                  onPressed: dialHelpdesk,
+                  icon: const Icon(Icons.phone_outlined, color: Evuddy.ink),
+                ),
+              ],
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Where are you\nriding today?',
+                      style: Theme.of(context).textTheme.displaySmall,
                     ),
-                  ),
-                  const SizedBox(height: 18),
-                  AnimatedBuilder(
-                    animation: _bob,
-                    builder: (context, child) {
-                      return Transform.translate(
-                        offset: Offset(0, (_bob.value - 0.5) * 6),
-                        child: child,
-                      );
-                    },
-                    child: const ScenePhoto(
-                      asset: Evuddy.riderCityAsset,
-                      height: 228,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Hub pickup · Live GPS · EV only',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Evuddy.muted,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  const ScenePhoto(
-                    asset: Evuddy.yellowScooterAsset,
-                    height: 168,
-                  ),
-                  const SizedBox(height: 12),
-                  SurfaceCard(
-                    child: Row(
+                    const SizedBox(height: 16),
+                    Stack(
+                      alignment: Alignment.bottomLeft,
                       children: [
-                        const Icon(Icons.bolt_rounded, color: Evuddy.green, size: 28),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'EVUDDY Electric Scooter',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Text(
-                                '120 km · 45 km/h · GPS live · 4h charge',
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: Evuddy.muted,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
+                        const ScenePhoto(
+                          asset: Evuddy.riderCityAsset,
+                          height: 220,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 168,
+                            child: EvuddyButton(
+                              label: 'Book EV',
+                              onPressed: () => _book(),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  EvuddyButton(label: 'Book EV', onPressed: _book),
-                  const SizedBox(height: 10),
-                  EvuddyGhostButton(
-                    label: registrationDraft.phoneVerified
-                        ? 'Update KYC'
-                        : 'New rider · Register',
-                    onPressed: () {
-                      Navigator.push(context, evuddyRoute(const LoginScreen()));
-                    },
-                  ),
-                  const SizedBox(height: 28),
-                  Text('NEARBY HUBS', style: Theme.of(context).textTheme.labelSmall),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 118,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: hubs.isEmpty ? 1 : hubs.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 10),
-                      itemBuilder: (context, i) {
-                        if (hubs.isEmpty) {
-                          return const SizedBox(
-                            width: 220,
-                            child: SurfaceCard(child: Text('Loading live hubs…')),
-                          );
-                        }
-                        final h = hubs[i];
-                        return SizedBox(
-                          width: 220,
-                          child: SurfaceCard(
+                    const SizedBox(height: 18),
+                    const InvestAdCarousel(),
+                    const SizedBox(height: 22),
+                    Text('CLEAR FARES', style: Theme.of(context).textTheme.labelSmall),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${CatalogRates.gstNote} · tap a card to start booking',
+                      style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
+                    ),
+                    const SizedBox(height: 12),
+                    FareGrid(onPick: (fare) => _book(fare: fare)),
+                    const SizedBox(height: 22),
+                    const TrustStrip(),
+                    const SizedBox(height: 22),
+                    SurfaceCard(
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Image.asset(
+                              Evuddy.yellowScooterAsset,
+                              width: 72,
+                              height: 72,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  h.name,
+                                  'EVUDDY Electric Scooter',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontWeight: FontWeight.w800,
+                                    fontSize: 15,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
                                 Text(
-                                  '${h.city} · ${h.location}',
+                                  '120 km · 45 km/h · GPS live · 4h charge',
                                   style: GoogleFonts.plusJakartaSans(
                                     color: Evuddy.muted,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  'Yard OTP after pay',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: Evuddy.greenDeep,
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        );
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    EvuddyGhostButton(
+                      label: registrationDraft.phoneVerified
+                          ? 'Update KYC'
+                          : 'New rider · Register',
+                      onPressed: () {
+                        Navigator.push(context, evuddyRoute(const LoginScreen()));
                       },
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text('FARES', style: Theme.of(context).textTheme.labelSmall),
-                  const SizedBox(height: 6),
-                  Text(
-                    CatalogRates.gstNote,
-                    style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: const [
-                      _Fare('Hourly', '₹60'),
-                      _Fare('Daily', '₹230'),
-                      _Fare('Weekly', '₹1,610'),
-                      _Fare('Monthly', '₹6,900'),
-                      _Fare('Rent to Own', '₹280/day'),
-                    ],
-                  ),
-                ],
+                    const SizedBox(height: 28),
+                    Text('NEARBY HUBS', style: Theme.of(context).textTheme.labelSmall),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 118,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: loadingHubs && hubs.isEmpty ? 1 : (hubs.isEmpty ? 1 : hubs.length),
+                        separatorBuilder: (_, i) => const SizedBox(width: 10),
+                        itemBuilder: (context, i) {
+                          if (hubs.isEmpty) {
+                            return SizedBox(
+                              width: 220,
+                              child: SurfaceCard(
+                                child: Text(
+                                  loadingHubs
+                                      ? 'Loading live hubs…'
+                                      : 'No hub listed yet. Pull to refresh.',
+                                ),
+                              ),
+                            );
+                          }
+                          final h = hubs[i];
+                          return SizedBox(
+                            width: 220,
+                            child: SurfaceCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    h.name,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${h.city} · ${h.location}',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: Evuddy.muted,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    'Yard OTP after pay',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: Evuddy.greenDeep,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Fare extends StatelessWidget {
-  const _Fare(this.label, this.value);
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Evuddy.line),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Evuddy.muted, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text(value, style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w800)),
-        ],
+          ],
+        ),
       ),
     );
   }

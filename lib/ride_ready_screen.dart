@@ -64,8 +64,6 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       ),
       children: [
         const ScenePhoto(asset: Evuddy.riderEveningAsset, height: 200),
-        const SizedBox(height: 14),
-        const ScenePhoto(asset: Evuddy.hubAsset, height: 140),
         const SizedBox(height: 16),
         Center(
           child: Text(

@@ -664,6 +664,127 @@ class SurfaceCard extends StatelessWidget {
   }
 }
 
+class OtpPinField extends StatefulWidget {
+  const OtpPinField({
+    super.key,
+    required this.controller,
+    this.onCompleted,
+  });
+
+  final TextEditingController controller;
+  final ValueChanged<String>? onCompleted;
+
+  @override
+  State<OtpPinField> createState() => _OtpPinFieldState();
+}
+
+class _OtpPinFieldState extends State<OtpPinField> {
+  final focus = FocusNode();
+  bool _fired = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onText);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onText);
+    focus.dispose();
+    super.dispose();
+  }
+
+  void _onText() {
+    final digits = widget.controller.text.replaceAll(RegExp(r'\D'), '');
+    if (digits != widget.controller.text) {
+      widget.controller.value = TextEditingValue(
+        text: digits.length > 6 ? digits.substring(0, 6) : digits,
+        selection: TextSelection.collapsed(
+          offset: (digits.length > 6 ? 6 : digits.length),
+        ),
+      );
+      return;
+    }
+    setState(() {});
+    if (digits.length == 6 && !_fired) {
+      _fired = true;
+      widget.onCompleted?.call(digits);
+      TextInput.finishAutofillContext();
+    }
+    if (digits.length < 6) _fired = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final code = widget.controller.text;
+    return AutofillGroup(
+      child: GestureDetector(
+        onTap: () => focus.requestFocus(),
+        child: Stack(
+          children: [
+            Opacity(
+              opacity: 0.02,
+              child: TextField(
+                controller: widget.controller,
+                focusNode: focus,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.oneTimeCode],
+                enableSuggestions: false,
+                autocorrect: false,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  counterText: '',
+                  border: InputBorder.none,
+                ),
+                style: const TextStyle(color: Colors.transparent, fontSize: 1),
+                cursorColor: Colors.transparent,
+              ),
+            ),
+            Row(
+              children: List.generate(6, (i) {
+                final filled = i < code.length;
+                final current = i == code.length;
+                return Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    margin: EdgeInsets.only(right: i == 5 ? 0 : 7),
+                    height: 56,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Evuddy.paper,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: current
+                            ? Evuddy.green
+                            : filled
+                                ? Evuddy.logoGreen
+                                : Evuddy.line,
+                        width: current || filled ? 1.7 : 1,
+                      ),
+                    ),
+                    child: Text(
+                      filled ? code[i] : '',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: Evuddy.ink,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class OtpRow extends StatefulWidget {
   const OtpRow({super.key, required this.controllers, required this.foci});
   final List<TextEditingController> controllers;

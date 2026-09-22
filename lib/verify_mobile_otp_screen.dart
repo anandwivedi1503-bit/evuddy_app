@@ -20,8 +20,7 @@ class VerifyMobileOtpScreen extends StatefulWidget {
 }
 
 class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
-  final boxes = List.generate(6, (_) => TextEditingController());
-  final foci = List.generate(6, (_) => FocusNode());
+  final pin = TextEditingController();
   final webOtp = WebOtpController();
   int seconds = 45;
   Timer? timer;
@@ -44,16 +43,11 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
   @override
   void dispose() {
     timer?.cancel();
-    for (final c in boxes) {
-      c.dispose();
-    }
-    for (final f in foci) {
-      f.dispose();
-    }
+    pin.dispose();
     super.dispose();
   }
 
-  String get code => boxes.map((c) => c.text).join();
+  String get code => pin.text.replaceAll(RegExp(r'\D'), '');
 
   Future<void> _send() async {
     setState(() {
@@ -80,9 +74,10 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
 
   Future<void> _verify() async {
     if (code.length != 6) {
-      setState(() => error = 'Enter the 6-digit OTP.');
+      setState(() => error = 'Enter the 6-digit OTP, or wait for SMS autofill.');
       return;
     }
+    if (verifying) return;
     setState(() {
       verifying = true;
       error = null;
@@ -151,12 +146,18 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       kicker: 'OTP',
       title: 'OTP Verification',
       subtitle:
-          'SMS to ${phone.isEmpty ? "your number" : phone}. If Google asks you to select cars or buses, use the large box below — it is the same recaptcha as evuddy.com.',
+          'SMS to ${phone.isEmpty ? "your number" : phone}. Android can suggest the code automatically. If Google shows cars or buses, tap them in the box below.',
       error: error,
       expanded: WebOtpPanel(controller: webOtp),
       footer: Column(
         children: [
-          OtpRow(controllers: boxes, foci: foci),
+          OtpPinField(controller: pin, onCompleted: (_) => _verify()),
+          const SizedBox(height: 8),
+          Text(
+            'Autofill from SMS when your phone offers it — we never read your full inbox.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 11),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -183,7 +184,7 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
           sending
               ? 'Sending OTP… complete the security check in the box below if asked.'
               : sentOk
-                  ? 'OTP sent. Enter the 6 digits from SMS.'
+                  ? 'OTP sent. Wait for autofill, or type the 6 digits.'
                   : 'Preparing secure SMS…',
           style: GoogleFonts.plusJakartaSans(
             color: Evuddy.greenDeep,
