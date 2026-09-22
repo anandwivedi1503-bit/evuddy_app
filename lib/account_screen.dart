@@ -61,8 +61,15 @@ class AccountScreen extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         const TrustStrip(),
-        const SizedBox(height: 16),
-        const InvestAdCarousel(),
+        const SizedBox(height: 14),
+        GestureDetector(
+          onTap: () => Navigator.push(context, evuddyRoute(const InvestScreen())),
+          child: const ScenePhoto(
+            asset: Evuddy.investPosterAsset,
+            height: 280,
+            fit: BoxFit.contain,
+          ),
+        ),
         const SizedBox(height: 14),
         EvuddyButton(
           label: 'Investment plans',

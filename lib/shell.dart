@@ -54,7 +54,10 @@ class _RiderShellState extends State<RiderShell> {
         selectedIndex: index,
         onDestinationSelected: (i) => setState(() => index = i),
         backgroundColor: Colors.white,
+        elevation: 8,
+        shadowColor: const Color(0x14000000),
         indicatorColor: Evuddy.greenSoft,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),

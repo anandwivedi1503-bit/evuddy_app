@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'api/evuddy_api.dart';
 import 'book_ev_screen.dart';
 import 'confirm_mobile_screen.dart';
+import 'invest_screen.dart';
 import 'login_screen.dart';
 import 'open_link.dart';
 import 'state/registration_draft.dart';
@@ -11,6 +12,7 @@ import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 import 'widgets/fares.dart';
 import 'widgets/promo.dart';
+import 'widgets/scenes.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -59,6 +61,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final name = registrationDraft.fullName.trim();
+    final headline = registrationDraft.canBook
+        ? (name.isEmpty ? 'Ready when you are.' : 'Ready, ${name.split(' ').first}.')
+        : 'Ride the city.\nOwn the journey.';
     return Scaffold(
       backgroundColor: Evuddy.wash,
       body: RefreshIndicator(
@@ -69,169 +75,145 @@ class _HomeScreenState extends State<HomeScreen> {
           slivers: [
             SliverAppBar(
               pinned: true,
-              backgroundColor: Evuddy.wash,
+              backgroundColor: Evuddy.wash.withValues(alpha: 0.96),
               elevation: 0,
-              title: const EvuddyLogo(height: 40),
+              title: const EvuddyLogo(height: 38),
               centerTitle: true,
               automaticallyImplyLeading: false,
               actions: [
                 IconButton(
                   tooltip: 'Call helpdesk',
                   onPressed: dialHelpdesk,
-                  icon: const Icon(Icons.phone_outlined, color: Evuddy.ink),
+                  icon: const Icon(Icons.phone_in_talk_outlined, color: Evuddy.ink),
                 ),
               ],
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Where are you\nriding today?',
-                      style: Theme.of(context).textTheme.displaySmall,
-                    ),
+                    Text(headline, style: Theme.of(context).textTheme.displaySmall),
                     const SizedBox(height: 8),
                     Text(
-                      'Hub pickup · Live GPS · EV only',
+                      'India’s hub-first EV brand · Lucknow & Kanpur · GPS on every scooter',
                       style: GoogleFonts.plusJakartaSans(
                         color: Evuddy.muted,
                         fontWeight: FontWeight.w600,
+                        height: 1.4,
                       ),
                     ),
+                    const SizedBox(height: 18),
+                    const FleetSceneCarousel(),
                     const SizedBox(height: 16),
-                    Stack(
-                      alignment: Alignment.bottomLeft,
+                    EvuddyButton(label: 'Book EV in one tap', onPressed: () => _book()),
+                    const SizedBox(height: 10),
+                    Row(
                       children: [
-                        const ScenePhoto(
-                          asset: Evuddy.riderCityAsset,
-                          height: 220,
+                        Expanded(
+                          child: EvuddyGhostButton(
+                            label: registrationDraft.phoneVerified ? 'KYC' : 'Register',
+                            onPressed: () {
+                              Navigator.push(context, evuddyRoute(const LoginScreen()));
+                            },
+                          ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: SizedBox(
-                            width: 168,
-                            child: EvuddyButton(
-                              label: 'Book EV',
-                              onPressed: () => _book(),
-                            ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: EvuddyGhostButton(
+                            label: 'Invest',
+                            onPressed: () {
+                              Navigator.push(context, evuddyRoute(const InvestScreen()));
+                            },
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
-                    const InvestAdCarousel(),
                     const SizedBox(height: 22),
+                    const RideSteps(),
+                    const SizedBox(height: 24),
+                    const PosterAdCarousel(),
+                    const SizedBox(height: 24),
                     Text('CLEAR FARES', style: Theme.of(context).textTheme.labelSmall),
                     const SizedBox(height: 6),
                     Text(
-                      '${CatalogRates.gstNote} · tap a card to start booking',
+                      '${CatalogRates.gstNote} · tap a card, we take you to booking',
                       style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
                     ),
                     const SizedBox(height: 12),
                     FareGrid(onPick: (fare) => _book(fare: fare)),
                     const SizedBox(height: 22),
                     const TrustStrip(),
-                    const SizedBox(height: 22),
-                    SurfaceCard(
-                      child: Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: Image.asset(
-                              Evuddy.yellowScooterAsset,
-                              width: 72,
-                              height: 72,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'EVUDDY Electric Scooter',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                Text(
-                                  '120 km · 45 km/h · GPS live · 4h charge',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: Evuddy.muted,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    EvuddyGhostButton(
-                      label: registrationDraft.phoneVerified
-                          ? 'Update KYC'
-                          : 'New rider · Register',
-                      onPressed: () {
-                        Navigator.push(context, evuddyRoute(const LoginScreen()));
-                      },
-                    ),
                     const SizedBox(height: 28),
                     Text('NEARBY HUBS', style: Theme.of(context).textTheme.labelSmall),
                     const SizedBox(height: 12),
                     SizedBox(
-                      height: 118,
+                      height: 150,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
-                        itemCount: loadingHubs && hubs.isEmpty ? 1 : (hubs.isEmpty ? 1 : hubs.length),
+                        itemCount: hubs.isEmpty ? 1 : hubs.length,
                         separatorBuilder: (_, i) => const SizedBox(width: 10),
                         itemBuilder: (context, i) {
                           if (hubs.isEmpty) {
                             return SizedBox(
-                              width: 220,
+                              width: 240,
                               child: SurfaceCard(
                                 child: Text(
                                   loadingHubs
-                                      ? 'Loading live hubs…'
-                                      : 'No hub listed yet. Pull to refresh.',
+                                      ? 'Finding live yards…'
+                                      : 'No hub listed yet. Pull down to refresh.',
                                 ),
                               ),
                             );
                           }
                           final h = hubs[i];
                           return SizedBox(
-                            width: 220,
-                            child: SurfaceCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            width: 248,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Stack(
                                 children: [
-                                  Text(
-                                    h.name,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontWeight: FontWeight.w800,
+                                  Positioned.fill(
+                                    child: Image.asset(Evuddy.hubAsset, fit: BoxFit.cover),
+                                  ),
+                                  Positioned.fill(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            Colors.black.withValues(alpha: 0.05),
+                                            Colors.black.withValues(alpha: 0.72),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${h.city} · ${h.location}',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      color: Evuddy.muted,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    'Yard OTP after pay',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      color: Evuddy.greenDeep,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
+                                  Padding(
+                                    padding: const EdgeInsets.all(14),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Spacer(),
+                                        Text(
+                                          h.name,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${h.city} · ${h.location}',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            color: Colors.white70,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],

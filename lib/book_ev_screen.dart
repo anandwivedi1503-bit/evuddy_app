@@ -108,7 +108,7 @@ class _BookEvScreenState extends State<BookEvScreen> {
               },
       ),
       children: [
-        const ScenePhoto(asset: Evuddy.yellowScooterAsset, height: 168),
+        const ScenePhoto(asset: Evuddy.yellowScooterAsset, height: 210),
         const SizedBox(height: 16),
         if (loading) const InfoNote(text: 'Loading live cities…'),
         if (!registrationDraft.phoneVerified)

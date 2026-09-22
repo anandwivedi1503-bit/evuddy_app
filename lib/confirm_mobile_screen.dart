@@ -53,7 +53,7 @@ class _ConfirmMobileScreenState extends State<ConfirmMobileScreen> {
       error: error,
       footer: EvuddyButton(label: 'Send OTP', onPressed: _send),
       children: [
-        const ScenePhoto(asset: Evuddy.yellowScooterAsset, height: 160),
+        const ScenePhoto(asset: Evuddy.yellowScooterAsset, height: 200, fit: BoxFit.contain),
         const SizedBox(height: 18),
         EvuddyField(
           label: 'MOBILE NUMBER',

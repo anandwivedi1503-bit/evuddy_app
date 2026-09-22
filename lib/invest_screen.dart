@@ -21,7 +21,7 @@ class InvestScreen extends StatelessWidget {
         onPressed: () => openEvuddyPath('/partners'),
       ),
       children: [
-        const ScenePhoto(asset: Evuddy.yellowScooterAsset, height: 168),
+        const ScenePhoto(asset: Evuddy.investPosterAsset, height: 420, fit: BoxFit.contain),
         const SizedBox(height: 16),
         const InfoNote(
           text:

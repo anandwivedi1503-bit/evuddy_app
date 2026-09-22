@@ -22,11 +22,17 @@ class Evuddy {
   static const logoPink = Color(0xFFEC4899);
 
   static const wordmarkAsset = 'assets/images/evuddy_wordmark.png';
-  static const riderCityAsset = 'assets/images/rider_city.png';
-  static const riderEveningAsset = 'assets/images/rider_evening.png';
-  static const yellowScooterAsset = 'assets/images/scooter_yellow.png';
-  static const hubAsset = 'assets/images/evuddy_hub.jpg';
+  static const riderCityAsset = 'assets/images/scene_city.jpg';
+  static const riderEveningAsset = 'assets/images/scene_evening.jpg';
+  static const yellowScooterAsset = 'assets/images/scene_range.jpg';
+  static const hubAsset = 'assets/images/scene_hub.jpg';
   static const scooterAsset = yellowScooterAsset;
+  static const sceneHomeAsset = 'assets/images/scene_home.jpg';
+  static const sceneDealerAsset = 'assets/images/scene_dealer.jpg';
+  static const sceneDistributorAsset = 'assets/images/scene_distributor.jpg';
+  static const sceneFranchiseAsset = 'assets/images/scene_franchise.jpg';
+  static const sceneFilmAsset = 'assets/images/scene_film.jpg';
+  static const investPosterAsset = 'assets/images/invest_poster.jpg';
 
   static List<BoxShadow> get lift => const [
         BoxShadow(
@@ -108,7 +114,7 @@ class ScenePhoto extends StatelessWidget {
     super.key,
     required this.asset,
     this.height = 210,
-    this.fit = BoxFit.cover,
+    this.fit = BoxFit.contain,
   });
 
   final String asset;
@@ -119,14 +125,20 @@ class ScenePhoto extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(22),
-      child: SizedBox(
-        height: height,
-        width: double.infinity,
-        child: Image.asset(
-          asset,
-          fit: fit,
-          alignment: Alignment.center,
-          filterQuality: FilterQuality.high,
+      child: ColoredBox(
+        color: const Color(0xFFF3EFE6),
+        child: SizedBox(
+          height: height,
+          width: double.infinity,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Image.asset(
+              asset,
+              fit: fit,
+              alignment: Alignment.center,
+              filterQuality: FilterQuality.high,
+            ),
+          ),
         ),
       ),
     );
