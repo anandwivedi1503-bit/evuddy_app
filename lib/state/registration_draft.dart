@@ -39,6 +39,22 @@ class RegistrationDraft {
   RiderBooking? activeBooking;
   String otpGate = 'register'; // register | book
   int shellTab = 0;
+  double depositHeld = 0;
+  String depositStatus = 'none'; // none | held | refund_pending | released
+  String? depositBookingId;
+
+  String get depositLabel {
+    switch (depositStatus) {
+      case 'held':
+        return 'Held · Rent to Own';
+      case 'refund_pending':
+        return 'Scooter back · refund queued';
+      case 'released':
+        return 'Released';
+      default:
+        return 'No hold';
+    }
+  }
 
   bool get canBook =>
       phoneVerified && (bookingEnabled || approvalStatus == 'Approved');

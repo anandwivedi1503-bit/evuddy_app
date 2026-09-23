@@ -166,6 +166,7 @@ class EvuddyApi {
     required EvuddyHub hub,
     required String city,
     required String rentalMode,
+    String? duration,
     String? referenceBy,
   }) async {
     final body = {
@@ -186,6 +187,12 @@ class EvuddyApi {
       'city': city,
       'pickupCity': city,
       'rentalMode': rentalMode,
+      if (duration != null && duration.isNotEmpty) 'rentalDuration': duration,
+      'catalog': CatalogRates.payload(),
+      'securityDepositInr': rentalMode.toLowerCase().contains('own')
+          ? CatalogRates.securityDeposit
+          : 0,
+      'depositHoldOnly': true,
       if (referenceBy != null && referenceBy.isNotEmpty) 'referenceBy': referenceBy,
       'firebaseIdToken': idToken,
       'paymentMode': 'Razorpay',
@@ -306,15 +313,72 @@ class EvuddyApi {
   }
 }
 
-/// Public fare card on the website landing / Book EV catalog.
+/// Rider catalog. GST-in rental prices; RTO is ₹300/day + ₹2,500 hold.
 class CatalogRates {
-  static const hourly = 60;
-  static const daily = 230;
-  static const weekly = 1610;
-  static const monthly = 6900;
-  static const rtoDaily = 280;
-  static const rtoMonths = 18;
-  static const gstNote = 'GST 5% on rent only';
+  static const daily = 250;
+  static const weekly = 1750;
+  static const monthly = 7500;
+  static const rtoDaily = 300;
+  static const rtoMonths = 20;
+  static const securityDeposit = 2500;
+  static const gstNote = 'GST included on rental';
+  static const partnerShare = 0.60;
+  static const partnerMonths = 42;
+  static const scootersPerLakh = 3;
+  /// Scaled from the prior ₹52.2 / scooter / day at ₹230 rent.
+  static const investorPerScooterDay = 57;
+
+  static String inr(num n) {
+    final s = n.round().abs().toString();
+    final buf = StringBuffer();
+    if (s.length <= 3) {
+      return '₹${n.round() < 0 ? '-' : ''}$s';
+    }
+    final last3 = s.substring(s.length - 3);
+    var rest = s.substring(0, s.length - 3);
+    final groups = <String>[];
+    while (rest.length > 2) {
+      groups.insert(0, rest.substring(rest.length - 2));
+      rest = rest.substring(0, rest.length - 2);
+    }
+    if (rest.isNotEmpty) groups.insert(0, rest);
+    buf.write(n.round() < 0 ? '-₹' : '₹');
+    buf.write(groups.join(','));
+    buf.write(',$last3');
+    return buf.toString();
+  }
+
+  static int investorMonthly(int lakhs) =>
+      investorPerScooterDay * scootersPerLakh * lakhs * 30;
+
+  static int investorTerm(int lakhs) => investorMonthly(lakhs) * partnerMonths;
+
+  static int scrapValue(int lakhs) => 18000 * lakhs;
+
+  static Map<String, dynamic> payload() => {
+        'daily': daily,
+        'weekly': weekly,
+        'monthly': monthly,
+        'rtoDaily': rtoDaily,
+        'rtoMonths': rtoMonths,
+        'securityDeposit': securityDeposit,
+        'gstInclusiveRental': true,
+        'currency': 'INR',
+      };
+
+  static int amountForDuration(String duration) {
+    switch (duration) {
+      case 'Weekly':
+        return weekly;
+      case 'Monthly':
+        return monthly;
+      case 'Rent to Own':
+      case 'Rent To Own':
+        return rtoDaily;
+      default:
+        return daily;
+    }
+  }
 }
 
 class EvuddyCity {

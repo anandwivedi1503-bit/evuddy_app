@@ -104,15 +104,10 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
                     child: Column(
                       children: [
                         const Spacer(flex: 2),
-                        const SizedBox(
-                          width: double.infinity,
-                          height: 128,
-                          child: FittedBox(
-                            fit: BoxFit.contain,
-                            child: EvuddyLogo(height: 160),
-                          ),
-                        ),
+                        const EvuddyMarkCircle(size: 176),
                         const SizedBox(height: 28),
+                        const EvuddyLogo(height: 28),
+                        const SizedBox(height: 16),
                         Text(
                           'Ride the city. Own the journey.',
                           textAlign: TextAlign.center,

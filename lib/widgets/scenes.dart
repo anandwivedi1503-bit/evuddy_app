@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../api/partner_pdf.dart';
 import '../invest_screen.dart';
 import '../open_link.dart';
 import '../theme/evuddy.dart';
@@ -117,46 +118,55 @@ class OfferAd {
     required this.title,
     required this.body,
     required this.cta,
+    required this.asset,
     this.invest = false,
     this.path,
     this.book = false,
+    this.pdf = false,
   });
   final String kicker;
   final String title;
   final String body;
   final String cta;
+  final String asset;
   final bool invest;
   final String? path;
   final bool book;
+  final bool pdf;
 }
 
 const offerAds = [
   OfferAd(
     kicker: 'DEALER',
     title: 'Retail EVUDDY in your city',
-    body: 'Showroom or pickup hub. ₹5 lakh minimum. KYC and yard OTP stay on our platform.',
+    body: 'Showroom or pickup hub. ₹5 lakh minimum.',
     cta: 'Become a dealer',
+    asset: Evuddy.sceneDealerAsset,
     path: '/partners/dealer',
   ),
   OfferAd(
     kicker: 'FLEET PARTNER',
     title: 'Earn 60% of net profit',
-    body: '₹1L · ₹5L · ₹10L for 42 months. Same math as the official poster.',
-    cta: 'See investment plans',
+    body: '₹1L · ₹5L · ₹10L · 42 months. Download the brief.',
+    cta: 'Open plans',
+    asset: Evuddy.investPosterAsset,
     invest: true,
+    pdf: true,
   ),
   OfferAd(
     kicker: 'DISTRIBUTOR',
     title: 'Supply dealers from ₹10 lakh',
-    body: 'Territory warehouse, dealer onboarding and brand standards.',
+    body: 'Territory warehouse and brand standards.',
     cta: 'Apply as distributor',
+    asset: Evuddy.sceneDistributorAsset,
     path: '/partners',
   ),
   OfferAd(
     kicker: 'RIDERS',
-    title: 'Hub OTP after first rupee',
-    body: 'Razorpay on Book EV. GPS on every scooter. Lucknow & Kanpur.',
+    title: 'GST-in fares. Hub OTP after pay.',
+    body: 'Daily ₹250 · GPS on every scooter.',
     cta: 'Book an EV',
+    asset: Evuddy.riderCityAsset,
     book: true,
   ),
 ];
@@ -211,65 +221,114 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
     return Column(
       children: [
         SizedBox(
-          height: 168,
+          height: 214,
           child: PageView.builder(
             controller: page,
             onPageChanged: (i) => setState(() => index = i),
             itemCount: offerAds.length,
             itemBuilder: (context, i) {
               final ad = offerAds[i];
-              return GestureDetector(
-                onTap: () => _open(ad),
-                child: Container(
-                  margin: const EdgeInsets.only(right: 2),
-                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-                  decoration: BoxDecoration(
-                    color: Evuddy.greenDeep,
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              return Container(
+                margin: const EdgeInsets.only(right: 2),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 8)),
+                  ],
+                ),
+                child: GestureDetector(
+                  onTap: () => _open(ad),
+                  child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: Stack(
+                    fit: StackFit.expand,
                     children: [
-                      Text(
-                        ad.kicker,
-                        style: GoogleFonts.plusJakartaSans(
-                          color: const Color(0xFF86EFAC),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 11,
-                          letterSpacing: 1.2,
+                      Image.asset(
+                        ad.asset,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                        filterQuality: FilterQuality.high,
+                      ),
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0x66050A08), Color(0xF2050A08)],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        ad.title,
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 20,
-                          height: 1.15,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        ad.body,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white70,
-                          fontSize: 13,
-                          height: 1.35,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '${ad.cta}  →',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              ad.kicker,
+                              style: GoogleFonts.plusJakartaSans(
+                                color: const Color(0xFF86EFAC),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 11,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              ad.title,
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 20,
+                                height: 1.15,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              ad.body,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Colors.white70,
+                                fontSize: 13,
+                                height: 1.35,
+                              ),
+                            ),
+                            const Spacer(),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => _open(ad),
+                                    child: Text(
+                                      '${ad.cta}  →',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                if (ad.pdf)
+                                  TextButton.icon(
+                                    onPressed: () => shareFleetPartnerPdf(),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      backgroundColor: const Color(0x33FFFFFF),
+                                    ),
+                                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                                    label: Text(
+                                      'PDF',
+                                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
+                ),
                 ),
               );
             },
@@ -305,7 +364,7 @@ class RideSteps extends StatelessWidget {
     const steps = [
       (Icons.sms_outlined, 'OTP autofill', 'SMS fills the 6 digits'),
       (Icons.mic_none_rounded, 'Voice KYC', 'Speak name, mobile, email'),
-      (Icons.payments_outlined, 'Razorpay', 'Pay ₹1+ for yard OTP'),
+      (Icons.payments_outlined, 'Razorpay', 'Deposit hold or rent'),
     ];
     return Row(
       children: [

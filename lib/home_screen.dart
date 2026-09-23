@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text('CLEAR FARES', style: Theme.of(context).textTheme.labelSmall),
                     const SizedBox(height: 4),
                     Text(
-                      '${CatalogRates.gstNote} · tap a card to start booking',
+                      '${CatalogRates.gstNote} · Daily ${CatalogRates.inr(CatalogRates.daily)} · tap a card',
                       style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
                     ),
                     const SizedBox(height: 12),

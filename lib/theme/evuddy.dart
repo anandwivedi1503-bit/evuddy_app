@@ -19,11 +19,12 @@ class Evuddy {
   static const danger = Color(0xFFB42318);
 
   /// Bump this whenever Home must visibly change on the emulator after a pull.
-  static const buildStamp = '23 Sep 2026 · OTP v5';
+  static const buildStamp = '23 Sep 2026 · Catalog v6';
   static const logoGreen = Color(0xFF22C55E);
   static const logoPink = Color(0xFFEC4899);
 
   static const wordmarkAsset = 'assets/images/evuddy_wordmark.png';
+  static const logoMarkAsset = 'assets/images/evuddy_logo.png';
   static const riderCityAsset = 'assets/images/rider_city.png';
   static const riderEveningAsset = 'assets/images/rider_evening.png';
   static const yellowScooterAsset = 'assets/images/scooter_yellow.png';
@@ -91,6 +92,12 @@ class Evuddy {
         surface: paper,
       ),
       textTheme: _text(ink),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: FadeUpwardsPageTransitionsBuilder(),
+        },
+      ),
     );
   }
 }
@@ -107,6 +114,45 @@ class EvuddyLogo extends StatelessWidget {
       height: height,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.high,
+    );
+  }
+}
+
+/// Rapido-style circular lockup for splash.
+class EvuddyMarkCircle extends StatelessWidget {
+  const EvuddyMarkCircle({super.key, this.size = 168});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33071B12),
+            blurRadius: 36,
+            offset: Offset(0, 16),
+          ),
+        ],
+        border: Border.all(color: const Color(0xFFD1FAE5), width: 6),
+      ),
+      child: ClipOval(
+        child: ColoredBox(
+          color: const Color(0xFFF0FDF4),
+          child: Padding(
+            padding: EdgeInsets.all(size * 0.16),
+            child: Image.asset(
+              Evuddy.logoMarkAsset,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

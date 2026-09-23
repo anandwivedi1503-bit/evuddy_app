@@ -17,7 +17,9 @@ class RideReadyScreen extends StatefulWidget {
 }
 
 class _RideReadyScreenState extends State<RideReadyScreen> {
-  String duration = registrationDraft.chosenDuration ?? 'Daily';
+  String duration = registrationDraft.chosenDuration == 'Hourly'
+      ? 'Daily'
+      : (registrationDraft.chosenDuration ?? 'Daily');
   List<EvuddyVehicle> vehicles = [];
   EvuddyHub? hub;
   EvuddyVehicle? selected;
@@ -29,6 +31,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   final amount = TextEditingController();
 
   bool get rental => registrationDraft.chosenPlan != 'rto';
+
+  bool get needsDepositHold {
+    if (rental) return false;
+    return registrationDraft.depositHeld + 0.009 < CatalogRates.securityDeposit;
+  }
 
   String get rentalMode =>
       rental ? duration : 'Rent To Own';
@@ -93,6 +100,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         loading = false;
         if (mine != null && mine.due > 0.009) {
           amount.text = mine.due.toStringAsFixed(0);
+        } else if (!rental && amount.text.isEmpty) {
+          amount.text = '${CatalogRates.securityDeposit}';
         }
       });
     } catch (e) {
@@ -166,6 +175,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         hub: h,
         city: d.chosenCity ?? h.city,
         rentalMode: rentalMode,
+        duration: rental ? duration : 'Rent To Own',
         referenceBy: d.comingThrough,
       );
       registrationDraft
@@ -176,10 +186,14 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         booking = created;
         busy = false;
         note = created.message.isEmpty
-            ? 'Scooter reserved. Pay any amount from ₹1 to get pickup OTP.'
+            ? (rental
+                ? 'Scooter reserved. Pay from ₹1 to get pickup OTP.'
+                : 'Scooter reserved. Pay ${CatalogRates.inr(CatalogRates.securityDeposit)} security deposit — hold only, not a recharge.')
             : created.message;
         if (created.due > 0.009) {
           amount.text = created.due.toStringAsFixed(0);
+        } else if (!rental) {
+          amount.text = '${CatalogRates.securityDeposit}';
         }
       });
     } catch (e) {
@@ -200,8 +214,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     }
     final maxDue = b.due;
     final pay = double.tryParse(amount.text.trim()) ?? 0;
-    if (pay < 1 || (maxDue > 0.009 && pay > maxDue + 0.009)) {
-      setState(() => error = 'Enter a payment between ₹1 and ₹${maxDue.toStringAsFixed(0)}.');
+    final depositOnly = !rental && maxDue < 0.01;
+    if (pay < 1 || (!depositOnly && maxDue > 0.009 && pay > maxDue + 0.009)) {
+      setState(() => error = depositOnly
+          ? 'Enter the ${CatalogRates.inr(CatalogRates.securityDeposit)} hold (or the amount the yard billed).'
+          : 'Enter a payment between ₹1 and ₹${maxDue.toStringAsFixed(0)}.');
       return;
     }
     setState(() {
@@ -238,6 +255,15 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         signature: result['signature'],
       );
       registrationDraft.activeBooking = verified;
+      if (!rental && pay >= 1) {
+        final held = (registrationDraft.depositHeld + pay)
+            .clamp(0, CatalogRates.securityDeposit.toDouble())
+            .toDouble();
+        registrationDraft
+          ..depositHeld = held
+          ..depositStatus = 'held'
+          ..depositBookingId = verified.bookingId.isEmpty ? b.bookingId : verified.bookingId;
+      }
       if (verified.hasPickupOtp) {
         try {
           await EvuddyApi.notifyPickupOtp(
@@ -276,7 +302,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     try {
       final msg = await EvuddyApi.rideAction(idToken: token, start: start);
       final mine = await EvuddyApi.myBooking(token);
-      if (mine != null) registrationDraft.activeBooking = mine;
+      if (!start &&
+          registrationDraft.depositHeld > 0 &&
+          registrationDraft.depositStatus == 'held') {
+        registrationDraft.depositStatus = 'refund_pending';
+      }
       if (!mounted) return;
       setState(() {
         booking = mine ?? booking;
@@ -300,10 +330,10 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       kicker: rental ? 'Flexible rental' : 'Rent to Own',
       title: b != null && b.bookingId.isNotEmpty
           ? 'Booking ${b.bookingId}'
-          : (rental ? 'Choose a duration' : '18-month ownership'),
+          : (rental ? 'Choose a duration' : '${CatalogRates.rtoMonths}-month ownership'),
       subtitle: rental
-          ? 'Same catalog and Razorpay as evuddy.com. First ₹1 issues pickup OTP.'
-          : '₹${CatalogRates.rtoDaily}/day · ${CatalogRates.rtoMonths} months · hub OTP after pay.',
+          ? 'GST included. First ₹1 issues pickup OTP. No recharge wallet.'
+          : '${CatalogRates.inr(CatalogRates.rtoDaily)}/day · ${CatalogRates.rtoMonths} months · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold, refunded when the scooter is back.',
       error: error,
       footer: _footer(b),
       children: [
@@ -334,7 +364,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         const SizedBox(height: 16),
         if (rental && b == null)
           ChoicePills(
-            options: const ['Hourly', 'Daily', 'Weekly', 'Monthly'],
+            options: const ['Daily', 'Weekly', 'Monthly'],
             value: duration,
             onChanged: (v) => setState(() => duration = v),
           ),
@@ -440,14 +470,16 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
               ),
             ),
           ],
-          if (b.due > 0.009) ...[
+          if (b.due > 0.009 || needsDepositHold) ...[
             const SizedBox(height: 16),
             TextField(
               controller: amount,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
               decoration: InputDecoration(
-                labelText: 'Pay amount (₹1 to remaining)',
+                labelText: needsDepositHold && b.due < 0.01
+                    ? 'Security deposit hold (₹)'
+                    : 'Pay amount (₹1 to remaining)',
                 filled: true,
                 fillColor: Evuddy.paper,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
@@ -489,9 +521,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       }
       return EvuddyButton(label: 'Reserve scooter', onPressed: _reserve);
     }
-    if (b.due > 0.009) {
+    if (b.due > 0.009 || needsDepositHold) {
       return EvuddyButton(
-        label: 'Pay with Razorpay',
+        label: needsDepositHold && b.due < 0.01
+            ? 'Hold deposit on Razorpay'
+            : 'Pay with Razorpay',
         onPressed: _pay,
       );
     }

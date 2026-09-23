@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'api/evuddy_api.dart';
+import 'deposit_wallet_screen.dart';
 import 'invest_screen.dart';
 import 'open_link.dart';
 import 'state/registration_draft.dart';
@@ -36,7 +38,10 @@ class AccountScreen extends StatelessWidget {
             ..approvalStatus = ''
             ..chosenPlan = null
             ..riderId = null
-            ..activeBooking = null;
+            ..activeBooking = null
+            ..depositHeld = 0
+            ..depositStatus = 'none'
+            ..depositBookingId = null;
           onLoggedOut?.call();
         },
       ),
@@ -96,6 +101,36 @@ class AccountScreen extends StatelessWidget {
           const SizedBox(height: 14),
         ],
         const TrustStrip(),
+        const SizedBox(height: 14),
+        GestureDetector(
+          onTap: () => Navigator.push(context, evuddyRoute(const DepositWalletScreen())),
+          child: SurfaceCard(
+            child: Row(
+              children: [
+                const Icon(Icons.account_balance_wallet_outlined, color: Evuddy.greenDeep),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('SECURITY DEPOSIT', style: Theme.of(context).textTheme.labelSmall),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${CatalogRates.inr(d.depositHeld)} · ${d.depositLabel}',
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+                      ),
+                      Text(
+                        'Hold only · no recharge',
+                        style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: Evuddy.muted),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 14),
         GestureDetector(
           onTap: () => Navigator.push(context, evuddyRoute(const InvestScreen())),

@@ -95,7 +95,7 @@ class _BookEvScreenState extends State<BookEvScreen> {
       kicker: 'Book EV',
       title: 'How do you want to ride?',
       subtitle:
-          'Approved riders land here after OTP — same as the website. Pick rental or Rent to Own, then your hub.',
+          'Approved riders land here after OTP. Pick rental or Rent to Own. Wallet is deposit-hold only — never a recharge.',
       error: error,
       footer: EvuddyButton(
         label: plan == null ? 'Choose a plan above' : 'Continue',
@@ -123,12 +123,11 @@ class _BookEvScreenState extends State<BookEvScreen> {
           frozen: plan == 'rto',
           tag: 'FLEXIBLE RENTAL',
           title: 'Normal booking',
-          body: 'Hourly, daily, weekly or monthly. Return the scooter when the plan ends.',
-          rates: const [
-            'Hourly ₹${CatalogRates.hourly}',
-            'Daily ₹${CatalogRates.daily}',
-            'Weekly ₹${CatalogRates.weekly}',
-            'Monthly ₹${CatalogRates.monthly}',
+          body: 'Daily, weekly or monthly. GST included. Return the scooter when the plan ends.',
+          rates: [
+            'Daily ${CatalogRates.inr(CatalogRates.daily)} GST in',
+            'Weekly ${CatalogRates.inr(CatalogRates.weekly)}',
+            'Monthly ${CatalogRates.inr(CatalogRates.monthly)}',
           ],
           onTap: () => _pickPlan('rental'),
           selected: plan == 'rental',
@@ -138,8 +137,9 @@ class _BookEvScreenState extends State<BookEvScreen> {
           frozen: plan == 'rental',
           tag: 'OWN AFTER ${CatalogRates.rtoMonths} MONTHS',
           title: 'Rent to Own',
-          body: '₹${CatalogRates.rtoDaily} / day · no security deposit. Ownership after a successful term.',
-          rates: const ['Daily receipt', 'Hub OTP pickup'],
+          body:
+              '${CatalogRates.inr(CatalogRates.rtoDaily)} / day · ${CatalogRates.inr(CatalogRates.securityDeposit)} security deposit held · ownership after ${CatalogRates.rtoMonths} months.',
+          rates: const ['Deposit hold only', 'Refund on return', 'Hub OTP pickup'],
           onTap: () => _pickPlan('rto'),
           selected: plan == 'rto',
         ),
