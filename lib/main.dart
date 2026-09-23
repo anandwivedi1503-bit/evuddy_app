@@ -15,9 +15,9 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Evuddy.splash,
-      systemNavigationBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
   runApp(const EvuddyApp());
@@ -37,7 +37,7 @@ class EvuddyApp extends StatelessWidget {
   }
 }
 
-/// Full-bleed brand colour + centred wordmark, same structure as Rapido.
+/// Native launch is white; Flutter splash matches — centred wordmark only.
 class EvuddySplashScreen extends StatefulWidget {
   const EvuddySplashScreen({super.key});
 
@@ -49,22 +49,18 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c;
   late final Animation<double> _fade;
-  late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
     _c = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 500),
     );
     _fade = CurvedAnimation(parent: _c, curve: Curves.easeOut);
-    _scale = Tween<double>(begin: 0.92, end: 1).animate(
-      CurvedAnimation(parent: _c, curve: Curves.easeOutCubic),
-    );
     _c.forward();
     EvuddyApi.health();
-    Timer(const Duration(milliseconds: 1800), _go);
+    Timer(const Duration(milliseconds: 1600), _go);
   }
 
   void _go() {
@@ -83,31 +79,18 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Evuddy.splash,
-        systemNavigationBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: Evuddy.splash,
+        backgroundColor: Colors.white,
         body: FadeTransition(
           opacity: _fade,
-          child: ScaleTransition(
-            scale: _scale,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 36),
-                child: Center(
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 28),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    child: const EvuddyLogo(height: 48),
-                  ),
-                ),
-              ),
+          child: const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 48),
+              child: EvuddyLogo(height: 44),
             ),
           ),
         ),

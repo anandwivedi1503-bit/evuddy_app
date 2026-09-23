@@ -13,15 +13,10 @@
       overflow: auto;
     }
     #recaptcha {
-      min-height: 520px;
-      padding: 12px 8px 32px;
+      min-height: 1px;
     }
-    /* Image challenge (cars, buses, traffic lights) must stay inside this WebView. */
-    body > div,
-    iframe,
-    .grecaptcha-overlay,
-    div[style*="z-index"] {
-      max-width: none !important;
+    iframe, .grecaptcha-badge {
+      z-index: 2147483646 !important;
     }
   </style>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -30,6 +25,9 @@
 <body>
   <div id="recaptcha"></div>
   <script>
+    try {
+      window.chrome = window.chrome || { runtime: {} };
+    } catch (e) {}
     firebase.initializeApp({
       apiKey: "AIzaSyBlwZI_QVvI3mnEs1sgtIS_YQvpp5rU8Gk",
       authDomain: "kebuone-otp.firebaseapp.com",
@@ -61,7 +59,7 @@
     }
     function sendOtp(phone) {
       if (!verifier) {
-        post({ type: "error", message: "Security check is still loading. Wait for “I’m not a robot”." });
+        post({ type: "error", message: "Security check is still loading. Wait a moment and retry." });
         return;
       }
       listenSms();
@@ -91,7 +89,7 @@
     function mount() {
       try {
         verifier = new firebase.auth.RecaptchaVerifier("recaptcha", {
-          size: "normal",
+          size: "invisible",
           callback: function () { post({ type: "captcha" }); },
           "expired-callback": function () { post({ type: "expired" }); }
         });
