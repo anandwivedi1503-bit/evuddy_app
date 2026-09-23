@@ -39,7 +39,7 @@ class _RiderShellState extends State<RiderShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Evuddy.wash,
+      backgroundColor: Colors.white,
       body: IndexedStack(
         index: index,
         children: [

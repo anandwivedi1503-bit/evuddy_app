@@ -5,11 +5,11 @@ class Evuddy {
   static const black = Color(0xFF1C1917);
   static const ink = Color(0xFF1C1917);
   static const muted = Color(0xFF78716C);
-  static const wash = Color(0xFFF7F4EE);
+  static const wash = Color(0xFFF7F8F5);
   static const paper = Color(0xFFFFFFFF);
-  static const line = Color(0xFFE7E5E4);
+  static const line = Color(0xFFE8EDE8);
   static const green = Color(0xFF16A34A);
-  static const greenDeep = Color(0xFF047857);
+  static const greenDeep = Color(0xFF14532D);
   static const magenta = Color(0xFFE11D8F);
   static const gold = magenta;
   static const greenSoft = Color(0xFFECFDF3);
@@ -22,9 +22,9 @@ class Evuddy {
   static const logoPink = Color(0xFFEC4899);
 
   static const wordmarkAsset = 'assets/images/evuddy_wordmark.png';
-  static const riderCityAsset = 'assets/images/scene_city.jpg';
-  static const riderEveningAsset = 'assets/images/scene_evening.jpg';
-  static const yellowScooterAsset = 'assets/images/scene_range.jpg';
+  static const riderCityAsset = 'assets/images/rider_city.png';
+  static const riderEveningAsset = 'assets/images/rider_evening.png';
+  static const yellowScooterAsset = 'assets/images/scooter_yellow.png';
   static const hubAsset = 'assets/images/scene_hub.jpg';
   static const scooterAsset = yellowScooterAsset;
   static const sceneHomeAsset = 'assets/images/scene_home.jpg';

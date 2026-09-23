@@ -8,7 +8,7 @@ Premium cream canvas, official lockup, **peeking photo carousel** with **Book EV
 
 ## What you get
 
-- **Home** — swipeable fleet photos, Book EV overlay, offers carousel, photo fares, live hubs
+- **Home** — “Where are you riding today?”, rider photo with Book EV on the picture, dealer ads, white fare cards
 - **Invest** — official poster + ₹1L / ₹5L / ₹10L math, apply on evuddy.com
 - **Book EV** — confirm mobile → OTP autofill → rental vs Rent to Own → reserve live scooter → Razorpay → yard pickup OTP
 - **OTP** — Firebase Recaptcha + Web OTP / SMS autofill after the code is sent
