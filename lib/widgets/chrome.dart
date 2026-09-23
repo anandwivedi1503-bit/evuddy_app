@@ -19,6 +19,7 @@ class AuthScreen extends StatelessWidget {
     this.error,
     this.titleStyle,
     this.expanded,
+    this.expandedInset,
   });
 
   final String title;
@@ -33,6 +34,7 @@ class AuthScreen extends StatelessWidget {
   final TextStyle? titleStyle;
   /// Fills leftover height (used so Recaptcha image grids are not clipped).
   final Widget? expanded;
+  final EdgeInsetsGeometry? expandedInset;
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +123,7 @@ class AuthScreen extends StatelessWidget {
                               ),
                               Expanded(
                                 child: Padding(
-                                  padding:
+                                  padding: expandedInset ??
                                       const EdgeInsets.fromLTRB(16, 0, 16, 8),
                                   child: expanded!,
                                 ),

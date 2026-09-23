@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
@@ -164,137 +163,71 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
   @override
   Widget build(BuildContext context) {
     final phone = registrationDraft.phoneDisplay;
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Colors.white,
-        systemNavigationBarIconBrightness: Brightness.dark,
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
-                child: Row(
+    return AuthScreen(
+      kicker: 'OTP',
+      title: sentOk ? 'OTP Verification' : 'Security check',
+      subtitle: sentOk
+          ? 'SMS to ${phone.isEmpty ? "your number" : phone}. We fill the code from the message.'
+          : 'If Google shows a check or pictures, complete them — then we send SMS.',
+      error: error,
+      expanded: WebOtpPanel(controller: webOtp),
+      expandedInset: EdgeInsets.zero,
+      footer: sentOk
+          ? Column(
+              children: [
+                OtpPinField(controller: pin, autofocus: true, onCompleted: (_) => _verify()),
+                const SizedBox(height: 12),
+                Row(
                   children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                    ),
                     Expanded(
-                      child: Text(
-                        sentOk ? 'Enter OTP' : 'Verify number',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: Evuddy.ink,
-                            ),
+                      child: EvuddyGhostButton(
+                        label: seconds == 0 ? 'Resend' : '00:${seconds.toString().padLeft(2, '0')}',
+                        onPressed: seconds == 0 && !sending ? _send : null,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Text(
-                        'Change',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Evuddy.green,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: EvuddyButton(
+                        label: 'Verify OTP',
+                        busy: verifying || sending,
+                        onPressed: verifying || sending ? null : _verify,
                       ),
                     ),
                   ],
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: Text(
-                  sentOk
-                      ? 'SMS sent to ${phone.isEmpty ? "your number" : phone}.'
-                      : 'Complete Google’s check if it appears below. We send SMS after it passes.',
+              ],
+            )
+          : Column(
+              children: [
+                Text(
+                  sending
+                      ? 'If pictures appear, tap them. SMS sends after the check.'
+                      : 'Loading the security check…',
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
-                    color: Evuddy.muted,
+                    color: Evuddy.greenDeep,
+                    fontWeight: FontWeight.w600,
                     fontSize: 13,
-                    height: 1.4,
                   ),
                 ),
-              ),
-              if (error != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                  child: Text(
-                    error!,
-                    style: GoogleFonts.plusJakartaSans(
-                      color: Evuddy.danger,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                const SizedBox(height: 10),
+                if (!sending && error != null)
+                  EvuddyButton(label: 'Retry security check', onPressed: _send)
+                else
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Text(
+                      'Wrong number? Change',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Evuddy.green,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-              Expanded(
-                child: WebOtpPanel(controller: webOtp),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                child: sentOk
-                    ? Column(
-                        children: [
-                          OtpPinField(
-                            controller: pin,
-                            autofocus: true,
-                            onCompleted: (_) => _verify(),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: EvuddyGhostButton(
-                                  label: seconds == 0
-                                      ? 'Resend'
-                                      : '00:${seconds.toString().padLeft(2, '0')}',
-                                  onPressed: seconds == 0 && !sending ? _send : null,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: EvuddyButton(
-                                  label: 'Verify OTP',
-                                  busy: verifying || sending,
-                                  onPressed: verifying || sending ? null : _verify,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      )
-                    : Column(
-                        children: [
-                          Text(
-                            sending
-                                ? 'If pictures appear, tap them. SMS sends after the check.'
-                                : 'Loading security check…',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.plusJakartaSans(
-                              color: Evuddy.muted,
-                              fontSize: 12,
-                            ),
-                          ),
-                          if (!sending && error != null) ...[
-                            const SizedBox(height: 10),
-                            EvuddyButton(
-                              label: 'Retry security check',
-                              onPressed: _send,
-                            ),
-                          ],
-                        ],
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
+              ],
+            ),
+      children: const [],
     );
   }
 }

@@ -37,7 +37,8 @@ class EvuddyApp extends StatelessWidget {
   }
 }
 
-/// Native launch is white; Flutter splash matches — centred wordmark only.
+/// Rapido structure: full-bleed field, centred wordmark, fade+scale.
+/// Field is the app wash (not forest green, not a white card).
 class EvuddySplashScreen extends StatefulWidget {
   const EvuddySplashScreen({super.key});
 
@@ -49,18 +50,22 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c;
   late final Animation<double> _fade;
+  late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
     _c = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 700),
     );
     _fade = CurvedAnimation(parent: _c, curve: Curves.easeOut);
+    _scale = Tween<double>(begin: 0.92, end: 1).animate(
+      CurvedAnimation(parent: _c, curve: Curves.easeOutCubic),
+    );
     _c.forward();
     EvuddyApi.health();
-    Timer(const Duration(milliseconds: 1600), _go);
+    Timer(const Duration(milliseconds: 1800), _go);
   }
 
   void _go() {
@@ -80,17 +85,36 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Colors.white,
+        systemNavigationBarColor: Evuddy.wash,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Evuddy.wash,
         body: FadeTransition(
           opacity: _fade,
-          child: const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 48),
-              child: EvuddyLogo(height: 44),
+          child: ScaleTransition(
+            scale: _scale,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const EvuddyLogo(height: 64),
+                    const SizedBox(height: 22),
+                    Container(
+                      width: 36,
+                      height: 3,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(99),
+                        gradient: const LinearGradient(
+                          colors: [Evuddy.logoGreen, Evuddy.logoPink],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

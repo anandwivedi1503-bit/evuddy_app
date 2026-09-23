@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
               pinned: true,
               backgroundColor: Colors.white,
               elevation: 0,
-              title: const EvuddyLogo(height: 36),
+              title: const EvuddyLogo(height: 40),
               centerTitle: true,
               automaticallyImplyLeading: false,
               actions: [
@@ -114,12 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     OfferAdCarousel(onBook: () => _book()),
                     const SizedBox(height: 22),
                     Text('PLANS', style: Theme.of(context).textTheme.labelSmall),
-                    const SizedBox(height: 4),
-                    Text(
-                      'GST included · same yellow EVUDDY scooter on every plan',
-                      style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13, height: 1.35),
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     FareGrid(onPick: (fare) => _book(fare: fare)),
                     const SizedBox(height: 18),
                     QuickActions(
@@ -137,12 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const TrustStrip(),
                     const SizedBox(height: 22),
                     Text('NEARBY HUBS', style: Theme.of(context).textTheme.labelSmall),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Live yards on evuddy.com · tap to book',
-                      style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     if (hubs.isEmpty)
                       SurfaceCard(
                         child: Text(
