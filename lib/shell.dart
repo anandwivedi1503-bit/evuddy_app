@@ -43,7 +43,7 @@ class _RiderShellState extends State<RiderShell> {
       body: IndexedStack(
         index: index,
         children: [
-          HomeScreen(key: ValueKey(Evuddy.buildStamp)),
+          const HomeScreen(),
           registrationDraft.phoneVerified
               ? const BookEvScreen(showBack: false)
               : const ConfirmMobileScreen(),

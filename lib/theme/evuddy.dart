@@ -18,8 +18,7 @@ class Evuddy {
   static const night = Color(0xFF050A08);
   static const danger = Color(0xFFB42318);
 
-  /// Bump this whenever Home must visibly change on the emulator after a pull.
-  static const buildStamp = '23 Sep 2026 · Home v7';
+  static const splashYellow = Color(0xFFFFCC00);
   static const logoGreen = Color(0xFF22C55E);
   static const logoPink = Color(0xFFEC4899);
 
@@ -114,46 +113,6 @@ class EvuddyLogo extends StatelessWidget {
       height: height,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.high,
-    );
-  }
-}
-
-/// Circular product mark for splash (Rapido-style). Wordmark stays outside.
-class EvuddyMarkCircle extends StatelessWidget {
-  const EvuddyMarkCircle({super.key, this.size = 168});
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFECFDF3), Color(0xFFFFFFFF)],
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33071B12),
-            blurRadius: 36,
-            offset: Offset(0, 16),
-          ),
-        ],
-        border: Border.all(color: const Color(0xFFBBF7D0), width: 5),
-      ),
-      child: ClipOval(
-        child: Padding(
-          padding: EdgeInsets.all(size * 0.18),
-          child: Image.asset(
-            Evuddy.yellowScooterAsset,
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.high,
-          ),
-        ),
-      ),
     );
   }
 }
