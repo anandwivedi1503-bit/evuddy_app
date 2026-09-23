@@ -95,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
       kicker: 'Personal  ·  Step 1 of 4',
       title: 'Personal Information',
       subtitle:
-          'Same fields as evuddy.com/register. Tap the mic to speak the form. We’ll text a Firebase OTP.',
+          'Tap the mic to speak. We’ll send an OTP to this number.',
       step: 1,
       error: error,
       footer: EvuddyButton(

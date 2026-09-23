@@ -22,7 +22,7 @@ GitHub merge only updates the remote. **sdk gphone16k still runs the last APK** 
 **Fix (Windows):** press `q` in the old Flutter terminal, then double-click `tool/update_emulator.bat`  
 (or VS Code → Terminal → Run Task → **EVUDDY: pull main and run emulator**).
 
-That pulls `main`, **uninstalls the old app**, and installs this build. Splash is Rapido-style: yellow screen, EVUDDY wordmark only.
+That pulls `main`, **uninstalls the old app**, and installs this build. Splash is forest green with the EVUDDY wordmark on white.
 
 ```bash
 # press q in the running flutter terminal first

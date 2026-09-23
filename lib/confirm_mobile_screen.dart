@@ -50,7 +50,7 @@ class _ConfirmMobileScreenState extends State<ConfirmMobileScreen> {
       kicker: 'Book EV',
       title: 'Confirm your\nmobile number',
       subtitle:
-          'Same as the website. If this number is already approved, you go straight to rental vs Rent to Own.',
+          'If this number is already approved, you go straight to booking.',
       error: error,
       footer: EvuddyButton(label: 'Send OTP', onPressed: _send),
       children: [

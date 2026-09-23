@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../theme/evuddy.dart';
@@ -8,11 +9,67 @@ enum VoiceKind { name, phone, email, aadhaar, license, free }
 class VoiceFill {
   static final SpeechToText _speech = SpeechToText();
   static bool _ready = false;
+  static String? localeId;
 
-  static Future<bool> ensure() async {
-    if (_ready) return true;
-    _ready = await _speech.initialize();
-    return _ready;
+  static Future<bool> ensure({void Function(String message)? onError}) async {
+    final mic = await Permission.microphone.request();
+    if (!mic.isGranted) {
+      onError?.call('Allow microphone in system settings to speak the form.');
+      return false;
+    }
+    if (_ready && _speech.isAvailable) return true;
+    _ready = await _speech.initialize(
+      onError: (e) => onError?.call(_friendly(e.errorMsg)),
+      onStatus: (_) {},
+    );
+    if (!_ready) {
+      onError?.call('Speech is not set up on this phone. Install Google app / Speech Services.');
+      return false;
+    }
+    localeId = await _pickLocale();
+    return true;
+  }
+
+  static Future<String?> _pickLocale() async {
+    try {
+      final locales = await _speech.locales();
+      if (locales.isEmpty) return null;
+      const prefer = ['en_IN', 'en-IN', 'hi_IN', 'en_US', 'en_GB', 'en'];
+      for (final want in prefer) {
+        final needle = want.toLowerCase().replaceAll('-', '_');
+        for (final l in locales) {
+          final id = l.localeId.toLowerCase().replaceAll('-', '_');
+          if (id == needle || id.startsWith('${needle}_') || id.startsWith(needle)) {
+            return l.localeId;
+          }
+        }
+      }
+      return locales.first.localeId;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _friendly(String code) {
+    switch (code) {
+      case 'error_permission':
+        return 'Microphone permission was denied.';
+      case 'error_language_not_supported':
+      case 'error_language_unavailable':
+        return 'This emulator has no speech language pack. Use a device or install Google Speech.';
+      case 'error_network':
+      case 'error_network_timeout':
+        return 'Speech needs a network connection.';
+      case 'error_no_match':
+        return 'Didn’t catch that. Tap the mic and speak again.';
+      case 'error_speech_timeout':
+        return 'No speech heard. Hold closer to the mic.';
+      case 'error_client':
+      case 'error_busy':
+        return 'Speech service is busy. Close Google Assistant and retry.';
+      default:
+        return 'Could not start the microphone ($code).';
+    }
   }
 
   static String extract(String spoken, VoiceKind kind) {
@@ -43,7 +100,6 @@ class VoiceFill {
     }
   }
 
-  /// Pulls name / mobile / email from one spoken sentence for the register form.
   static Map<String, String> parseRegister(String spoken) {
     final out = <String, String>{};
     final digits = spoken.replaceAll(RegExp(r'\D'), '');
@@ -88,38 +144,42 @@ class VoiceMicButton extends StatefulWidget {
 class _VoiceMicButtonState extends State<VoiceMicButton> {
   bool listening = false;
 
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
   Future<void> _tap() async {
-    final ok = await VoiceFill.ensure();
-    if (!ok) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Microphone is not available on this device.')),
-      );
-      return;
-    }
     if (listening) {
       await VoiceFill._speech.stop();
       setState(() => listening = false);
       return;
     }
+    final ok = await VoiceFill.ensure(onError: _toast);
+    if (!ok) return;
     setState(() => listening = true);
     try {
       await VoiceFill._speech.listen(
-        listenOptions: SpeechListenOptions(
-          localeId: 'en_IN',
-          listenFor: const Duration(seconds: 12),
-          pauseFor: const Duration(seconds: 3),
-        ),
         onResult: (r) {
-          if (!r.finalResult && r.recognizedWords.length < 3) return;
-          if (r.finalResult) {
-            widget.onResult(VoiceFill.extract(r.recognizedWords, widget.kind));
-            if (mounted) setState(() => listening = false);
+          final words = r.recognizedWords.trim();
+          if (words.length < 2) return;
+          if (r.finalResult || words.length >= 3) {
+            widget.onResult(VoiceFill.extract(words, widget.kind));
           }
+          if (r.finalResult && mounted) setState(() => listening = false);
         },
+        listenOptions: SpeechListenOptions(
+          localeId: VoiceFill.localeId,
+          listenFor: const Duration(seconds: 20),
+          pauseFor: const Duration(seconds: 4),
+          partialResults: true,
+          cancelOnError: true,
+          listenMode: ListenMode.dictation,
+        ),
       );
-    } catch (_) {
+    } catch (e) {
       if (mounted) setState(() => listening = false);
+      _toast(e.toString());
     }
   }
 
