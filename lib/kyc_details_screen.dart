@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'state/registration_draft.dart';
 import 'upload_documents_screen.dart';
 import 'widgets/chrome.dart';
+import 'widgets/voice_fill.dart';
 
 class KycDetailsScreen extends StatefulWidget {
   const KycDetailsScreen({super.key});
@@ -94,7 +95,7 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
       kicker: 'KYC  ·  Step 3 of 4',
       title: 'KYC details',
       subtitle:
-          'Same KYC as the website: Aadhaar required. Licence and references are optional.',
+          'Same KYC as the website: Aadhaar required. Tap the mic to speak numbers.',
       step: 3,
       error: error,
       footer: EvuddyButton(label: 'Continue', onPressed: _continue),
@@ -106,6 +107,7 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
           keyboardType: TextInputType.number,
           maxLength: 12,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          voiceKind: VoiceKind.aadhaar,
         ),
         const SizedBox(height: 16),
         EvuddyField(
@@ -113,6 +115,7 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
           hint: 'Optional · UP1420110012345',
           controller: license,
           textCapitalization: TextCapitalization.characters,
+          voiceKind: VoiceKind.license,
         ),
         const SizedBox(height: 16),
         EvuddyField(label: 'INSTAGRAM', hint: 'Optional', controller: ig),
@@ -121,7 +124,7 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
         const SizedBox(height: 24),
         const WelcomeRule(caption: 'References'),
         const SizedBox(height: 16),
-        EvuddyField(label: 'REFERENCE 1 NAME', hint: 'Optional', controller: r1n),
+        EvuddyField(label: 'REFERENCE 1 NAME', hint: 'Optional', controller: r1n, voiceKind: VoiceKind.name),
         const SizedBox(height: 16),
         EvuddyField(
           label: 'REFERENCE 1 MOBILE',
@@ -131,9 +134,10 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
           maxLength: 10,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           prefix: const PhonePrefix(),
+          voiceKind: VoiceKind.phone,
         ),
         const SizedBox(height: 16),
-        EvuddyField(label: 'REFERENCE 2 NAME', hint: 'Optional', controller: r2n),
+        EvuddyField(label: 'REFERENCE 2 NAME', hint: 'Optional', controller: r2n, voiceKind: VoiceKind.name),
         const SizedBox(height: 16),
         EvuddyField(
           label: 'REFERENCE 2 MOBILE',
@@ -143,6 +147,7 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
           maxLength: 10,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           prefix: const PhonePrefix(),
+          voiceKind: VoiceKind.phone,
         ),
       ],
     );

@@ -56,7 +56,9 @@ class _RiderShellState extends State<RiderShell> {
         backgroundColor: Colors.white,
         elevation: 8,
         shadowColor: const Color(0x14000000),
+        surfaceTintColor: Colors.white,
         indicatorColor: Evuddy.greenSoft,
+        height: 72,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const [
           NavigationDestination(

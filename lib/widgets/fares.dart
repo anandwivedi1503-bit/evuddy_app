@@ -15,6 +15,7 @@ class FareOffer {
     required this.icon,
     this.plan = 'rental',
     this.featured = false,
+    this.asset,
   });
 
   final String id;
@@ -25,6 +26,7 @@ class FareOffer {
   final IconData icon;
   final String plan;
   final bool featured;
+  final String? asset;
 }
 
 const fareOffers = <FareOffer>[
@@ -32,43 +34,48 @@ const fareOffers = <FareOffer>[
     id: 'Hourly',
     label: 'Hourly',
     price: '₹${CatalogRates.hourly}',
-    unit: '/ hour',
-    hint: '+ 5% GST',
+    unit: '/ hr',
+    hint: 'Quick hops · +GST 5%',
     icon: Icons.schedule_rounded,
+    asset: Evuddy.sceneHomeAsset,
   ),
   FareOffer(
     id: 'Daily',
     label: 'Daily',
     price: '₹${CatalogRates.daily}',
     unit: '/ day',
-    hint: 'Most booked · + 5% GST',
+    hint: 'Most booked in Lucknow',
     icon: Icons.wb_sunny_outlined,
     featured: true,
+    asset: Evuddy.riderCityAsset,
   ),
   FareOffer(
     id: 'Weekly',
     label: 'Weekly',
     price: '₹${CatalogRates.weekly}',
-    unit: '/ week',
-    hint: '+ 5% GST',
+    unit: '/ wk',
+    hint: '7 days · GPS fleet',
     icon: Icons.date_range_rounded,
+    asset: Evuddy.riderEveningAsset,
   ),
   FareOffer(
     id: 'Monthly',
     label: 'Monthly',
     price: '₹${CatalogRates.monthly}',
-    unit: '/ month',
-    hint: '+ 5% GST',
+    unit: '/ mo',
+    hint: 'Work commute pack',
     icon: Icons.calendar_month_rounded,
+    asset: Evuddy.hubAsset,
   ),
   FareOffer(
     id: 'Rent to Own',
     label: 'Rent to Own',
     price: '₹${CatalogRates.rtoDaily}',
     unit: '/ day',
-    hint: '${CatalogRates.rtoMonths} months · no deposit',
+    hint: '${CatalogRates.rtoMonths} months · no deposit · own it',
     icon: Icons.workspace_premium_outlined,
     plan: 'rto',
+    asset: Evuddy.yellowScooterAsset,
   ),
 ];
 
@@ -80,22 +87,19 @@ class FareGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(child: FareCard(offer: fareOffers[0], onTap: onPick)),
-            const SizedBox(width: 10),
-            Expanded(child: FareCard(offer: fareOffers[1], onTap: onPick)),
-          ],
+        SizedBox(
+          height: 196,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: 4,
+            separatorBuilder: (_, i) => const SizedBox(width: 10),
+            itemBuilder: (context, i) => SizedBox(
+              width: 168,
+              child: FareCard(offer: fareOffers[i], onTap: onPick),
+            ),
+          ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(child: FareCard(offer: fareOffers[2], onTap: onPick)),
-            const SizedBox(width: 10),
-            Expanded(child: FareCard(offer: fareOffers[3], onTap: onPick)),
-          ],
-        ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         FareCard(offer: fareOffers[4], wide: true, onTap: onPick),
       ],
     );
@@ -122,101 +126,99 @@ class FareCard extends StatelessWidget {
               },
         borderRadius: BorderRadius.circular(22),
         child: Ink(
-          width: double.infinity,
-          padding: EdgeInsets.fromLTRB(14, featured ? 12 : 14, 14, 14),
+          height: wide ? 132 : 196,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
-            gradient: featured
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF14532D), Color(0xFF047857)],
-                  )
-                : null,
-            color: featured ? null : Evuddy.paper,
-            border: Border.all(
-              color: featured ? Colors.transparent : Evuddy.line,
-            ),
             boxShadow: Evuddy.lift,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    offer.icon,
-                    size: 18,
-                    color: featured ? Colors.white : Evuddy.greenDeep,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      offer.label.toUpperCase(),
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        letterSpacing: 0.8,
-                        fontWeight: FontWeight.w800,
-                        color: featured ? Colors.white70 : Evuddy.muted,
-                      ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (offer.asset != null)
+                  Image.asset(offer.asset!, fit: BoxFit.cover, alignment: Alignment.center),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: featured
+                          ? const [Color(0x6614532D), Color(0xF014532D)]
+                          : const [Color(0x33000000), Color(0xE6081210)],
                     ),
                   ),
-                  if (featured)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(99),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            offer.label.toUpperCase(),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              letterSpacing: 0.8,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white70,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (featured)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Evuddy.green,
+                                borderRadius: BorderRadius.circular(99),
+                              ),
+                              child: Text(
+                                'POPULAR',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                      child: Text(
-                        'POPULAR',
+                      const Spacer(),
+                      Text(
+                        offer.price,
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 9,
+                          fontSize: wide ? 32 : 26,
+                          height: 1,
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
-                          letterSpacing: 0.6,
                         ),
                       ),
-                    ),
-                ],
-              ),
-              SizedBox(height: wide ? 10 : 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    offer.price,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: wide ? 28 : 22,
-                      height: 1,
-                      fontWeight: FontWeight.w800,
-                      color: featured ? Colors.white : Evuddy.ink,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
-                    child: Text(
-                      offer.unit,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: featured ? Colors.white70 : Evuddy.muted,
+                      Text(
+                        '${offer.unit}  ·  ${offer.hint}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white70,
+                          height: 1.3,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap to book  →',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF86EFAC),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                offer.hint,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: featured ? Colors.white70 : Evuddy.muted,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

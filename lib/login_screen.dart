@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 
 import 'api/evuddy_api.dart';
 import 'state/registration_draft.dart';
+import 'theme/evuddy.dart';
 import 'verify_mobile_otp_screen.dart';
 import 'widgets/chrome.dart';
+import 'widgets/voice_fill.dart';
 
 const comingThroughOptions = [
   'Direct / EVUDDY',
@@ -93,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
       kicker: 'Personal  ·  Step 1 of 4',
       title: 'Personal Information',
       subtitle:
-          'Same fields as evuddy.com/register. We’ll text a Firebase OTP to this number.',
+          'Same fields as evuddy.com/register. Tap the mic to speak the form. We’ll text a Firebase OTP.',
       step: 1,
       error: error,
       footer: EvuddyButton(
@@ -109,26 +111,55 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         EvuddyField(
           label: 'FULL NAME *',
-          hint: 'As on Aadhaar',
+          hint: 'As on Aadhaar · or tap the mic',
           controller: name,
           textCapitalization: TextCapitalization.words,
+          voiceKind: VoiceKind.name,
         ),
         const SizedBox(height: 16),
         EvuddyField(
           label: 'MOBILE NUMBER *',
-          hint: '10-digit mobile',
+          hint: '10-digit mobile · or speak it',
           controller: phone,
           keyboardType: TextInputType.phone,
           maxLength: 10,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           prefix: const PhonePrefix(),
+          voiceKind: VoiceKind.phone,
         ),
         const SizedBox(height: 16),
         EvuddyField(
           label: 'EMAIL *',
-          hint: 'name@email.com',
+          hint: 'name@email.com · say “at” and “dot”',
           controller: email,
           keyboardType: TextInputType.emailAddress,
+          voiceKind: VoiceKind.email,
+        ),
+        const SizedBox(height: 12),
+        Material(
+          color: Evuddy.greenSoft,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                VoiceMicButton(
+                  kind: VoiceKind.free,
+                  tooltip: 'Speak name, mobile and email together',
+                  onResult: (spoken) {
+                    final parsed = VoiceFill.parseRegister(spoken);
+                    if (parsed['name'] != null) name.text = parsed['name']!;
+                    if (parsed['phone'] != null) phone.text = parsed['phone']!;
+                    if (parsed['email'] != null) email.text = parsed['email']!;
+                    setState(() {});
+                  },
+                ),
+                const Expanded(
+                  child: Text('Speak name, mobile and email in one go'),
+                ),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 20),
         Text('COMING THROUGH', style: Theme.of(context).textTheme.labelSmall),

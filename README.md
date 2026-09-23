@@ -4,15 +4,16 @@ Same APIs as [evuddy.com](https://www.evuddy.com). Website source is not modifie
 
 ## Look
 
-Premium cream canvas, official lockup, **full yellow scooter** (never cropped), scenes that rotate one-by-one, and the **official fleet-partner poster** as in-app ads.
+Premium cream canvas, official lockup, **peeking photo carousel** with **Book EV on the picture**, advertisement-style partner banners, and fare cards with live scene photos.
 
 ## What you get
 
-- **Home** — scene carousel, one-tap Book EV, 3-step ride, partner posters, fare cards, live hubs
+- **Home** — swipeable fleet photos, Book EV overlay, offers carousel, photo fares, live hubs
 - **Invest** — official poster + ₹1L / ₹5L / ₹10L math, apply on evuddy.com
 - **Book EV** — confirm mobile → OTP autofill → rental vs Rent to Own → reserve live scooter → Razorpay → yard pickup OTP
-- **OTP** — Firebase Recaptcha + SMS `oneTimeCode` autofill
-- **Account** — status, poster, helpdesk
+- **OTP** — Firebase Recaptcha + Web OTP / SMS autofill after the code is sent
+- **Voice** — microphone on register / KYC fields (and “speak the whole form”)
+- **Account** — status, open booking OTP, helpdesk
 
 ```bash
 git pull origin main

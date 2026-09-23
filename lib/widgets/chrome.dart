@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/evuddy.dart';
+import 'voice_fill.dart';
 
 class AuthScreen extends StatelessWidget {
   const AuthScreen({
@@ -319,6 +320,7 @@ class EvuddyField extends StatefulWidget {
     this.suffix,
     this.readOnly = false,
     this.onTap,
+    this.voiceKind,
   });
 
   final String label;
@@ -332,6 +334,7 @@ class EvuddyField extends StatefulWidget {
   final Widget? suffix;
   final bool readOnly;
   final VoidCallback? onTap;
+  final VoiceKind? voiceKind;
 
   @override
   State<EvuddyField> createState() => _EvuddyFieldState();
@@ -426,6 +429,15 @@ class _EvuddyFieldState extends State<EvuddyField> {
                 ),
               ),
               if (widget.suffix != null) widget.suffix!,
+              if (widget.voiceKind != null && widget.controller != null)
+                VoiceMicButton(
+                  kind: widget.voiceKind!,
+                  onResult: (v) {
+                    if (v.isEmpty) return;
+                    widget.controller!.text = v;
+                    widget.controller!.selection = TextSelection.collapsed(offset: v.length);
+                  },
+                ),
             ],
           ),
         ),

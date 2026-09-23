@@ -37,7 +37,13 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       if (seconds == 0) return;
       setState(() => seconds -= 1);
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _send());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      webOtp.onAutofill = (code) {
+        pin.text = code;
+        _verify();
+      };
+      _send();
+    });
   }
 
   @override
@@ -146,7 +152,7 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       kicker: 'OTP',
       title: 'OTP Verification',
       subtitle:
-          'SMS to ${phone.isEmpty ? "your number" : phone}. Android can suggest the code automatically. If Google shows cars or buses, tap them in the box below.',
+          'SMS to ${phone.isEmpty ? "your number" : phone}. We listen for the code and fill it — you can still type if autofill misses.',
       error: error,
       expanded: WebOtpPanel(controller: webOtp),
       footer: Column(
@@ -184,7 +190,7 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
           sending
               ? 'Sending OTP… complete the security check in the box below if asked.'
               : sentOk
-                  ? 'OTP sent. Wait for autofill, or type the 6 digits.'
+                  ? 'OTP sent. Autofill is listening — or type the 6 digits.'
                   : 'Preparing secure SMS…',
           style: GoogleFonts.plusJakartaSans(
             color: Evuddy.greenDeep,

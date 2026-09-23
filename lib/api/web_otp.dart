@@ -21,6 +21,7 @@ class WebOtpPanel extends StatefulWidget {
 
 class WebOtpController {
   _WebOtpPanelState? _state;
+  void Function(String code)? onAutofill;
 
   bool get ready => _state?.ready ?? false;
 
@@ -77,6 +78,11 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
               token: raw['token']?.toString() ?? '',
             ));
             _verified = null;
+          } else if (type == 'sms') {
+            final code = raw['code']?.toString().replaceAll(RegExp(r'\D'), '') ?? '';
+            if (code.length >= 6) {
+              widget.controller.onAutofill?.call(code.substring(0, 6));
+            }
           } else if (type == 'error') {
             final msg = raw['message']?.toString() ?? 'OTP failed.';
             setState(() => lastError = msg);

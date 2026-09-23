@@ -5,6 +5,7 @@ import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 import 'verify_mobile_otp_screen.dart';
 import 'widgets/chrome.dart';
+import 'widgets/voice_fill.dart';
 
 /// Website Book EV: confirm mobile, then OTP. Approved riders skip KYC.
 class ConfirmMobileScreen extends StatefulWidget {
@@ -63,6 +64,7 @@ class _ConfirmMobileScreenState extends State<ConfirmMobileScreen> {
           maxLength: 10,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           prefix: const PhonePrefix(),
+          voiceKind: VoiceKind.phone,
         ),
       ],
     );

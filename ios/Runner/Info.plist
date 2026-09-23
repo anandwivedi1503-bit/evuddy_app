@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>EVUDDY uses the microphone so you can speak name, mobile and KYC fields instead of typing.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>EVUDDY turns your speech into form text for register and KYC.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>EVUDDY uses the camera for KYC photos, same as the website.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

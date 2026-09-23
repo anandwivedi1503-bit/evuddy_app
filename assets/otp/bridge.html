@@ -38,18 +38,33 @@
     });
     var confirmation = null;
     var verifier = null;
+    var smsAbort = null;
     function post(obj) {
       if (window.OtpBridge && window.OtpBridge.postMessage) {
         window.OtpBridge.postMessage(JSON.stringify(obj));
       }
+    }
+    function listenSms() {
+      try {
+        if (!window.OTPCredential) return;
+        if (smsAbort) { try { smsAbort.abort(); } catch (e) {} }
+        smsAbort = new AbortController();
+        navigator.credentials.get({
+          otp: { transport: ["sms"] },
+          signal: smsAbort.signal
+        }).then(function (otp) {
+          if (otp && otp.code) post({ type: "sms", code: String(otp.code) });
+        }).catch(function () {});
+      } catch (e) {}
     }
     function sendOtp(phone) {
       if (!verifier) {
         post({ type: "error", message: "Security check is still loading." });
         return;
       }
+      listenSms();
       firebase.auth().signInWithPhoneNumber(phone, verifier)
-        .then(function (c) { confirmation = c; post({ type: "sent" }); })
+        .then(function (c) { confirmation = c; post({ type: "sent" }); listenSms(); })
         .catch(function (e) { post({ type: "error", message: String(e.message || e) }); });
     }
     function confirmOtp(code) {
