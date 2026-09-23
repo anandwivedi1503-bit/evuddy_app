@@ -1,16 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../theme/evuddy.dart';
 
 /// Website-style Firebase phone OTP (Recaptcha in a WebView).
 /// Avoids the Android SHA-1 block on native Play Integrity.
 ///
-/// Recaptcha image challenges (select cars, buses, …) render in a large
-/// overlay. They were clipped when this panel was 124px with CSS scale.
+/// Recaptcha image challenges must fill this panel. The OTP keyboard used to
+/// open immediately and clip “I’m not a robot” / select-all-cars.
 class WebOtpPanel extends StatefulWidget {
   const WebOtpPanel({super.key, required this.controller});
   final WebOtpController controller;
@@ -22,8 +25,11 @@ class WebOtpPanel extends StatefulWidget {
 class WebOtpController {
   _WebOtpPanelState? _state;
   void Function(String code)? onAutofill;
+  VoidCallback? onCaptcha;
+  VoidCallback? onExpired;
 
-  bool get ready => _state?.ready ?? false;
+  bool get ready => _state?.widgetReady ?? false;
+  bool get captchaSolved => _state?.captchaSolved ?? false;
 
   Future<void> send(String phone10) {
     final s = _state;
@@ -46,8 +52,11 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
   late final WebViewController _web;
   Completer<void>? _sent;
   Completer<({String uid, String token})>? _verified;
-  bool ready = false;
+  OverlayEntry? _customView;
+  bool widgetReady = false;
+  bool captchaSolved = false;
   String? lastError;
+  bool _readyOnce = false;
 
   @override
   void initState() {
@@ -55,10 +64,15 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
     widget.controller._state = this;
     _web = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Evuddy.wash)
+      ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: (_) => NavigationDecision.navigate,
+          onWebResourceError: (err) {
+            if (!mounted) return;
+            if (widgetReady) return;
+            setState(() => lastError = err.description);
+          },
         ),
       )
       ..addJavaScriptChannel(
@@ -67,8 +81,17 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
           final raw = jsonDecode(m.message);
           if (raw is! Map) return;
           final type = raw['type']?.toString();
-          if (type == 'ready' || type == 'captcha') {
-            setState(() => ready = true);
+          if (type == 'ready') {
+            setState(() => widgetReady = true);
+          } else if (type == 'captcha') {
+            setState(() {
+              captchaSolved = true;
+              widgetReady = true;
+            });
+            widget.controller.onCaptcha?.call();
+          } else if (type == 'expired') {
+            setState(() => captchaSolved = false);
+            widget.controller.onExpired?.call();
           } else if (type == 'sent') {
             _sent?.complete();
             _sent = null;
@@ -85,7 +108,10 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
             }
           } else if (type == 'error') {
             final msg = raw['message']?.toString() ?? 'OTP failed.';
-            setState(() => lastError = msg);
+            setState(() {
+              lastError = msg;
+              captchaSolved = false;
+            });
             if (_sent != null && !_sent!.isCompleted) {
               _sent!.completeError(msg);
               _sent = null;
@@ -97,10 +123,65 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
           }
         },
       );
-    _readyOnce = false;
+    _configureAndroid();
   }
 
-  bool _readyOnce = false;
+  Future<void> _configureAndroid() async {
+    final platform = _web.platform;
+    if (platform is! AndroidWebViewController) return;
+    await platform.setMixedContentMode(MixedContentMode.alwaysAllow);
+    await platform.setGeolocationEnabled(true);
+    await platform.setOnPlatformPermissionRequest((request) {
+      request.grant();
+    });
+    await platform.setGeolocationPermissionsPromptCallbacks(
+      onShowPrompt: (params) async {
+        return const GeolocationPermissionsResponse(allow: true, retain: true);
+      },
+    );
+    await platform.setCustomWidgetCallbacks(
+      onShowCustomWidget: (view, onHidden) {
+        _customView?.remove();
+        _customView = OverlayEntry(
+          builder: (ctx) => Positioned.fill(
+            child: Material(
+              color: Colors.black,
+              child: SafeArea(
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: view),
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: IconButton(
+                        color: Colors.white,
+                        onPressed: () {
+                          _hideCustomView();
+                          onHidden();
+                        },
+                        icon: const Icon(Icons.close),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        Overlay.of(context, rootOverlay: true).insert(_customView!);
+      },
+      onHideCustomWidget: _hideCustomView,
+    );
+    final cookies = WebViewCookieManager();
+    final cookiePlatform = cookies.platform;
+    if (cookiePlatform is AndroidWebViewCookieManager) {
+      await cookiePlatform.setAcceptThirdPartyCookies(platform, true);
+    }
+  }
+
+  void _hideCustomView() {
+    _customView?.remove();
+    _customView = null;
+  }
 
   @override
   void didChangeDependencies() {
@@ -116,17 +197,20 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
   }
 
   Future<void> send(String phone10) async {
-    for (var i = 0; i < 80 && !ready; i++) {
+    for (var i = 0; i < 80 && !widgetReady; i++) {
       await Future.delayed(const Duration(milliseconds: 150));
     }
-    if (!ready) {
+    if (!widgetReady) {
       return Future.error('Security check did not load. Check the network and retry.');
+    }
+    if (!captchaSolved) {
+      return Future.error('Tick “I’m not a robot” in the box. If pictures appear, complete them first.');
     }
     _sent = Completer<void>();
     await _web.runJavaScript("sendOtp('+91$phone10');");
     return _sent!.future.timeout(
       const Duration(seconds: 120),
-      onTimeout: () => throw 'Timed out waiting for the security images. Complete “select all cars” then wait for SMS.',
+      onTimeout: () => throw 'Timed out waiting for SMS after the security check. Tap Resend.',
     );
   }
 
@@ -138,8 +222,25 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
 
   @override
   void dispose() {
+    _hideCustomView();
     if (widget.controller._state == this) widget.controller._state = null;
     super.dispose();
+  }
+
+  Widget _webView() {
+    final gestures = <Factory<OneSequenceGestureRecognizer>>{
+      Factory<EagerGestureRecognizer>(() => EagerGestureRecognizer()),
+    };
+    if (WebViewPlatform.instance is AndroidWebViewPlatform) {
+      return WebViewWidget.fromPlatformCreationParams(
+        params: AndroidWebViewWidgetCreationParams(
+          controller: _web.platform,
+          displayWithHybridComposition: true,
+          gestureRecognizers: gestures,
+        ),
+      );
+    }
+    return WebViewWidget(controller: _web, gestureRecognizers: gestures);
   }
 
   @override
@@ -152,13 +253,11 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        clipBehavior: Clip.none,
         child: Stack(
           fit: StackFit.expand,
-          clipBehavior: Clip.none,
           children: [
-            WebViewWidget(controller: _web),
-            if (!ready)
+            _webView(),
+            if (!widgetReady)
               const Align(
                 alignment: Alignment.topCenter,
                 child: LinearProgressIndicator(minHeight: 2),

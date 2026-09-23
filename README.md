@@ -11,7 +11,7 @@ Premium cream canvas, official lockup, **peeking photo carousel** with **Book EV
 - **Home** — “Where are you riding today?”, rider photo with Book EV on the picture, dealer ads, white fare cards
 - **Invest** — official poster + ₹1L / ₹5L / ₹10L math, apply on evuddy.com
 - **Book EV** — confirm mobile → OTP autofill → rental vs Rent to Own → reserve live scooter → Razorpay → yard pickup OTP
-- **OTP** — Firebase Recaptcha + Web OTP / SMS autofill after the code is sent
+- **OTP** — Recaptcha (“I’m not a robot” / picture challenge) first, then Firebase SMS and autofill
 - **Voice** — microphone on register / KYC fields (and “speak the whole form”)
 - **Account** — status, open booking OTP, helpdesk
 
@@ -22,7 +22,7 @@ GitHub merge only updates the remote. **sdk gphone16k still runs the last APK** 
 **Fix (Windows):** press `q` in the old Flutter terminal, then double-click `tool/update_emulator.bat`  
 (or VS Code → Terminal → Run Task → **EVUDDY: pull main and run emulator**).
 
-That pulls `main`, **uninstalls the old app**, and installs this build. You must see **Where are you riding today?** and green **23 Sep 2026 · Home v4**. If that stamp is missing, you are still on an old session.
+That pulls `main`, **uninstalls the old app**, and installs this build. You must see **Where are you riding today?** and green **23 Sep 2026 · OTP v5**. If that stamp is missing, you are still on an old session.
 
 ```bash
 # press q in the running flutter terminal first

@@ -37,13 +37,23 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       if (seconds == 0) return;
       setState(() => seconds -= 1);
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      webOtp.onAutofill = (code) {
-        pin.text = code;
-        _verify();
-      };
+    webOtp.onAutofill = (code) {
+      pin.text = code;
+      _verify();
+    };
+    webOtp.onCaptcha = () {
+      if (!mounted || sentOk || sending) return;
       _send();
-    });
+    };
+    webOtp.onExpired = () {
+      if (!mounted) return;
+      setState(() {
+        sending = false;
+        sentOk = false;
+        error = 'Security check expired. Tick “I’m not a robot” again.';
+        seconds = 0;
+      });
+    };
   }
 
   @override
@@ -73,6 +83,7 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       if (!mounted) return;
       setState(() {
         sending = false;
+        seconds = 0;
         error = e.toString();
       });
     }
@@ -150,66 +161,71 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
     final phone = registrationDraft.phoneDisplay;
     return AuthScreen(
       kicker: 'OTP',
-      title: 'OTP Verification',
-      subtitle:
-          'SMS to ${phone.isEmpty ? "your number" : phone}. We listen for the code and fill it — you can still type if autofill misses.',
+      title: sentOk ? 'OTP Verification' : 'Security check',
+      subtitle: sentOk
+          ? 'SMS to ${phone.isEmpty ? "your number" : phone}. We listen for the code and fill it.'
+          : 'Tick I’m not a robot below. If Google shows pictures (cars, buses), complete them — then we send SMS.',
       error: error,
       expanded: WebOtpPanel(controller: webOtp),
-      footer: Column(
-        children: [
-          OtpPinField(controller: pin, onCompleted: (_) => _verify()),
-          const SizedBox(height: 8),
-          Text(
-            'Autofill from SMS when your phone offers it — we never read your full inbox.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 11),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: EvuddyGhostButton(
-                  label: seconds == 0 ? 'Resend' : '00:${seconds.toString().padLeft(2, '0')}',
-                  onPressed: seconds == 0 && !sending ? _send : null,
+      footer: sentOk
+          ? Column(
+              children: [
+                OtpPinField(controller: pin, autofocus: true, onCompleted: (_) => _verify()),
+                const SizedBox(height: 8),
+                Text(
+                  'Autofill from SMS when your phone offers it — we never read your full inbox.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 11),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: EvuddyButton(
-                  label: 'Verify OTP',
-                  busy: verifying || sending,
-                  onPressed: verifying || sending ? null : _verify,
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: EvuddyGhostButton(
+                        label: seconds == 0 ? 'Resend' : '00:${seconds.toString().padLeft(2, '0')}',
+                        onPressed: seconds == 0 && !sending ? _send : null,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: EvuddyButton(
+                        label: 'Verify OTP',
+                        busy: verifying || sending,
+                        onPressed: verifying || sending ? null : _verify,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      children: [
-        Text(
-          sending
-              ? 'Sending OTP… complete the security check in the box below if asked.'
-              : sentOk
-                  ? 'OTP sent. Autofill is listening — or type the 6 digits.'
-                  : 'Preparing secure SMS…',
-          style: GoogleFonts.plusJakartaSans(
-            color: Evuddy.greenDeep,
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-          ),
-        ),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Text(
-            'Wrong number? Change',
-            style: GoogleFonts.plusJakartaSans(
-              color: Evuddy.green,
-              fontWeight: FontWeight.w700,
+              ],
+            )
+          : Column(
+              children: [
+                Text(
+                  sending
+                      ? 'Security check passed — sending SMS…'
+                      : 'Do not type an OTP yet. Finish the box first.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Evuddy.greenDeep,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Text(
+                    'Wrong number? Change',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: Evuddy.green,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ),
-      ],
+      children: const [],
     );
   }
 }

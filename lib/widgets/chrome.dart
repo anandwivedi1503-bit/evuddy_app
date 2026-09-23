@@ -681,10 +681,12 @@ class OtpPinField extends StatefulWidget {
     super.key,
     required this.controller,
     this.onCompleted,
+    this.autofocus = true,
   });
 
   final TextEditingController controller;
   final ValueChanged<String>? onCompleted;
+  final bool autofocus;
 
   @override
   State<OtpPinField> createState() => _OtpPinFieldState();
@@ -740,7 +742,7 @@ class _OtpPinFieldState extends State<OtpPinField> {
               child: TextField(
                 controller: widget.controller,
                 focusNode: focus,
-                autofocus: true,
+                autofocus: widget.autofocus,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.done,
                 autofillHints: const [AutofillHints.oneTimeCode],
