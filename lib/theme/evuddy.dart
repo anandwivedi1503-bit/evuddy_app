@@ -19,7 +19,7 @@ class Evuddy {
   static const danger = Color(0xFFB42318);
 
   /// Bump this whenever Home must visibly change on the emulator after a pull.
-  static const buildStamp = '23 Sep 2026 · Home v4';
+  static const buildStamp = '23 Sep 2026 · OTP v5';
   static const logoGreen = Color(0xFF22C55E);
   static const logoPink = Color(0xFFEC4899);
 
