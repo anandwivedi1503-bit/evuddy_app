@@ -1,0 +1,15 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "EVUDDY: pull main and run emulator",
+      "type": "shell",
+      "command": "git checkout main && git fetch origin main && git pull origin main && flutter pub get && flutter run --uninstall-first",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    }
+  ]
+}
