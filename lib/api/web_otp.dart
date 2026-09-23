@@ -7,13 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
-import '../theme/evuddy.dart';
-
 /// Website-style Firebase phone OTP (Recaptcha in a WebView).
 /// Avoids the Android SHA-1 block on native Play Integrity.
 ///
-/// Recaptcha image challenges must fill this panel. The OTP keyboard used to
-/// open immediately and clip “I’m not a robot” / select-all-cars.
+/// Invisible Recaptcha + Chrome UA so Google’s overlay can fill this WebView.
+/// Do not wrap this panel in ClipRRect or a short AuthScreen expanded slot.
 class WebOtpPanel extends StatefulWidget {
   const WebOtpPanel({super.key, required this.controller});
   final WebOtpController controller;
@@ -26,6 +24,7 @@ class WebOtpController {
   _WebOtpPanelState? _state;
   void Function(String code)? onAutofill;
   VoidCallback? onCaptcha;
+  VoidCallback? onReady;
   VoidCallback? onExpired;
 
   bool get ready => _state?.widgetReady ?? false;
@@ -49,6 +48,9 @@ class WebOtpController {
 }
 
 class _WebOtpPanelState extends State<WebOtpPanel> {
+  static const _chromeUa =
+      'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.135 Mobile Safari/537.36';
+
   late final WebViewController _web;
   Completer<void>? _sent;
   Completer<({String uid, String token})>? _verified;
@@ -65,6 +67,7 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
     _web = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.white)
+      ..setUserAgent(_chromeUa)
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: (_) => NavigationDecision.navigate,
@@ -83,6 +86,7 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
           final type = raw['type']?.toString();
           if (type == 'ready') {
             setState(() => widgetReady = true);
+            widget.controller.onReady?.call();
           } else if (type == 'captcha') {
             setState(() {
               captchaSolved = true;
@@ -145,7 +149,7 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
         _customView = OverlayEntry(
           builder: (ctx) => Positioned.fill(
             child: Material(
-              color: Colors.black,
+              color: Colors.white,
               child: SafeArea(
                 child: Stack(
                   children: [
@@ -153,7 +157,7 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
                     Align(
                       alignment: Alignment.topRight,
                       child: IconButton(
-                        color: Colors.white,
+                        color: Colors.black,
                         onPressed: () {
                           _hideCustomView();
                           onHidden();
@@ -203,14 +207,12 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
     if (!widgetReady) {
       return Future.error('Security check did not load. Check the network and retry.');
     }
-    if (!captchaSolved) {
-      return Future.error('Tick “I’m not a robot” in the box. If pictures appear, complete them first.');
-    }
     _sent = Completer<void>();
     await _web.runJavaScript("sendOtp('+91$phone10');");
     return _sent!.future.timeout(
       const Duration(seconds: 120),
-      onTimeout: () => throw 'Timed out waiting for SMS after the security check. Tap Resend.',
+      onTimeout: () =>
+          throw 'Timed out waiting for SMS after the security check. Tap Resend.',
     );
   }
 
@@ -245,25 +247,18 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Evuddy.paper,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Evuddy.line),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            _webView(),
-            if (!widgetReady)
-              const Align(
-                alignment: Alignment.topCenter,
-                child: LinearProgressIndicator(minHeight: 2),
-              ),
-          ],
-        ),
+    return ColoredBox(
+      color: Colors.white,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _webView(),
+          if (!widgetReady)
+            const Align(
+              alignment: Alignment.topCenter,
+              child: LinearProgressIndicator(minHeight: 2),
+            ),
+        ],
       ),
     );
   }

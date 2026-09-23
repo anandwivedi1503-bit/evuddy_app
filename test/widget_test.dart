@@ -10,6 +10,6 @@ void main() {
     expect(find.byType(Image), findsWidgets);
     expect(find.text('23 Sep 2026 · Home v7'), findsNothing);
     expect(find.text('Smart electric mobility'), findsNothing);
-    await tester.pump(const Duration(milliseconds: 1800));
+    await tester.pump(const Duration(milliseconds: 1600));
   });
 }
