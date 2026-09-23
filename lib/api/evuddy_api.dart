@@ -573,6 +573,16 @@ class RazorpayOrder {
   final String currency;
   final String name;
   final String? image;
+
+  /// Razorpay Checkout wants paise. Live create-order may return paise or rupees.
+  int amountPaise(double rupeesPaid) {
+    final expected = (rupeesPaid * 100).round();
+    final raw = amount.round();
+    if (raw == expected) return raw;
+    if (raw == rupeesPaid.round()) return expected;
+    if (raw >= expected) return raw;
+    return expected;
+  }
 }
 
 double? _asDouble(dynamic v) {

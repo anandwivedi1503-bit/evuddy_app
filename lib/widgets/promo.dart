@@ -9,10 +9,10 @@ class TrustStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
-      (Icons.verified_user_outlined, 'KYC riders'),
+      (Icons.verified_user_outlined, 'KYC'),
       (Icons.lock_outline_rounded, 'Hub OTP'),
-      (Icons.payments_outlined, 'Razorpay'),
-      (Icons.headset_mic_outlined, '24×7 desk'),
+      (Icons.verified_outlined, 'Secure pay'),
+      (Icons.headset_mic_outlined, '24×7'),
     ];
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),

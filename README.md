@@ -22,7 +22,7 @@ GitHub merge only updates the remote. **sdk gphone16k still runs the last APK** 
 **Fix (Windows):** press `q` in the old Flutter terminal, then double-click `tool/update_emulator.bat`  
 (or VS Code → Terminal → Run Task → **EVUDDY: pull main and run emulator**).
 
-That pulls `main`, **uninstalls the old app**, and installs this build. You must see **Where are you riding today?** and green **23 Sep 2026 · Catalog v6**. If that stamp is missing, you are still on an old session.
+That pulls `main`, **uninstalls the old app**, and installs this build. You must see **Where are you riding today?** and green **23 Sep 2026 · Home v7**. If that stamp is missing, you are still on an old session.
 
 ```bash
 # press q in the running flutter terminal first

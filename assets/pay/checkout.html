@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <style>
-    html, body { margin: 0; padding: 24px; background: #F7F4EE; font-family: sans-serif; color: #1C1917; }
+    html, body { margin: 0; padding: 24px; background: #F7F8F5; font-family: sans-serif; color: #1C1917; }
     p { color: #78716C; }
   </style>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -19,6 +19,10 @@
     }
     function openPay(raw) {
       var n = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (typeof Razorpay === "undefined") {
+        post({ type: "failed", message: "Razorpay checkout.js did not load. Check network." });
+        return;
+      }
       var options = {
         key: n.key,
         amount: n.amount,
@@ -29,7 +33,7 @@
         order_id: n.order_id,
         prefill: n.prefill || {},
         notes: n.notes || {},
-        theme: { color: "#18B368" },
+        theme: { color: "#16A34A" },
         handler: function (response) {
           post({
             type: "success",
@@ -55,7 +59,20 @@
         post({ type: "failed", message: String(e.message || e) });
       }
     }
-    post({ type: "ready" });
+    function markReady() {
+      post({ type: "ready" });
+    }
+    if (typeof Razorpay !== "undefined") {
+      markReady();
+    } else {
+      window.addEventListener("load", function () {
+        if (typeof Razorpay === "undefined") {
+          post({ type: "failed", message: "Razorpay checkout.js did not load." });
+        } else {
+          markReady();
+        }
+      });
+    }
   </script>
 </body>
 </html>

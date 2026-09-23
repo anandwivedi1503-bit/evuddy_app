@@ -241,6 +241,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             bookingId: b.bookingId,
             contact: registrationDraft.phone,
             customerName: registrationDraft.fullName,
+            rupees: pay,
             vehicleId: selected?.vehicleId ?? b.vehicleId,
           ),
         ),
