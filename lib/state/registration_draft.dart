@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../api/evuddy_api.dart';
+
 class RegistrationDraft {
   String phone = '';
   bool phoneVerified = false;
@@ -34,6 +36,7 @@ class RegistrationDraft {
   String? chosenCity;
   String? chosenHubId;
   String? chosenDuration;
+  RiderBooking? activeBooking;
   String otpGate = 'register'; // register | book
   int shellTab = 0;
 

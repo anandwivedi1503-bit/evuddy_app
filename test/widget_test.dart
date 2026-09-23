@@ -6,7 +6,9 @@ import 'package:evuddy_app/main.dart';
 void main() {
   testWidgets('splash shows brand logo', (WidgetTester tester) async {
     await tester.pumpWidget(const EvuddyApp());
+    await tester.pump();
     expect(find.byType(Image), findsWidgets);
     expect(find.text('Smart electric mobility'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 2400));
   });
 }

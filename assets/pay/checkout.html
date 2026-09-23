@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <style>
+    html, body { margin: 0; padding: 24px; background: #F7F4EE; font-family: sans-serif; color: #1C1917; }
+    p { color: #78716C; }
+  </style>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+  <p>Opening Razorpay…</p>
+  <script>
+    function post(obj) {
+      if (window.PayBridge && window.PayBridge.postMessage) {
+        window.PayBridge.postMessage(JSON.stringify(obj));
+      }
+    }
+    function openPay(raw) {
+      var n = typeof raw === "string" ? JSON.parse(raw) : raw;
+      var options = {
+        key: n.key,
+        amount: n.amount,
+        currency: n.currency || "INR",
+        name: n.name || "EVUDDY",
+        image: n.image,
+        description: n.description || "EVUDDY booking",
+        order_id: n.order_id,
+        prefill: n.prefill || {},
+        notes: n.notes || {},
+        theme: { color: "#18B368" },
+        handler: function (response) {
+          post({
+            type: "success",
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature
+          });
+        },
+        modal: {
+          ondismiss: function () { post({ type: "dismiss" }); }
+        }
+      };
+      try {
+        var rzp = new Razorpay(options);
+        rzp.on("payment.failed", function (resp) {
+          post({
+            type: "failed",
+            message: (resp && resp.error && (resp.error.description || resp.error.reason)) || "Payment failed."
+          });
+        });
+        rzp.open();
+      } catch (e) {
+        post({ type: "failed", message: String(e.message || e) });
+      }
+    }
+    post({ type: "ready" });
+  </script>
+</body>
+</html>

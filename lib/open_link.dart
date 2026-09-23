@@ -9,3 +9,10 @@ Future<bool> openEvuddyPath(String path) {
 Future<bool> dialHelpdesk() {
   return launchUrl(Uri.parse('tel:+918726006512'));
 }
+
+Future<bool> launchMaps(String query) {
+  final uri = Uri.parse(
+    'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}',
+  );
+  return launchUrl(uri, mode: LaunchMode.externalApplication);
+}

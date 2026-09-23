@@ -63,6 +63,7 @@ flutter:
   assets:
     - assets/images/
     - assets/otp/bridge.html
+    - assets/pay/checkout.html
 
   # To add assets to your application, add an assets section, like this:
   # assets:

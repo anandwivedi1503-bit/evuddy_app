@@ -35,7 +35,8 @@ class AccountScreen extends StatelessWidget {
             ..bookingEnabled = false
             ..approvalStatus = ''
             ..chosenPlan = null
-            ..riderId = null;
+            ..riderId = null
+            ..activeBooking = null;
           onLoggedOut?.call();
         },
       ),
@@ -60,6 +61,40 @@ class AccountScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
+        if (d.activeBooking != null) ...[
+          SurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Open booking ${d.activeBooking!.bookingId}',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Remaining ₹${d.activeBooking!.due.toStringAsFixed(0)} · ${d.activeBooking!.paymentStatus}',
+                  style: GoogleFonts.plusJakartaSans(color: Evuddy.muted),
+                ),
+                if (d.activeBooking!.hasPickupOtp) ...[
+                  const SizedBox(height: 10),
+                  Text('PICKUP OTP', style: Theme.of(context).textTheme.labelSmall),
+                  SelectableText(
+                    d.activeBooking!.pickupOtp,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 4,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
         const TrustStrip(),
         const SizedBox(height: 14),
         GestureDetector(

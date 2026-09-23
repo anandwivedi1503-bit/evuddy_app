@@ -115,7 +115,8 @@ class _BookEvScreenState extends State<BookEvScreen> {
           const Padding(
             padding: EdgeInsets.only(bottom: 16),
             child: InfoNote(
-              text: 'Website Book EV asks you to verify mobile first. Register / KYC unlocks checkout.',
+              text:
+                  'Same catalog as the website. Razorpay checkout after you reserve a live scooter.',
             ),
           ),
         _PlanCard(
