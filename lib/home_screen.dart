@@ -109,15 +109,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontSize: 14,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      Evuddy.buildStamp,
-                      style: GoogleFonts.plusJakartaSans(
-                        color: Evuddy.greenDeep,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
-                      ),
-                    ),
                     const SizedBox(height: 16),
                     RideTodayHero(onBook: () => _book()),
                     OfferAdCarousel(onBook: () => _book()),

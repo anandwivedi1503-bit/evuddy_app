@@ -17,7 +17,7 @@ call flutter pub get
 if errorlevel 1 goto :fail
 echo.
 echo Reinstalling on the connected emulator (uninstalls the stale APK first)...
-echo After launch you must see green text: 23 Sep 2026 · Home v7
+echo After launch: yellow Rapido-style splash, EVUDDY wordmark only (no date stamp).
 echo Cursor Agents phone preview is NOT this emulator — ignore that panel.
 echo.
 call flutter run --uninstall-first
