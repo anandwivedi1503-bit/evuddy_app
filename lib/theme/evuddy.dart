@@ -18,7 +18,7 @@ class Evuddy {
   static const night = Color(0xFF050A08);
   static const danger = Color(0xFFB42318);
 
-  static const splash = Color(0xFFFFFFFF);
+  static const splash = Color(0xFFF7F8F5);
   static const logoGreen = Color(0xFF22C55E);
   static const logoPink = Color(0xFFEC4899);
 
