@@ -55,6 +55,19 @@ void main() {
     expect(booking.message, contains('Payment successful'));
   });
 
+  test('catalog rates and Indian rupee format', () {
+    expect(CatalogRates.daily, 250);
+    expect(CatalogRates.weekly, 1750);
+    expect(CatalogRates.monthly, 7500);
+    expect(CatalogRates.rtoDaily, 300);
+    expect(CatalogRates.rtoMonths, 20);
+    expect(CatalogRates.securityDeposit, 2500);
+    expect(CatalogRates.inr(250), '₹250');
+    expect(CatalogRates.inr(1750), '₹1,750');
+    expect(CatalogRates.inr(7500), '₹7,500');
+    expect(CatalogRates.investorMonthly(1), 5130);
+  });
+
   test('parses Razorpay create-order response', () {
     final order = RazorpayOrder.fromJson({
       'success': true,

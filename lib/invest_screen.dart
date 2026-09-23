@@ -1,61 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'api/evuddy_api.dart';
+import 'api/partner_pdf.dart';
 import 'open_link.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 
-/// Same partner copy as evuddy.com/partners — shown in-app like a Rapido ad.
 class InvestScreen extends StatelessWidget {
   const InvestScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return AuthScreen(
-      kicker: 'Partner  ·  Advertisement',
+      kicker: 'Fleet  ·  Advertisement',
       title: 'Invest today. Earn monthly.',
       subtitle:
-          'Same 60/40 model as the website. EVUDDY runs the fleet. You earn 60% of net profit for 42 months. No payment inside this app.',
-      footer: EvuddyButton(
-        label: 'Apply on evuddy.com',
-        onPressed: () => openEvuddyPath('/partners'),
+          '60/40 with EVUDDY running the fleet for ${CatalogRates.partnerMonths} months. Daily rental ${CatalogRates.inr(CatalogRates.daily)} GST included. Apply on the website — no invest payment in this app.',
+      footer: Column(
+        children: [
+          EvuddyButton(
+            label: 'Download partner PDF',
+            icon: Icons.picture_as_pdf_outlined,
+            onPressed: () {
+              shareFleetPartnerPdf();
+            },
+          ),
+          const SizedBox(height: 10),
+          EvuddyGhostButton(
+            label: 'Apply on evuddy.com',
+            onPressed: () => openEvuddyPath('/partners'),
+          ),
+        ],
       ),
       children: [
-        const ScenePhoto(asset: Evuddy.investPosterAsset, height: 420, fit: BoxFit.contain),
+        const ScenePhoto(asset: Evuddy.investPosterAsset, height: 280, fit: BoxFit.cover),
         const SizedBox(height: 16),
-        const InfoNote(
+        InfoNote(
           text:
-              '3 scooters per ₹1 lakh, rented at ₹230 / 24 hrs. ₹87 profit per scooter per day after ops. You take ₹52.2 (60%).',
+              '${CatalogRates.scootersPerLakh} scooters per ₹1 lakh, rented at ${CatalogRates.inr(CatalogRates.daily)} / day GST included. About ${CatalogRates.inr(CatalogRates.investorPerScooterDay)} to you per scooter per day (60% of net).',
         ),
         const SizedBox(height: 18),
         Text('PLANS', style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: 10),
-        const _Plan(
-          tag: 'STARTER',
-          invest: '₹1 lakh',
-          scooters: '3 scooters',
-          monthly: '₹4,698 / month',
-          total: '₹2,15,316 in 42 months',
-          scrap: 'Scrap value ₹18,000',
-        ),
+        _Plan(tag: 'STARTER', lakhs: 1),
         const SizedBox(height: 10),
-        const _Plan(
-          tag: 'GROWTH',
-          invest: '₹5 lakh',
-          scooters: '15 scooters',
-          monthly: '₹23,490 / month',
-          total: '₹10,76,580 in 42 months',
-          scrap: 'Scrap value ₹90,000',
-        ),
+        _Plan(tag: 'GROWTH', lakhs: 5),
         const SizedBox(height: 10),
-        const _Plan(
-          tag: 'SCALE',
-          invest: '₹10 lakh',
-          scooters: '30 scooters',
-          monthly: '₹46,980 / month',
-          total: '₹21,53,160 in 42 months',
-          scrap: 'Scrap value ₹1,80,000',
-        ),
+        _Plan(tag: 'SCALE', lakhs: 10),
         const SizedBox(height: 18),
         Text('ALSO ON THE SITE', style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: 10),
@@ -72,7 +64,7 @@ class InvestScreen extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         Text(
-          'Figures match the official poster on evuddy.com. Subject to operational performance.',
+          'Subject to operational performance. Rider catalog matches this app and evuddy.com Book EV.',
           style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
         ),
       ],
@@ -81,21 +73,9 @@ class InvestScreen extends StatelessWidget {
 }
 
 class _Plan extends StatelessWidget {
-  const _Plan({
-    required this.tag,
-    required this.invest,
-    required this.scooters,
-    required this.monthly,
-    required this.total,
-    required this.scrap,
-  });
-
+  const _Plan({required this.tag, required this.lakhs});
   final String tag;
-  final String invest;
-  final String scooters;
-  final String monthly;
-  final String total;
-  final String scrap;
+  final int lakhs;
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +103,7 @@ class _Plan extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                invest,
+                CatalogRates.inr(lakhs * 100000),
                 style: GoogleFonts.plusJakartaSans(
                   fontWeight: FontWeight.w800,
                   fontSize: 18,
@@ -132,10 +112,13 @@ class _Plan extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Text(scooters, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+          Text(
+            '${CatalogRates.scootersPerLakh * lakhs} scooters',
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 4),
           Text(
-            monthly,
+            '${CatalogRates.inr(CatalogRates.investorMonthly(lakhs))} / month',
             style: GoogleFonts.plusJakartaSans(
               fontWeight: FontWeight.w800,
               fontSize: 16,
@@ -143,8 +126,14 @@ class _Plan extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(total, style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13)),
-          Text(scrap, style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12)),
+          Text(
+            '${CatalogRates.inr(CatalogRates.investorTerm(lakhs))} in ${CatalogRates.partnerMonths} months',
+            style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
+          ),
+          Text(
+            'Scrap value ${CatalogRates.inr(CatalogRates.scrapValue(lakhs))}',
+            style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
+          ),
         ],
       ),
     );

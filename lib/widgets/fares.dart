@@ -12,7 +12,7 @@ class FareOffer {
     required this.price,
     required this.unit,
     required this.hint,
-    required this.icon,
+    required this.asset,
     this.plan = 'rental',
     this.featured = false,
   });
@@ -22,52 +22,44 @@ class FareOffer {
   final String price;
   final String unit;
   final String hint;
-  final IconData icon;
+  final String asset;
   final String plan;
   final bool featured;
 }
 
-const fareOffers = <FareOffer>[
-  FareOffer(
-    id: 'Hourly',
-    label: 'Hourly',
-    price: '₹${CatalogRates.hourly}',
-    unit: '/ hour',
-    hint: '+ 5% GST',
-    icon: Icons.schedule_rounded,
-  ),
+final fareOffers = <FareOffer>[
   FareOffer(
     id: 'Daily',
     label: 'Daily',
-    price: '₹${CatalogRates.daily}',
+    price: CatalogRates.inr(CatalogRates.daily),
     unit: '/ day',
-    hint: 'Most booked',
-    icon: Icons.wb_sunny_outlined,
+    hint: 'GST included',
+    asset: Evuddy.yellowScooterAsset,
     featured: true,
   ),
   FareOffer(
     id: 'Weekly',
     label: 'Weekly',
-    price: '₹${CatalogRates.weekly}',
+    price: CatalogRates.inr(CatalogRates.weekly),
     unit: '/ week',
-    hint: '+ 5% GST',
-    icon: Icons.date_range_rounded,
+    hint: 'GST included',
+    asset: Evuddy.riderCityAsset,
   ),
   FareOffer(
     id: 'Monthly',
     label: 'Monthly',
-    price: '₹${CatalogRates.monthly}',
+    price: CatalogRates.inr(CatalogRates.monthly),
     unit: '/ month',
-    hint: '+ 5% GST',
-    icon: Icons.calendar_month_rounded,
+    hint: 'GST included',
+    asset: Evuddy.riderEveningAsset,
   ),
   FareOffer(
     id: 'Rent to Own',
     label: 'Rent to Own',
-    price: '₹${CatalogRates.rtoDaily}',
+    price: CatalogRates.inr(CatalogRates.rtoDaily),
     unit: '/ day',
-    hint: '${CatalogRates.rtoMonths} months · no deposit',
-    icon: Icons.workspace_premium_outlined,
+    hint: '${CatalogRates.rtoMonths} months · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold',
+    asset: Evuddy.yellowScooterAsset,
     plan: 'rto',
   ),
 ];
@@ -95,17 +87,14 @@ class FareGrid extends StatelessWidget {
             Expanded(child: FareCard(offer: fareOffers[3], onTap: onPick)),
           ],
         ),
-        const SizedBox(height: 10),
-        FareCard(offer: fareOffers[4], wide: true, onTap: onPick),
       ],
     );
   }
 }
 
 class FareCard extends StatelessWidget {
-  const FareCard({super.key, required this.offer, this.wide = false, this.onTap});
+  const FareCard({super.key, required this.offer, this.onTap});
   final FareOffer offer;
-  final bool wide;
   final ValueChanged<FareOffer>? onTap;
 
   @override
@@ -123,78 +112,97 @@ class FareCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         child: Ink(
           width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          height: 168,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: featured ? Evuddy.green.withValues(alpha: 0.35) : Evuddy.line),
+            border: Border.all(color: featured ? Evuddy.green.withValues(alpha: 0.4) : Evuddy.line),
             boxShadow: const [
               BoxShadow(color: Color(0x0F0B1F14), blurRadius: 18, offset: Offset(0, 8)),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              Row(
-                children: [
-                  Icon(offer.icon, size: 18, color: Evuddy.muted),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      offer.label.toUpperCase(),
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        letterSpacing: 0.8,
-                        fontWeight: FontWeight.w800,
-                        color: Evuddy.muted,
-                      ),
-                    ),
+              Positioned(
+                right: -18,
+                bottom: -8,
+                child: Opacity(
+                  opacity: 0.92,
+                  child: Image.asset(
+                    offer.asset,
+                    width: 108,
+                    height: 108,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
                   ),
-                  if (featured)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Evuddy.greenSoft,
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Text(
-                        'POPULAR',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          color: Evuddy.greenDeep,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                ],
+                ),
               ),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    offer.price,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: wide ? 28 : 26,
-                      height: 1,
-                      fontWeight: FontWeight.w800,
-                      color: Evuddy.ink,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          offer.label.toUpperCase(),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            letterSpacing: 0.8,
+                            fontWeight: FontWeight.w800,
+                            color: Evuddy.muted,
+                          ),
+                        ),
+                        if (featured) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Evuddy.greenSoft,
+                              borderRadius: BorderRadius.circular(99),
+                            ),
+                            child: Text(
+                              'POPULAR',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w800,
+                                color: Evuddy.greenDeep,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
-                    child: Text(
+                    const Spacer(),
+                    Text(
+                      offer.price,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 24,
+                        height: 1,
+                        fontWeight: FontWeight.w800,
+                        color: Evuddy.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
                       offer.unit,
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Evuddy.muted,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      offer.hint,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Evuddy.greenDeep,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

@@ -9,7 +9,7 @@ void main() {
     await tester.pump();
     expect(find.byType(Image), findsWidgets);
     expect(find.text('Smart electric mobility'), findsOneWidget);
-    expect(find.text('23 Sep 2026 · OTP v5'), findsOneWidget);
+    expect(find.text('23 Sep 2026 · Catalog v6'), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 2400));
   });
 }
