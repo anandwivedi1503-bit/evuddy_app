@@ -122,11 +122,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     RideTodayHero(onBook: () => _book()),
                     OfferAdCarousel(onBook: () => _book()),
                     const SizedBox(height: 22),
-                    Text('CLEAR FARES', style: Theme.of(context).textTheme.labelSmall),
+                    Text('PLANS', style: Theme.of(context).textTheme.labelSmall),
                     const SizedBox(height: 4),
                     Text(
-                      '${CatalogRates.gstNote} · Daily ${CatalogRates.inr(CatalogRates.daily)} · tap a card',
-                      style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
+                      'GST included · same yellow EVUDDY scooter on every plan',
+                      style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13, height: 1.35),
                     ),
                     const SizedBox(height: 12),
                     FareGrid(onPick: (fare) => _book(fare: fare)),
@@ -144,91 +144,118 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 18),
                     const TrustStrip(),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 22),
                     Text('NEARBY HUBS', style: Theme.of(context).textTheme.labelSmall),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Live yards on evuddy.com · tap to book',
+                      style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
+                    ),
                     const SizedBox(height: 12),
-                    SizedBox(
-                      height: 150,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: hubs.isEmpty ? 1 : hubs.length,
-                        separatorBuilder: (_, i) => const SizedBox(width: 10),
-                        itemBuilder: (context, i) {
-                          if (hubs.isEmpty) {
-                            return SizedBox(
-                              width: 240,
-                              child: SurfaceCard(
-                                child: Text(
-                                  loadingHubs
-                                      ? 'Finding live yards…'
-                                      : 'No hub listed yet. Pull down to refresh.',
-                                ),
-                              ),
-                            );
-                          }
-                          final h = hubs[i];
-                          return SizedBox(
-                            width: 248,
-                            child: GestureDetector(
-                              onTap: () {
-                                registrationDraft.chosenCity = h.city;
-                                registrationDraft.chosenHubId = h.id;
-                                _book();
-                              },
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(20),
-                                child: Stack(
-                                  children: [
-                                    Positioned.fill(
-                                      child: Image.asset(Evuddy.riderEveningAsset, fit: BoxFit.cover),
-                                    ),
-                                    Positioned.fill(
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [
-                                              Colors.black.withValues(alpha: 0.05),
-                                              Colors.black.withValues(alpha: 0.72),
+                    if (hubs.isEmpty)
+                      SurfaceCard(
+                        child: Text(
+                          loadingHubs
+                              ? 'Finding live yards…'
+                              : 'No hub listed yet. Pull down to refresh.',
+                        ),
+                      )
+                    else
+                      Column(
+                        children: [
+                          for (final h in hubs)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: GestureDetector(
+                                onTap: () {
+                                  registrationDraft.chosenCity = h.city;
+                                  registrationDraft.chosenHubId = h.id;
+                                  _book();
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(22),
+                                  child: SizedBox(
+                                    height: 196,
+                                    width: double.infinity,
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        Image.asset(
+                                          Evuddy.hubAsset,
+                                          fit: BoxFit.cover,
+                                          alignment: Alignment.center,
+                                        ),
+                                        const DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                Color(0x11000000),
+                                                Color(0xCC071B12),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white.withValues(alpha: 0.9),
+                                                  borderRadius: BorderRadius.circular(99),
+                                                ),
+                                                child: Text(
+                                                  h.city.toUpperCase(),
+                                                  style: GoogleFonts.plusJakartaSans(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w800,
+                                                    letterSpacing: 0.8,
+                                                    color: Evuddy.greenDeep,
+                                                  ),
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                              Text(
+                                                h.name,
+                                                style: GoogleFonts.plusJakartaSans(
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 22,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                h.location,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: GoogleFonts.plusJakartaSans(
+                                                  color: Colors.white70,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 10),
+                                              Text(
+                                                'Book from this hub  →',
+                                                style: GoogleFonts.plusJakartaSans(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
                                             ],
                                           ),
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                    Padding(
-                                      padding: const EdgeInsets.all(14),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Spacer(),
-                                          Text(
-                                            h.name,
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontWeight: FontWeight.w800,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          Text(
-                                            '${h.city} · ${h.location}',
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: GoogleFonts.plusJakartaSans(
-                                              color: Colors.white70,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
-                          );
-                        },
+                        ],
                       ),
-                    ),
                   ],
                 ),
               ),

@@ -12,7 +12,6 @@ class FareOffer {
     required this.price,
     required this.unit,
     required this.hint,
-    required this.asset,
     this.plan = 'rental',
     this.featured = false,
   });
@@ -22,7 +21,6 @@ class FareOffer {
   final String price;
   final String unit;
   final String hint;
-  final String asset;
   final String plan;
   final bool featured;
 }
@@ -32,34 +30,30 @@ final fareOffers = <FareOffer>[
     id: 'Daily',
     label: 'Daily',
     price: CatalogRates.inr(CatalogRates.daily),
-    unit: '/ day',
+    unit: 'per day',
     hint: 'GST included',
-    asset: Evuddy.yellowScooterAsset,
     featured: true,
   ),
   FareOffer(
     id: 'Weekly',
     label: 'Weekly',
     price: CatalogRates.inr(CatalogRates.weekly),
-    unit: '/ week',
+    unit: 'per week',
     hint: 'GST included',
-    asset: Evuddy.riderCityAsset,
   ),
   FareOffer(
     id: 'Monthly',
     label: 'Monthly',
     price: CatalogRates.inr(CatalogRates.monthly),
-    unit: '/ month',
+    unit: 'per month',
     hint: 'GST included',
-    asset: Evuddy.riderEveningAsset,
   ),
   FareOffer(
     id: 'Rent to Own',
-    label: 'Rent to Own',
+    label: 'Own',
     price: CatalogRates.inr(CatalogRates.rtoDaily),
-    unit: '/ day',
-    hint: '${CatalogRates.rtoMonths} months · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold',
-    asset: Evuddy.yellowScooterAsset,
+    unit: 'per day',
+    hint: '${CatalogRates.rtoMonths} mo · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold',
     plan: 'rto',
   ),
 ];
@@ -73,6 +67,7 @@ class FareGrid extends StatelessWidget {
     return Column(
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: FareCard(offer: fareOffers[0], onTap: onPick)),
             const SizedBox(width: 10),
@@ -81,6 +76,7 @@ class FareGrid extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: FareCard(offer: fareOffers[2], onTap: onPick)),
             const SizedBox(width: 10),
@@ -109,76 +105,73 @@ class FareCard extends StatelessWidget {
                 HapticFeedback.selectionClick();
                 onTap!(offer);
               },
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         child: Ink(
-          width: double.infinity,
-          height: 168,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: featured ? Evuddy.green.withValues(alpha: 0.4) : Evuddy.line),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: featured ? Evuddy.green.withValues(alpha: 0.45) : Evuddy.line,
+            ),
             boxShadow: const [
-              BoxShadow(color: Color(0x0F0B1F14), blurRadius: 18, offset: Offset(0, 8)),
+              BoxShadow(color: Color(0x0C0B1F14), blurRadius: 14, offset: Offset(0, 6)),
             ],
           ),
-          child: Stack(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Positioned(
-                right: -18,
-                bottom: -8,
-                child: Opacity(
-                  opacity: 0.92,
+              Container(
+                height: 88,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: featured ? const Color(0xFFECFDF3) : const Color(0xFFF7F8F5),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
                   child: Image.asset(
-                    offer.asset,
-                    width: 108,
-                    height: 108,
+                    Evuddy.yellowScooterAsset,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.high,
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Text(
-                          offer.label.toUpperCase(),
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            letterSpacing: 0.8,
-                            fontWeight: FontWeight.w800,
-                            color: Evuddy.muted,
+                        Expanded(
+                          child: Text(
+                            offer.label.toUpperCase(),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              letterSpacing: 0.9,
+                              fontWeight: FontWeight.w800,
+                              color: Evuddy.muted,
+                            ),
                           ),
                         ),
-                        if (featured) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Evuddy.greenSoft,
-                              borderRadius: BorderRadius.circular(99),
-                            ),
-                            child: Text(
-                              'POPULAR',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 8,
-                                fontWeight: FontWeight.w800,
-                                color: Evuddy.greenDeep,
-                              ),
+                        if (featured)
+                          Text(
+                            'POPULAR',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                              color: Evuddy.green,
+                              letterSpacing: 0.4,
                             ),
                           ),
-                        ],
                       ],
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 6),
                     Text(
                       offer.price,
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 24,
-                        height: 1,
+                        fontSize: 22,
+                        height: 1.05,
                         fontWeight: FontWeight.w800,
                         color: Evuddy.ink,
                       ),
@@ -192,11 +185,14 @@ class FareCard extends StatelessWidget {
                         color: Evuddy.muted,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       offer.hint,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 10,
+                        fontSize: 11,
+                        height: 1.25,
                         fontWeight: FontWeight.w700,
                         color: Evuddy.greenDeep,
                       ),

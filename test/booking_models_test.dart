@@ -66,6 +66,18 @@ void main() {
     expect(CatalogRates.inr(1750), '₹1,750');
     expect(CatalogRates.inr(7500), '₹7,500');
     expect(CatalogRates.investorMonthly(1), 5130);
+    expect(RazorpayOrder.fromJson({
+      'keyId': 'rzp',
+      'orderId': 'order_1',
+      'amount': 250000,
+      'currency': 'INR',
+    }).amountPaise(2500), 250000);
+    expect(RazorpayOrder.fromJson({
+      'keyId': 'rzp',
+      'orderId': 'order_1',
+      'amount': 2500,
+      'currency': 'INR',
+    }).amountPaise(2500), 250000);
   });
 
   test('parses Razorpay create-order response', () {
