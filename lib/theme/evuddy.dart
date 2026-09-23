@@ -18,7 +18,7 @@ class Evuddy {
   static const night = Color(0xFF050A08);
   static const danger = Color(0xFFB42318);
 
-  static const splashYellow = Color(0xFFFFCC00);
+  static const splash = Color(0xFF14532D);
   static const logoGreen = Color(0xFF22C55E);
   static const logoPink = Color(0xFFEC4899);
 
@@ -83,7 +83,7 @@ class Evuddy {
   static ThemeData theme() {
     return ThemeData(
       useMaterial3: true,
-      scaffoldBackgroundColor: wash,
+      scaffoldBackgroundColor: paper,
       colorScheme: const ColorScheme.light(
         primary: green,
         onPrimary: paper,

@@ -40,13 +40,13 @@ class AuthScreen extends StatelessWidget {
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Evuddy.wash,
+        systemNavigationBarColor: Colors.white,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: Evuddy.wash,
+        backgroundColor: Colors.white,
         body: ColoredBox(
-          color: Evuddy.wash,
+          color: Colors.white,
           child: SafeArea(
               child: Column(
                 children: [

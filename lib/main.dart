@@ -15,9 +15,9 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Evuddy.splashYellow,
-      systemNavigationBarIconBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Evuddy.splash,
+      systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
   runApp(const EvuddyApp());
@@ -83,21 +83,29 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Evuddy.splashYellow,
-        systemNavigationBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Evuddy.splash,
+        systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: Evuddy.splashYellow,
+        backgroundColor: Evuddy.splash,
         body: FadeTransition(
           opacity: _fade,
           child: ScaleTransition(
             scale: _scale,
-            child: const SafeArea(
+            child: SafeArea(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 40),
+                padding: const EdgeInsets.symmetric(horizontal: 36),
                 child: Center(
-                  child: EvuddyLogo(height: 58),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 28),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: const EvuddyLogo(height: 48),
+                  ),
                 ),
               ),
             ),
