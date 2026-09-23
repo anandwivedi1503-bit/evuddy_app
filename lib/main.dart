@@ -69,7 +69,9 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
 
   void _go() {
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(evuddyRoute(const RiderShell()));
+    Navigator.of(context).pushReplacement(
+      evuddyRoute(const RiderShell(key: ValueKey(Evuddy.buildStamp))),
+    );
   }
 
   @override
@@ -128,6 +130,16 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: Evuddy.muted,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          Evuddy.buildStamp,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Evuddy.greenDeep,
                           ),
                         ),
                         const Spacer(flex: 3),

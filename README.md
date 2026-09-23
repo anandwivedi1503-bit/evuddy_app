@@ -15,10 +15,21 @@ Premium cream canvas, official lockup, **peeking photo carousel** with **Book EV
 - **Voice** — microphone on register / KYC fields (and “speak the whole form”)
 - **Account** — status, open booking OTP, helpdesk
 
+## Why the emulator does not update after a merge
+
+GitHub merge only updates the remote. **sdk gphone16k still runs the last APK** from `flutter run`. Hot reload does not load another machine’s merge. The Cursor Agents phone on the right is a website-style preview, not your emulator.
+
+**Fix (Windows):** press `q` in the old Flutter terminal, then double-click `tool/update_emulator.bat`  
+(or VS Code → Terminal → Run Task → **EVUDDY: pull main and run emulator**).
+
+That pulls `main`, **uninstalls the old app**, and installs this build. You must see **Where are you riding today?** and green **23 Sep 2026 · Home v4**. If that stamp is missing, you are still on an old session.
+
 ```bash
+# press q in the running flutter terminal first
+git checkout main
 git pull origin main
 flutter pub get
-flutter run
+flutter run --uninstall-first
 ```
 
 Full restart after pull. CEO APK: `flutter build apk --release` → `build/app/outputs/flutter-apk/app-release.apk`.
