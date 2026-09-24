@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'api/evuddy_api.dart';
 import 'state/registration_draft.dart';
 import 'submitted_screen.dart';
+import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 
 class UploadDocumentsScreen extends StatefulWidget {
@@ -22,9 +23,50 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
   final _picker = ImagePicker();
 
   Future<void> _pick(void Function(String path) assign) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Add photo',
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: Evuddy.ink,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera_outlined, color: Evuddy.greenDeep),
+                  title: const Text('Camera'),
+                  onTap: () => Navigator.pop(ctx, ImageSource.camera),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined, color: Evuddy.greenDeep),
+                  title: const Text('Gallery'),
+                  onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (source == null || !mounted) return;
     final shot = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 82,
+      source: source,
+      imageQuality: 85,
+      maxWidth: 1600,
+      requestFullMetadata: false,
     );
     if (shot == null) return;
     setState(() {
@@ -33,11 +75,15 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
     });
   }
 
-  Future<String> _up(String? path, String label) async {
+  Future<String> _up(String? path, String label, String filename) async {
     if (path == null) return '';
     setState(() => progress = 'Uploading $label…');
     final token = await _token();
-    return EvuddyApi.uploadFile(file: File(path), idToken: token);
+    return EvuddyApi.uploadFile(
+      file: File(path),
+      idToken: token,
+      filename: filename,
+    );
   }
 
   Future<String> _token() async {
@@ -62,14 +108,14 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
       progress = 'Preparing your registration…';
     });
     try {
-      final front = await _up(d.aadhaarFrontPath, 'Aadhaar front');
-      final back = await _up(d.aadhaarBackPath, 'Aadhaar back');
-      final lf = await _up(d.licenseFrontPath, 'licence front');
-      final lb = await _up(d.licenseBackPath, 'licence back');
-      final photo = await _up(d.profilePhotoPath, 'profile photo');
+      final front = await _up(d.aadhaarFrontPath, 'Aadhaar front', 'aadhaar-front');
+      final back = await _up(d.aadhaarBackPath, 'Aadhaar back', 'aadhaar-back');
+      final lf = await _up(d.licenseFrontPath, 'licence front', 'dl-front');
+      final lb = await _up(d.licenseBackPath, 'licence back', 'dl-back');
+      final photo = await _up(d.profilePhotoPath, 'profile photo', 'profile');
       setState(() => progress = 'Creating your rider account…');
       final token = await _token();
-      final result = await EvuddyApi.createRider({
+      final body = <String, dynamic>{
         'fullName': d.fullName,
         'phone': d.phone,
         'email': d.email,
@@ -80,8 +126,6 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
         'drivingLicense': d.drivingLicense,
         'aadhaarFrontUrl': front,
         'aadhaarBackUrl': back,
-        'licenseFrontUrl': lf,
-        'licenseBackUrl': lb,
         'profilePhotoUrl': photo,
         'instagramId': d.instagramId,
         'facebookId': d.facebookId,
@@ -90,7 +134,10 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
         'reference1Phone': d.reference1Phone,
         'reference2Name': d.reference2Name,
         'reference2Phone': d.reference2Phone,
-      });
+      };
+      if (lf.isNotEmpty) body['licenseFrontUrl'] = lf;
+      if (lb.isNotEmpty) body['licenseBackUrl'] = lb;
+      final result = await EvuddyApi.createRider(body);
       if (!mounted) return;
       if (result.riderExists && result.riderStatus == 'Rejected') {
         setState(() {
@@ -129,8 +176,7 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
     return AuthScreen(
       kicker: 'Documents  ·  Step 4 of 4',
       title: 'Upload documents',
-      subtitle:
-          'JPEG, PNG or WebP. Files go to the same /api/upload the website uses, then POST /api/riders.',
+      subtitle: 'Aadhaar front, back and a clear profile photo. Camera or gallery.',
       step: 4,
       error: error,
       footer: EvuddyButton(
@@ -171,7 +217,7 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
         ),
         DocTile(
           title: 'Profile photo',
-          subtitle: 'Required · passport size',
+          subtitle: 'Required · face clearly visible',
           icon: Icons.person_outline_rounded,
           selected: d.profilePhoto,
           onTap: () => _pick((p) => d.profilePhotoPath = p),

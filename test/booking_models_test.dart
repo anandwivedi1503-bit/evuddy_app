@@ -44,15 +44,43 @@ void main() {
         'bookingId': 'BK-9',
         'pendingAmount': 241.5,
         'receivedAmount': 1,
-        'pickupOTP': '4821',
+        'pickupOtp': '4821',
+        'rideEndOtp': '7732',
         'paymentStatus': 'Partial',
       },
     });
     expect(booking.mongoId, 'mongo1');
     expect(booking.bookingId, 'BK-9');
     expect(booking.hasPickupOtp, isTrue);
+    expect(booking.pickupOtp, '4821');
+    expect(booking.rideEndOtp, '7732');
     expect(booking.due, 241.5);
     expect(booking.message, contains('Payment successful'));
+    expect(
+      RiderBooking.fromJson({
+        'pickupOTP': '1111',
+        'rideEndOTP': '2222',
+      }).rideEndOtp,
+      '2222',
+    );
+  });
+
+  test('sniffs jpeg/png/webp and rejects mismatch names', () {
+    expect(sniffImageBytes([0xFF, 0xD8, 0xFF, ...List.filled(12, 0)]).extension, 'jpg');
+    expect(
+      sniffImageBytes([0x89, 0x50, 0x4E, 0x47, ...List.filled(12, 0)]).extension,
+      'png',
+    );
+    expect(
+      sniffImageBytes([
+        0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50,
+      ]).extension,
+      'webp',
+    );
+    expect(
+      () => sniffImageBytes(List.filled(20, 0)),
+      throwsA(isA<ApiException>()),
+    );
   });
 
   test('catalog rates and Indian rupee format', () {

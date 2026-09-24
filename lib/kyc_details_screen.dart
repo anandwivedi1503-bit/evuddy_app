@@ -95,7 +95,7 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
       kicker: 'KYC  ·  Step 3 of 4',
       title: 'KYC details',
       subtitle:
-          'Same KYC as the website: Aadhaar required. Tap the mic to speak numbers.',
+          'Aadhaar is required. Licence and references are optional. Tap the mic to speak numbers.',
       step: 3,
       error: error,
       footer: EvuddyButton(label: 'Continue', onPressed: _continue),
