@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 /// Talks only to the live EVUDDY site. Never writes website source.
 class EvuddyApi {
@@ -64,23 +65,41 @@ class EvuddyApi {
   static Future<String> uploadFile({
     required File file,
     required String idToken,
+    String filename = 'document',
   }) async {
+    final bytes = await file.readAsBytes();
+    final kind = sniffImageBytes(bytes);
     final req = http.MultipartRequest('POST', _u('/api/upload'))
+      ..headers['Authorization'] = 'Bearer $idToken'
       ..fields['firebaseIdToken'] = idToken
-      ..files.add(await http.MultipartFile.fromPath('file', file.path));
+      ..files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: '$filename.${kind.extension}',
+          contentType: kind.mediaType,
+        ),
+      );
     final streamed = await req.send().timeout(const Duration(seconds: 45));
     final r = await http.Response.fromStream(streamed);
     final j = _json(r);
-    final url = j['url']?.toString();
+    final url = j['url']?.toString() ??
+        (j['data'] is Map ? (j['data'] as Map)['url']?.toString() : null);
     if (j['success'] == true && url != null && url.isNotEmpty) return url;
-    throw ApiException(j['error']?.toString() ?? j['message']?.toString() ?? 'File upload failed.');
+    throw ApiException(
+      j['error']?.toString() ?? j['message']?.toString() ?? 'File upload failed.',
+    );
   }
 
   static Future<RegisterResult> createRider(Map<String, dynamic> body) async {
+    final token = body['firebaseIdToken']?.toString();
     final r = await http
         .post(
           _u('/api/riders'),
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          },
           body: jsonEncode(body),
         )
         .timeout(const Duration(seconds: 20));
@@ -286,12 +305,16 @@ class EvuddyApi {
   static Future<String> rideAction({
     required String idToken,
     required bool start,
+    String? bookingId,
   }) async {
     final r = await http
         .post(
           _u(start ? '/api/rides/rider-start' : '/api/rides/rider-end'),
           headers: _auth(idToken),
-          body: jsonEncode({}),
+          body: jsonEncode({
+            'firebaseIdToken': idToken,
+            if (bookingId != null && bookingId.isNotEmpty) 'bookingId': bookingId,
+          }),
         )
         .timeout(const Duration(seconds: 15));
     final j = _json(r);
@@ -507,8 +530,18 @@ class RiderBooking {
       pendingAmount: _asDouble(m['pendingAmount'] ?? e['pendingAmount']) ?? 0,
       receivedAmount: _asDouble(m['receivedAmount'] ?? e['receivedAmount'] ?? e['paidAmount']) ?? 0,
       paymentDue: _asDouble(m['paymentDue'] ?? e['paymentDue']) ?? 0,
-      pickupOtp: (m['pickupOTP'] ?? e['pickupOTP'])?.toString() ?? '',
-      rideEndOtp: (m['rideEndOTP'] ?? e['rideEndOTP'])?.toString() ?? '',
+      pickupOtp: (m['pickupOTP'] ??
+              m['pickupOtp'] ??
+              e['pickupOTP'] ??
+              e['pickupOtp'])
+          ?.toString() ??
+          '',
+      rideEndOtp: (m['rideEndOTP'] ??
+              m['rideEndOtp'] ??
+              e['rideEndOTP'] ??
+              e['rideEndOtp'])
+          ?.toString() ??
+          '',
       pickupOtpVerified: m['pickupOTPVerified'] == true || e['pickupOTPVerified'] == true,
       vehicleId: m['vehicleId']?.toString() ?? '',
       vehicleModel: m['vehicleModel']?.toString() ?? '',
@@ -583,6 +616,42 @@ class RazorpayOrder {
     if (raw >= expected) return raw;
     return expected;
   }
+}
+
+/// Gallery compress often writes JPEG bytes while keeping a .png/.webp name.
+/// Live /api/upload rejects that mismatch ("File content does not match…").
+class SniffedImage {
+  const SniffedImage(this.extension, this.mediaType);
+  final String extension;
+  final MediaType mediaType;
+}
+
+SniffedImage sniffImageBytes(List<int> bytes) {
+  if (bytes.length < 12) {
+    throw ApiException('That photo is empty or damaged. Pick it again.');
+  }
+  if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) {
+    return SniffedImage('jpg', MediaType('image', 'jpeg'));
+  }
+  if (bytes[0] == 0x89 &&
+      bytes[1] == 0x50 &&
+      bytes[2] == 0x4E &&
+      bytes[3] == 0x47) {
+    return SniffedImage('png', MediaType('image', 'png'));
+  }
+  if (bytes[0] == 0x52 &&
+      bytes[1] == 0x49 &&
+      bytes[2] == 0x46 &&
+      bytes[3] == 0x46 &&
+      bytes[8] == 0x57 &&
+      bytes[9] == 0x45 &&
+      bytes[10] == 0x42 &&
+      bytes[11] == 0x50) {
+    return SniffedImage('webp', MediaType('image', 'webp'));
+  }
+  throw ApiException(
+    'Use a JPEG, PNG or WebP from Camera or Gallery. WhatsApp/HEIC files are not accepted.',
+  );
 }
 
 double? _asDouble(dynamic v) {

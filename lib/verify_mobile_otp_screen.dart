@@ -151,7 +151,14 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
         Navigator.pushReplacement(context, evuddyRoute(const SubmittedScreen()));
         return;
       }
-    } catch (_) {}
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        verifying = false;
+        error = 'Could not reach evuddy.com after OTP. Check the network and verify again.';
+      });
+      return;
+    }
     if (!mounted) return;
     if (registrationDraft.fullName.isNotEmpty && registrationDraft.email.isNotEmpty) {
       Navigator.pushReplacement(context, evuddyRoute(const KycDetailsScreen()));

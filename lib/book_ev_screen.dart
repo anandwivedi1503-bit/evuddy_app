@@ -95,7 +95,7 @@ class _BookEvScreenState extends State<BookEvScreen> {
       kicker: 'Book EV',
       title: 'How do you want to ride?',
       subtitle:
-          'Approved riders land here after OTP. Pick rental or Rent to Own. Wallet is deposit-hold only — never a recharge.',
+          'Pick rental or Rent to Own. Pay on Razorpay. Pickup OTP is issued after payment.',
       error: error,
       footer: EvuddyButton(
         label: plan == null ? 'Choose a plan above' : 'Continue',

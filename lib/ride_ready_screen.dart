@@ -248,13 +248,16 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       );
       if (result == null) return;
       setState(() => busy = true);
-      final verified = await EvuddyApi.verifyPayment(
+      var verified = await EvuddyApi.verifyPayment(
         idToken: token,
         bookingMongoId: b.mongoId,
         orderId: result['orderId'],
         paymentId: result['paymentId'],
         signature: result['signature'],
       );
+      if (!verified.hasPickupOtp) {
+        verified = await EvuddyApi.myBooking(token) ?? verified;
+      }
       registrationDraft.activeBooking = verified;
       if (!rental && pay >= 1) {
         final held = (registrationDraft.depositHeld + pay)
@@ -301,7 +304,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       error = null;
     });
     try {
-      final msg = await EvuddyApi.rideAction(idToken: token, start: start);
+      final msg = await EvuddyApi.rideAction(
+        idToken: token,
+        start: start,
+        bookingId: booking?.bookingId,
+      );
       final mine = await EvuddyApi.myBooking(token);
       if (!start &&
           registrationDraft.depositHeld > 0 &&
