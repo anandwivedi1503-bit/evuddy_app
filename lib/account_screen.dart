@@ -10,9 +10,42 @@ import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 import 'widgets/promo.dart';
 
-class AccountScreen extends StatelessWidget {
+class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key, this.onLoggedOut});
   final VoidCallback? onLoggedOut;
+
+  @override
+  State<AccountScreen> createState() => _AccountScreenState();
+}
+
+class _AccountScreenState extends State<AccountScreen> {
+  bool checking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    riderSessionTick.addListener(_tick);
+    if (registrationDraft.phoneVerified) {
+      _refresh();
+    }
+  }
+
+  void _tick() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    riderSessionTick.removeListener(_tick);
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    setState(() => checking = true);
+    await registrationDraft.refreshFromServer();
+    if (!mounted) return;
+    setState(() => checking = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,22 +63,19 @@ class AccountScreen extends StatelessWidget {
       footer: EvuddyGhostButton(
         label: 'Log out on this phone',
         onPressed: () {
-          registrationDraft
-            ..phoneVerified = false
-            ..firebaseIdToken = null
-            ..firebaseUid = null
-            ..bookingEnabled = false
-            ..approvalStatus = ''
-            ..chosenPlan = null
-            ..riderId = null
-            ..activeBooking = null
-            ..depositHeld = 0
-            ..depositStatus = 'none'
-            ..depositBookingId = null;
-          onLoggedOut?.call();
+          d.clearSession();
+          widget.onLoggedOut?.call();
         },
       ),
       children: [
+        if (d.phoneVerified)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: EvuddyGhostButton(
+              label: checking ? 'Refreshing…' : 'Refresh approval & booking',
+              onPressed: checking ? null : _refresh,
+            ),
+          ),
         SurfaceCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,6 +92,17 @@ class AccountScreen extends StatelessWidget {
                 d.email.isEmpty ? 'Complete KYC to unlock hubs' : d.email,
                 style: GoogleFonts.plusJakartaSans(color: Evuddy.muted),
               ),
+              if (d.riderId != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Rider ${d.riderId} · $status',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: d.canBook ? Evuddy.greenDeep : Evuddy.muted,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

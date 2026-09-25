@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -17,29 +19,57 @@ class BookEvScreen extends StatefulWidget {
   State<BookEvScreen> createState() => _BookEvScreenState();
 }
 
-class _BookEvScreenState extends State<BookEvScreen> {
+class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver {
   List<EvuddyCity> cities = [];
   List<EvuddyHub> hubs = [];
   String? city;
   String? hubId;
   String? error;
   bool loading = true;
+  bool refreshing = false;
+  Timer? _poll;
 
-  bool get canBook =>
-      registrationDraft.phoneVerified &&
-      (registrationDraft.bookingEnabled ||
-          registrationDraft.approvalStatus == 'Approved');
+  bool get canBook => registrationDraft.canBook;
 
-  bool get waitingKyc =>
-      registrationDraft.phoneVerified &&
-      !canBook &&
-      (registrationDraft.approvalStatus == 'Under Review' ||
-          registrationDraft.riderId != null);
+  bool get waitingKyc => registrationDraft.isPendingKyc;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    riderSessionTick.addListener(_onTick);
     _load();
+    _refreshApproval();
+    _poll = Timer.periodic(const Duration(seconds: 6), (_) {
+      if (waitingKyc) _refreshApproval();
+    });
+  }
+
+  void _onTick() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshApproval();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    riderSessionTick.removeListener(_onTick);
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshApproval() async {
+    if (!registrationDraft.phoneVerified) return;
+    if (refreshing) return;
+    refreshing = true;
+    await registrationDraft.refreshFromServer();
+    refreshing = false;
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> _load() async {
@@ -50,8 +80,7 @@ class _BookEvScreenState extends State<BookEvScreen> {
       setState(() {
         cities = c;
         hubs = h;
-        city = registrationDraft.chosenCity ??
-            (c.isEmpty ? null : c.first.name);
+        city = registrationDraft.chosenCity ?? (c.isEmpty ? null : c.first.name);
         hubId = registrationDraft.chosenHubId;
         loading = false;
       });
@@ -71,17 +100,19 @@ class _BookEvScreenState extends State<BookEvScreen> {
         .toList();
   }
 
-  void _pickPlan(String plan) {
+  Future<void> _pickPlan(String plan) async {
     if (!registrationDraft.phoneVerified) {
       Navigator.push(context, evuddyRoute(const ConfirmMobileScreen()));
       return;
     }
-    if (waitingKyc) {
-      Navigator.push(context, evuddyRoute(const SubmittedScreen()));
+    await _refreshApproval();
+    if (!mounted) return;
+    if (registrationDraft.isRejected) {
+      setState(() => error = 'This number was rejected. Call helpdesk.');
       return;
     }
-    if (!canBook) {
-      Navigator.push(context, evuddyRoute(const ConfirmMobileScreen()));
+    if (!registrationDraft.canBook) {
+      Navigator.push(context, evuddyRoute(const SubmittedScreen()));
       return;
     }
     setState(() => registrationDraft.chosenPlan = plan);
@@ -98,29 +129,49 @@ class _BookEvScreenState extends State<BookEvScreen> {
           'Pick rental or Rent to Own. Pay on Razorpay. Pickup OTP is issued after payment.',
       error: error,
       footer: EvuddyButton(
-        label: plan == null ? 'Choose a plan above' : 'Continue',
-        onPressed: plan == null || hubId == null
-            ? null
-            : () {
-                registrationDraft.chosenCity = city;
-                registrationDraft.chosenHubId = hubId;
-                Navigator.push(context, evuddyRoute(const RideReadyScreen()));
-              },
+        label: !canBook
+            ? (waitingKyc ? 'Waiting for admin approval' : 'Verify mobile to book')
+            : (plan == null ? 'Choose a plan above' : 'Continue'),
+        onPressed: !canBook
+            ? (waitingKyc
+                ? () => Navigator.push(context, evuddyRoute(const SubmittedScreen()))
+                : () => Navigator.push(context, evuddyRoute(const ConfirmMobileScreen())))
+            : (plan == null || hubId == null
+                ? null
+                : () {
+                    registrationDraft.chosenCity = city;
+                    registrationDraft.chosenHubId = hubId;
+                    registrationDraft.persist();
+                    Navigator.push(context, evuddyRoute(const RideReadyScreen()));
+                  }),
       ),
       children: [
         const ScenePhoto(asset: Evuddy.yellowScooterAsset, height: 210),
         const SizedBox(height: 16),
         if (loading) const InfoNote(text: 'Loading live cities…'),
-        if (!registrationDraft.phoneVerified)
+        if (waitingKyc)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: InfoNote(
+              text:
+                  'Admin has not approved this rider yet (${registrationDraft.approvalStatus.isEmpty ? "Under Review" : registrationDraft.approvalStatus}). Normal booking and Rent to Own unlock automatically after Approve.',
+            ),
+          )
+        else if (!registrationDraft.phoneVerified)
           const Padding(
             padding: EdgeInsets.only(bottom: 16),
             child: InfoNote(
               text:
                   'Same catalog as the website. Razorpay checkout after you reserve a live scooter.',
             ),
+          )
+        else if (canBook)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 16),
+            child: InfoNote(text: 'You’re approved. Choose Normal booking or Rent to Own.'),
           ),
         _PlanCard(
-          frozen: plan == 'rto',
+          frozen: canBook && plan == 'rto',
           tag: 'FLEXIBLE RENTAL',
           title: 'Normal booking',
           body: 'Daily, weekly or monthly. GST included. Return the scooter when the plan ends.',
@@ -134,7 +185,7 @@ class _BookEvScreenState extends State<BookEvScreen> {
         ),
         const SizedBox(height: 12),
         _PlanCard(
-          frozen: plan == 'rental',
+          frozen: canBook && plan == 'rental',
           tag: 'OWN AFTER ${CatalogRates.rtoMonths} MONTHS',
           title: 'Rent to Own',
           body:
@@ -238,7 +289,7 @@ class _PlanCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    frozen ? 'FROZEN' : tag,
+                    frozen ? 'LOCKED' : tag,
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,

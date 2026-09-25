@@ -47,14 +47,10 @@ class EvuddyApi {
       return const RiderLookup.missing();
     }
     if (j['success'] == true && j['data'] is Map) {
-      final d = j['data'] as Map;
-      return RiderLookup(
-        found: true,
-        riderId: d['riderId']?.toString(),
-        approvalStatus: d['approvalStatus']?.toString() ?? '',
-        bookingEnabled: d['bookingEnabled'] == true,
-        message: j['message']?.toString(),
-      );
+      return RiderLookup.fromData(j['data'] as Map, message: j['message']?.toString());
+    }
+    if (j['success'] == true && (j['riderId'] != null || j['approvalStatus'] != null)) {
+      return RiderLookup.fromData(j, message: j['message']?.toString());
     }
     return RiderLookup(
       found: false,
@@ -118,7 +114,16 @@ class EvuddyApi {
       riderId: (j['riderId'] ?? (j['data'] is Map ? (j['data'] as Map)['riderId'] : null))
           ?.toString(),
       riderStatus: j['riderStatus']?.toString() ??
-          (j['data'] is Map ? (j['data'] as Map)['approvalStatus']?.toString() : null),
+          (j['data'] is Map ? (j['data'] as Map)['approvalStatus']?.toString() : null) ??
+          j['approvalStatus']?.toString(),
+      bookingEnabled: j['bookingEnabled'] == true ||
+          (j['data'] is Map && (j['data'] as Map)['bookingEnabled'] == true) ||
+          RiderLookup.isApprovedStatus(
+            j['riderStatus']?.toString() ??
+                (j['data'] is Map ? (j['data'] as Map)['approvalStatus']?.toString() : null) ??
+                j['approvalStatus']?.toString() ??
+                '',
+          ),
     );
   }
 
@@ -673,14 +678,74 @@ class RiderLookup {
     this.riderId,
     this.approvalStatus = '',
     this.bookingEnabled = false,
+    this.fullName,
+    this.email,
     this.message,
   });
   const RiderLookup.missing() : this(found: false);
+
+  factory RiderLookup.fromData(Map d, {String? message}) {
+    final status = (d['approvalStatus'] ??
+            d['riderStatus'] ??
+            d['status'] ??
+            d['kycStatus'] ??
+            d['riderApprovalStatus'] ??
+            '')
+        .toString();
+    final enabled = d['bookingEnabled'] == true ||
+        d['canBook'] == true ||
+        d['bookingAllowed'] == true ||
+        d['isApproved'] == true ||
+        isApprovedStatus(status);
+    return RiderLookup(
+      found: true,
+      riderId: (d['riderId'] ?? d['_id'] ?? d['id'])?.toString(),
+      approvalStatus: status,
+      bookingEnabled: enabled,
+      fullName: (d['fullName'] ?? d['name'])?.toString(),
+      email: d['email']?.toString(),
+      message: message,
+    );
+  }
+
+  static String _norm(String raw) =>
+      raw.toLowerCase().replaceAll(RegExp(r'[\s_-]+'), '');
+
+  static bool isApprovedStatus(String raw) {
+    final t = _norm(raw);
+    if (t.isEmpty) return false;
+    if (t.contains('reject') || t.contains('block') || t.contains('suspend')) {
+      return false;
+    }
+    return t == 'approved' ||
+        t == 'active' ||
+        t == 'verified' ||
+        t == 'enabled' ||
+        t.startsWith('approved');
+  }
+
+  static bool isRejectedStatus(String raw) {
+    final t = _norm(raw);
+    return t.contains('reject') || t.contains('block') || t == 'suspended';
+  }
+
+  static bool isPendingStatus(String raw) {
+    final t = _norm(raw);
+    if (t.isEmpty) return true;
+    if (isApprovedStatus(raw) || isRejectedStatus(raw)) return false;
+    return t.contains('review') ||
+        t.contains('pending') ||
+        t.contains('submit') ||
+        t.contains('kyc') ||
+        t.contains('wait');
+  }
 
   final bool found;
   final String? riderId;
   final String approvalStatus;
   final bool bookingEnabled;
+  final String? fullName;
+  final String? email;
   final String? message;
 }
 
@@ -693,6 +758,7 @@ class RegisterResult {
     this.riderExists = false,
     this.riderId,
     this.riderStatus,
+    this.bookingEnabled = false,
   });
 
   final bool ok;
@@ -702,4 +768,5 @@ class RegisterResult {
   final bool riderExists;
   final String? riderId;
   final String? riderStatus;
+  final bool bookingEnabled;
 }

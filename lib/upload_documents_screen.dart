@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'api/evuddy_api.dart';
 import 'state/registration_draft.dart';
 import 'submitted_screen.dart';
+import 'shell.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 
@@ -87,8 +88,8 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
   }
 
   Future<String> _token() async {
-    final stored = registrationDraft.firebaseIdToken;
-    if (stored != null && stored.isNotEmpty) return stored;
+    final token = await registrationDraft.freshToken();
+    if (token != null && token.isNotEmpty) return token;
     throw ApiException('Phone OTP expired. Go back and verify again.');
   }
 
@@ -139,7 +140,8 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
       if (lb.isNotEmpty) body['licenseBackUrl'] = lb;
       final result = await EvuddyApi.createRider(body);
       if (!mounted) return;
-      if (result.riderExists && result.riderStatus == 'Rejected') {
+      if (result.riderExists &&
+          RiderLookup.isRejectedStatus(result.riderStatus ?? '')) {
         setState(() {
           busy = false;
           progress = null;
@@ -158,7 +160,18 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
       d
         ..riderId = result.riderId
         ..approvalStatus = result.riderStatus ??
-            (result.ok ? 'Under Review' : d.approvalStatus);
+            (result.ok ? 'Under Review' : d.approvalStatus)
+        ..bookingEnabled = result.bookingEnabled;
+      await d.persist();
+      if (!mounted) return;
+      if (d.canBook) {
+        d.jumpToTab(1);
+        Navigator.of(context).pushAndRemoveUntil(
+          evuddyRoute(const RiderShell(startIndex: 1)),
+          (route) => false,
+        );
+        return;
+      }
       Navigator.pushReplacement(context, evuddyRoute(const SubmittedScreen()));
     } catch (e) {
       if (!mounted) return;

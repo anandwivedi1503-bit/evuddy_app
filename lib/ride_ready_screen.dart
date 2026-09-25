@@ -30,7 +30,13 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   String? note;
   final amount = TextEditingController();
 
-  bool get rental => registrationDraft.chosenPlan != 'rto';
+  bool get rental {
+    if (registrationDraft.chosenPlan == 'rto') return false;
+    if (registrationDraft.chosenPlan == 'rental') return true;
+    final mode = (booking ?? registrationDraft.activeBooking)?.rentalMode.toLowerCase() ?? '';
+    if (mode.contains('own')) return false;
+    return true;
+  }
 
   bool get needsDepositHold {
     if (rental) return false;
@@ -54,9 +60,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   }
 
   Future<String?> _token() async {
-    var token = registrationDraft.firebaseIdToken;
-    if (token != null && token.isNotEmpty) return token;
-    return null;
+    return registrationDraft.freshToken();
   }
 
   Future<void> _load() async {
@@ -142,9 +146,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       try {
         final looked = await EvuddyApi.lookupRider(phone: d.phone, idToken: token);
         if (looked.found && looked.riderId != null) {
-          d.riderId = looked.riderId;
-          d.approvalStatus = looked.approvalStatus;
-          d.bookingEnabled = looked.bookingEnabled;
+          d.applyLookup(looked);
         }
       } catch (_) {}
     }
@@ -181,6 +183,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       registrationDraft
         ..activeBooking = created
         ..chosenDuration = duration;
+      await registrationDraft.persist();
       if (!mounted) return;
       setState(() {
         booking = created;

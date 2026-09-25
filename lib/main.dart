@@ -1,22 +1,22 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'api/evuddy_api.dart';
 import 'api/firebase_phone.dart';
 import 'shell.dart';
+import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EvuddyFirebase.ensure();
+  await registrationDraft.restore();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.white,
+      systemNavigationBarColor: Evuddy.rapidoYellow,
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
@@ -37,8 +37,7 @@ class EvuddyApp extends StatelessWidget {
   }
 }
 
-/// Rapido structure: full-bleed field, centred wordmark, fade+scale.
-/// Field is the app wash (not forest green, not a white card).
+/// Rapido-style open: one solid field, centred wordmark scale, hold, fade to home.
 class EvuddySplashScreen extends StatefulWidget {
   const EvuddySplashScreen({super.key});
 
@@ -47,35 +46,52 @@ class EvuddySplashScreen extends StatefulWidget {
 }
 
 class _EvuddySplashScreenState extends State<EvuddySplashScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c;
+    with TickerProviderStateMixin {
+  late final AnimationController _in;
+  late final AnimationController _out;
   late final Animation<double> _fade;
   late final Animation<double> _scale;
+  late final Animation<double> _exit;
 
   @override
   void initState() {
     super.initState();
-    _c = AnimationController(
+    _in = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 520),
     );
-    _fade = CurvedAnimation(parent: _c, curve: Curves.easeOut);
-    _scale = Tween<double>(begin: 0.92, end: 1).animate(
-      CurvedAnimation(parent: _c, curve: Curves.easeOutCubic),
+    _out = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
     );
-    _c.forward();
+    _fade = CurvedAnimation(parent: _in, curve: Curves.easeOut);
+    _scale = Tween<double>(begin: 0.78, end: 1).animate(
+      CurvedAnimation(parent: _in, curve: Curves.easeOutBack),
+    );
+    _exit = Tween<double>(begin: 1, end: 0).animate(
+      CurvedAnimation(parent: _out, curve: Curves.easeIn),
+    );
+    _in.forward();
     EvuddyApi.health();
-    Timer(const Duration(milliseconds: 1800), _go);
+    registrationDraft.restore().then((_) {
+      if (registrationDraft.phoneVerified) {
+        registrationDraft.refreshFromServer();
+      }
+    });
+    Future<void>.delayed(const Duration(milliseconds: 1650), _go);
   }
 
-  void _go() {
+  Future<void> _go() async {
+    if (!mounted) return;
+    await _out.forward();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(evuddyRoute(const RiderShell()));
   }
 
   @override
   void dispose() {
-    _c.dispose();
+    _in.dispose();
+    _out.dispose();
     super.dispose();
   }
 
@@ -85,34 +101,35 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Evuddy.wash,
+        systemNavigationBarColor: Evuddy.rapidoYellow,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: Evuddy.wash,
+        backgroundColor: Evuddy.rapidoYellow,
         body: FadeTransition(
-          opacity: _fade,
-          child: ScaleTransition(
-            scale: _scale,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const EvuddyLogo(height: 64),
-                    const SizedBox(height: 22),
-                    Container(
-                      width: 36,
-                      height: 3,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(99),
-                        gradient: const LinearGradient(
-                          colors: [Evuddy.logoGreen, Evuddy.logoPink],
+          opacity: _exit,
+          child: FadeTransition(
+            opacity: _fade,
+            child: ScaleTransition(
+              scale: _scale,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const EvuddySplashMark(),
+                      const SizedBox(height: 28),
+                      SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.4,
+                          color: Evuddy.ink.withValues(alpha: 0.85),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

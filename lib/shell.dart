@@ -15,25 +15,49 @@ class RiderShell extends StatefulWidget {
   State<RiderShell> createState() => _RiderShellState();
 }
 
-class _RiderShellState extends State<RiderShell> {
+class _RiderShellState extends State<RiderShell> with WidgetsBindingObserver {
   late int index;
 
   @override
   void initState() {
     super.initState();
     index = widget.startIndex;
+    if (index < 0 || index > 2) index = 0;
     riderSessionTick.addListener(_onSession);
+    WidgetsBinding.instance.addObserver(this);
+    if (registrationDraft.phoneVerified) {
+      registrationDraft.refreshFromServer();
+    }
   }
 
   void _onSession() {
     if (!mounted) return;
-    setState(() => index = registrationDraft.shellTab);
+    final jump = registrationDraft.takeTabJump();
+    setState(() {
+      if (jump != null) index = jump;
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && registrationDraft.phoneVerified) {
+      registrationDraft.refreshFromServer();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     riderSessionTick.removeListener(_onSession);
     super.dispose();
+  }
+
+  void _select(int i) {
+    setState(() => index = i);
+    registrationDraft.shellTab = i;
+    if (i == 1 && registrationDraft.phoneVerified) {
+      registrationDraft.refreshFromServer();
+    }
   }
 
   @override
@@ -52,7 +76,7 @@ class _RiderShellState extends State<RiderShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
-        onDestinationSelected: (i) => setState(() => index = i),
+        onDestinationSelected: _select,
         backgroundColor: Colors.white,
         elevation: 8,
         shadowColor: const Color(0x14000000),

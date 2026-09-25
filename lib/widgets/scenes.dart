@@ -16,10 +16,9 @@ const heroPhotos = [
   Evuddy.hubAsset,
 ];
 
-/// Matches the live product Home: photo, Book EV overlapping the bottom-left.
+/// Photo carousel only — Book EV lives in the Rapido-style search bar above.
 class RideTodayHero extends StatefulWidget {
-  const RideTodayHero({super.key, required this.onBook});
-  final VoidCallback onBook;
+  const RideTodayHero({super.key});
 
   @override
   State<RideTodayHero> createState() => _RideTodayHeroState();
@@ -54,59 +53,43 @@ class _RideTodayHeroState extends State<RideTodayHero> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(22),
-              child: SizedBox(
-                height: 210,
-                width: double.infinity,
-                child: PageView.builder(
-                  controller: page,
-                  onPageChanged: (i) => setState(() => index = i),
-                  itemCount: heroPhotos.length,
-                  itemBuilder: (context, i) {
-                    return Image.asset(
-                      heroPhotos[i],
-                      fit: BoxFit.cover,
-                      alignment: Alignment.center,
-                      filterQuality: FilterQuality.high,
-                    );
-                  },
-                ),
-              ),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: SizedBox(
+            height: 210,
+            width: double.infinity,
+            child: PageView.builder(
+              controller: page,
+              onPageChanged: (i) => setState(() => index = i),
+              itemCount: heroPhotos.length,
+              itemBuilder: (context, i) {
+                return Image.asset(
+                  heroPhotos[i],
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                  filterQuality: FilterQuality.high,
+                );
+              },
             ),
-            Positioned(
-              left: 14,
-              bottom: -18,
-              child: SizedBox(
-                height: 44,
-                child: FilledButton(
-                  onPressed: widget.onBook,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Evuddy.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 22),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 8,
-                    shadowColor: Evuddy.green.withValues(alpha: 0.45),
-                  ),
-                  child: Text(
-                    'Book EV  →',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(heroPhotos.length, (i) {
+            final on = i == index;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: on ? 16 : 6,
+              height: 6,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              decoration: BoxDecoration(
+                color: on ? Evuddy.green : Evuddy.line,
+                borderRadius: BorderRadius.circular(99),
+              ),
+            );
+          }),
+        ),
       ],
     );
   }
@@ -228,107 +211,119 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
             itemCount: offerAds.length,
             itemBuilder: (context, i) {
               final ad = offerAds[i];
-              return Container(
-                margin: const EdgeInsets.only(right: 2),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 8)),
-                  ],
-                ),
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
                 child: GestureDetector(
                   onTap: () => _open(ad),
                   child: ClipRRect(
-                  borderRadius: BorderRadius.circular(22),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.asset(
-                        ad.asset,
-                        fit: BoxFit.cover,
-                        alignment: Alignment.center,
-                        filterQuality: FilterQuality.high,
-                      ),
-                      const DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0x66050A08), Color(0xF2050A08)],
+                    borderRadius: BorderRadius.circular(22),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.asset(
+                          ad.asset,
+                          fit: BoxFit.cover,
+                          alignment: Alignment.center,
+                          filterQuality: FilterQuality.high,
+                        ),
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                ad.book
+                                    ? const Color(0xE016A34A)
+                                    : ad.invest
+                                        ? const Color(0xE0BE185D)
+                                        : const Color(0xE014532D),
+                                const Color(0x66050A08),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              ad.kicker,
-                              style: GoogleFonts.plusJakartaSans(
-                                color: const Color(0xFF86EFAC),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 11,
-                                letterSpacing: 1.2,
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(18, 16, 16, 14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                                child: Text(
+                                  ad.kicker,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: Evuddy.greenDeep,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 10,
+                                    letterSpacing: 1.1,
+                                  ),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              ad.title,
-                              style: GoogleFonts.plusJakartaSans(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 20,
-                                height: 1.15,
+                              const SizedBox(height: 12),
+                              Text(
+                                ad.title,
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 22,
+                                  height: 1.12,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              ad.body,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.plusJakartaSans(
-                                color: Colors.white70,
-                                fontSize: 13,
-                                height: 1.35,
+                              const SizedBox(height: 8),
+                              Text(
+                                ad.body,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: Colors.white,
+                                  fontSize: 13.5,
+                                  height: 1.35,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                            const Spacer(),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () => _open(ad),
+                              const Spacer(),
+                              Row(
+                                children: [
+                                  Expanded(
                                     child: Text(
                                       '${ad.cta}  →',
                                       style: GoogleFonts.plusJakartaSans(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w800,
+                                        fontSize: 15,
                                       ),
                                     ),
                                   ),
-                                ),
-                                if (ad.pdf)
-                                  TextButton.icon(
-                                    onPressed: () => shareFleetPartnerPdf(),
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: Colors.white,
-                                      backgroundColor: const Color(0x33FFFFFF),
+                                  if (ad.pdf)
+                                    TextButton.icon(
+                                      onPressed: () => shareFleetPartnerPdf(),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        backgroundColor: const Color(0x33FFFFFF),
+                                      ),
+                                      icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                                      label: Text(
+                                        'PDF',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
                                     ),
-                                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                                    label: Text(
-                                      'PDF',
-                                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
                 ),
               );
             },

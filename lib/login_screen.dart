@@ -71,6 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => error = 'Enter a valid email address.');
       return;
     }
+    final previous = registrationDraft.phone;
     registrationDraft
       ..fullName = n
       ..phone = p
@@ -78,6 +79,14 @@ class _LoginScreenState extends State<LoginScreen> {
       ..comingThrough = comingThrough
       ..phoneVerified = false
       ..otpGate = 'register';
+    if (previous != p) {
+      registrationDraft
+        ..riderId = null
+        ..approvalStatus = ''
+        ..bookingEnabled = false
+        ..activeBooking = null;
+    }
+    await registrationDraft.persist();
     setState(() {
       error = null;
       busy = true;

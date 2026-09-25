@@ -38,7 +38,7 @@ class WebOtpController {
     return s.send(phone10);
   }
 
-  Future<({String uid, String token})> confirm(String code) {
+  Future<({String uid, String token, String refreshToken})> confirm(String code) {
     final s = _state;
     if (s == null) {
       return Future.error('OTP security check is still loading.');
@@ -53,7 +53,7 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
 
   late final WebViewController _web;
   Completer<void>? _sent;
-  Completer<({String uid, String token})>? _verified;
+  Completer<({String uid, String token, String refreshToken})>? _verified;
   OverlayEntry? _customView;
   bool widgetReady = false;
   bool captchaSolved = false;
@@ -103,6 +103,7 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
             _verified?.complete((
               uid: raw['uid']?.toString() ?? '',
               token: raw['token']?.toString() ?? '',
+              refreshToken: raw['refreshToken']?.toString() ?? '',
             ));
             _verified = null;
           } else if (type == 'sms') {
@@ -216,8 +217,8 @@ class _WebOtpPanelState extends State<WebOtpPanel> {
     );
   }
 
-  Future<({String uid, String token})> confirm(String code) {
-    _verified = Completer<({String uid, String token})>();
+  Future<({String uid, String token, String refreshToken})> confirm(String code) {
+    _verified = Completer<({String uid, String token, String refreshToken})>();
     _web.runJavaScript("confirmOtp('$code');");
     return _verified!.future.timeout(const Duration(seconds: 30));
   }

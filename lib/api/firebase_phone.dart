@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 /// Same Firebase project the website uses (`kebuone-otp`). Public web config.
 class EvuddyFirebase {
@@ -46,6 +49,72 @@ class EvuddyFirebase {
       codeSent: (id, _) => onCodeSent(id),
       codeAutoRetrievalTimeout: (_) {},
     );
+  }
+
+  /// WebView OTP stores a token; native Auth may be empty. Refresh when JWT is stale.
+  static Future<String?> freshIdToken({
+    String? storedToken,
+    String? refreshToken,
+    bool force = false,
+  }) async {
+    await ensure();
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        return await user.getIdToken(force);
+      }
+    } catch (e) {
+      debugPrint('Native token: $e');
+    }
+    if (refreshToken != null &&
+        refreshToken.isNotEmpty &&
+        (force || storedToken == null || storedToken.isEmpty || _jwtExpired(storedToken))) {
+      final refreshed = await _refreshWithGoogle(refreshToken);
+      if (refreshed != null) return refreshed;
+    }
+    if (storedToken != null && storedToken.isNotEmpty && !_jwtExpired(storedToken)) {
+      return storedToken;
+    }
+    return storedToken;
+  }
+
+  static Future<String?> _refreshWithGoogle(String refreshToken) async {
+    try {
+      final r = await http
+          .post(
+            Uri.parse(
+              'https://securetoken.googleapis.com/v1/token?key=${options.apiKey}',
+            ),
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'grant_type=refresh_token&refresh_token=${Uri.encodeComponent(refreshToken)}',
+          )
+          .timeout(const Duration(seconds: 15));
+      final j = jsonDecode(r.body);
+      if (j is Map && j['id_token'] != null) {
+        return j['id_token'].toString();
+      }
+    } catch (e) {
+      debugPrint('Token refresh: $e');
+    }
+    return null;
+  }
+
+  static bool _jwtExpired(String token) {
+    final parts = token.split('.');
+    if (parts.length < 2) return true;
+    try {
+      var payload = parts[1].replaceAll('-', '+').replaceAll('_', '/');
+      while (payload.length % 4 != 0) {
+        payload += '=';
+      }
+      final map = jsonDecode(utf8.decode(base64.decode(payload)));
+      if (map is! Map || map['exp'] is! num) return true;
+      final exp = (map['exp'] as num).toInt();
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      return now >= exp - 90;
+    } catch (_) {
+      return true;
+    }
   }
 
   static Future<User> confirmOtp({

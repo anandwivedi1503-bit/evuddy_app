@@ -18,7 +18,8 @@ class Evuddy {
   static const night = Color(0xFF050A08);
   static const danger = Color(0xFFB42318);
 
-  static const splash = Color(0xFFF7F8F5);
+  static const splash = Color(0xFFFFCC00);
+  static const rapidoYellow = Color(0xFFFFCC00);
   static const logoGreen = Color(0xFF22C55E);
   static const logoPink = Color(0xFFEC4899);
 
@@ -113,6 +114,26 @@ class EvuddyLogo extends StatelessWidget {
       height: height,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.high,
+    );
+  }
+}
+
+/// Solid-field splash mark (Rapido: wordmark only, no stamp card).
+class EvuddySplashMark extends StatelessWidget {
+  const EvuddySplashMark({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Image.asset(
+          Evuddy.wordmarkAsset,
+          height: 72,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+        ),
+      ],
     );
   }
 }

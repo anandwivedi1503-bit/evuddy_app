@@ -75,7 +75,12 @@
       confirmation.confirm(code)
         .then(function (res) {
           return res.user.getIdToken(true).then(function (token) {
-            post({ type: "verified", uid: res.user.uid, token: token });
+            post({
+              type: "verified",
+              uid: res.user.uid,
+              token: token,
+              refreshToken: res.user.refreshToken || ""
+            });
           });
         })
         .catch(function (e) { post({ type: "error", message: String(e.message || e) }); });

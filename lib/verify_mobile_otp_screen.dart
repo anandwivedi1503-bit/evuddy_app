@@ -108,7 +108,10 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       registrationDraft
         ..phoneVerified = true
         ..firebaseUid = session.uid
-        ..firebaseIdToken = session.token;
+        ..firebaseIdToken = session.token
+        ..firebaseRefreshToken =
+            session.refreshToken.isEmpty ? registrationDraft.firebaseRefreshToken : session.refreshToken;
+      await registrationDraft.persist();
       await _routeAfterOtp();
     } catch (e) {
       if (!mounted) return;
@@ -131,11 +134,8 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       );
       if (!mounted) return;
       if (lookup.found) {
-        registrationDraft
-          ..riderId = lookup.riderId
-          ..approvalStatus = lookup.approvalStatus
-          ..bookingEnabled = lookup.bookingEnabled;
-        if (lookup.approvalStatus == 'Rejected') {
+        registrationDraft.applyLookup(lookup);
+        if (registrationDraft.isRejected) {
           setState(() {
             verifying = false;
             error = 'This number was rejected. Contact EVUDDY support.';
@@ -143,8 +143,8 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
           return;
         }
         if (registrationDraft.canBook) {
-          registrationDraft.shellTab = 1;
-          riderSessionTick.value++;
+          registrationDraft.jumpToTab(1);
+          await registrationDraft.persist();
           Navigator.of(context).popUntil((r) => r.isFirst);
           return;
         }
