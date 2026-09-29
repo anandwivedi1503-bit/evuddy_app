@@ -35,7 +35,7 @@ class Evuddy {
   static const sceneDistributorAsset = 'assets/images/scene_distributor.jpg';
   static const sceneFranchiseAsset = 'assets/images/scene_franchise.jpg';
   static const sceneFilmAsset = 'assets/images/scene_film.jpg';
-  static const investPosterAsset = 'assets/images/invest_poster.jpg';
+  static const investPosterAsset = 'assets/images/fleet_partner_foco.png';
 
   static List<BoxShadow> get lift => const [
         BoxShadow(
@@ -118,22 +118,16 @@ class EvuddyLogo extends StatelessWidget {
   }
 }
 
-/// Solid-field splash mark (Rapido: wordmark only, no stamp card).
 class EvuddySplashMark extends StatelessWidget {
   const EvuddySplashMark({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Image.asset(
-          Evuddy.wordmarkAsset,
-          height: 72,
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-        ),
-      ],
+    return Image.asset(
+      Evuddy.wordmarkAsset,
+      height: 56,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
     );
   }
 }

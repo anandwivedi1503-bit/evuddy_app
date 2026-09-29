@@ -94,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
               pinned: true,
               backgroundColor: Colors.white,
               elevation: 0,
-              title: const EvuddyLogo(height: 40),
+              title: const EvuddyLogo(height: 34),
               centerTitle: true,
               automaticallyImplyLeading: false,
               actions: [
@@ -104,38 +104,41 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.phone_outlined, color: Evuddy.ink),
                 ),
               ],
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(76),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: BookSearchBar(onBook: () => _book()),
+                ),
+              ),
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Where are you\nriding today?',
+                      'Ride electric today',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 34,
-                        height: 1.08,
+                        fontSize: 28,
+                        height: 1.1,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -1.2,
+                        letterSpacing: -0.8,
                         color: Evuddy.ink,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
-                      'Hub pickup · Live GPS · EV only',
+                      'Hub pickup  ·  Live GPS  ·  GST included',
                       style: GoogleFonts.plusJakartaSans(
                         color: Evuddy.muted,
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    BookSearchBar(onBook: () => _book()),
-                    const SizedBox(height: 14),
-                    if (d.phoneVerified) _StatusChip(onTap: () => _book()),
                     if (d.activeBooking != null) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       _LiveTripBanner(
                         booking: d.activeBooking!,
                         onOpen: () {
@@ -143,12 +146,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       ),
                     ],
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
                     const RideTodayHero(),
                     const SizedBox(height: 18),
                     OfferAdCarousel(onBook: () => _book()),
                     const SizedBox(height: 22),
-                    Text('PLANS', style: Theme.of(context).textTheme.labelSmall),
+                    Text('RIDE', style: Theme.of(context).textTheme.labelSmall),
                     const SizedBox(height: 10),
                     FareGrid(onPick: (fare) => _book(fare: fare)),
                     const SizedBox(height: 18),
@@ -156,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 18),
                     QuickActions(
                       registerLabel: d.phoneVerified
-                          ? (d.canBook ? 'Approved' : 'KYC')
+                          ? (d.canBook ? 'Account' : 'KYC')
                           : 'Register',
                       onBook: () => _book(),
                       onRegister: () {
@@ -306,14 +309,14 @@ class BookSearchBar extends StatelessWidget {
         onTap: onBook,
         borderRadius: BorderRadius.circular(18),
         child: Ink(
-          height: 58,
+          height: 56,
           decoration: BoxDecoration(
-            color: const Color(0xFFF4F6F3),
+            color: const Color(0xFFF3F4F2),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: Evuddy.line),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+            padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
             child: Row(
               children: [
                 Container(
@@ -323,21 +326,21 @@ class BookSearchBar extends StatelessWidget {
                     color: Evuddy.green,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.electric_moped_rounded, color: Colors.white),
+                  child: const Icon(Icons.search_rounded, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Book an EV',
                     style: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       fontSize: 16,
                       color: Evuddy.ink,
                     ),
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: Evuddy.green,
                     borderRadius: BorderRadius.circular(14),
@@ -353,52 +356,6 @@ class BookSearchBar extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final d = registrationDraft;
-    final approved = d.canBook;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: approved ? Evuddy.greenSoft : const Color(0xFFFFF7ED),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: approved ? const Color(0xFF86EFAC) : const Color(0xFFFDBA74),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              approved ? Icons.verified_rounded : Icons.hourglass_top_rounded,
-              color: approved ? Evuddy.greenDeep : const Color(0xFFC2410C),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                approved
-                    ? 'Approved · Normal booking and Rent to Own are open'
-                    : 'KYC ${d.approvalStatus.isEmpty ? "under review" : d.approvalStatus} · waiting for admin',
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                  color: Evuddy.ink,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

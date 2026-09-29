@@ -6,7 +6,6 @@ import 'api/firebase_phone.dart';
 import 'shell.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
-import 'widgets/chrome.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,7 +36,7 @@ class EvuddyApp extends StatelessWidget {
   }
 }
 
-/// Rapido-style open: one solid field, centred wordmark scale, hold, fade to home.
+/// Brand-colour splash: wordmark only, then fade into the white home.
 class EvuddySplashScreen extends StatefulWidget {
   const EvuddySplashScreen({super.key});
 
@@ -46,30 +45,18 @@ class EvuddySplashScreen extends StatefulWidget {
 }
 
 class _EvuddySplashScreenState extends State<EvuddySplashScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late final AnimationController _in;
-  late final AnimationController _out;
   late final Animation<double> _fade;
   late final Animation<double> _scale;
-  late final Animation<double> _exit;
 
   @override
   void initState() {
     super.initState();
-    _in = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 520),
-    );
-    _out = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 280),
-    );
+    _in = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
     _fade = CurvedAnimation(parent: _in, curve: Curves.easeOut);
-    _scale = Tween<double>(begin: 0.78, end: 1).animate(
-      CurvedAnimation(parent: _in, curve: Curves.easeOutBack),
-    );
-    _exit = Tween<double>(begin: 1, end: 0).animate(
-      CurvedAnimation(parent: _out, curve: Curves.easeIn),
+    _scale = Tween<double>(begin: 0.92, end: 1).animate(
+      CurvedAnimation(parent: _in, curve: Curves.easeOutCubic),
     );
     _in.forward();
     EvuddyApi.health();
@@ -78,20 +65,25 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
         registrationDraft.refreshFromServer();
       }
     });
-    Future<void>.delayed(const Duration(milliseconds: 1650), _go);
+    Future<void>.delayed(const Duration(milliseconds: 1150), _go);
   }
 
   Future<void> _go() async {
     if (!mounted) return;
-    await _out.forward();
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(evuddyRoute(const RiderShell()));
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 380),
+        pageBuilder: (_, __, ___) => const RiderShell(),
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    );
   }
 
   @override
   void dispose() {
     _in.dispose();
-    _out.dispose();
     super.dispose();
   }
 
@@ -107,30 +99,13 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
       child: Scaffold(
         backgroundColor: Evuddy.rapidoYellow,
         body: FadeTransition(
-          opacity: _exit,
-          child: FadeTransition(
-            opacity: _fade,
-            child: ScaleTransition(
-              scale: _scale,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const EvuddySplashMark(),
-                      const SizedBox(height: 28),
-                      SizedBox(
-                        width: 28,
-                        height: 28,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.4,
-                          color: Evuddy.ink.withValues(alpha: 0.85),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+          opacity: _fade,
+          child: ScaleTransition(
+            scale: _scale,
+            child: const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40),
+                child: EvuddySplashMark(),
               ),
             ),
           ),

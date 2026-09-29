@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -6,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
@@ -21,6 +19,7 @@ class RazorpayCheckoutPage extends StatefulWidget {
     required this.contact,
     required this.customerName,
     required this.rupees,
+    this.email = '',
     this.vehicleId,
   });
 
@@ -29,6 +28,7 @@ class RazorpayCheckoutPage extends StatefulWidget {
   final String contact;
   final String customerName;
   final double rupees;
+  final String email;
   final String? vehicleId;
 
   @override
@@ -36,132 +36,135 @@ class RazorpayCheckoutPage extends StatefulWidget {
 }
 
 class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
-  Razorpay? _rzp;
+  static const _channel = MethodChannel('evuddy/razorpay');
+
   WebViewController? _web;
   String? _error;
   bool _opened = false;
-  bool _busy = false;
+  bool _launching = false;
 
-  bool get _native => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+  bool get _androidNative => !kIsWeb && Platform.isAndroid;
 
+  String get _contact10 {
+    final digits = widget.contact.replaceAll(RegExp(r'\D'), '');
+    if (digits.length >= 10) return digits.substring(digits.length - 10);
+    return digits;
+  }
+
+  /// Same payload evuddy.com passes to `new window.Razorpay({...})`.
+  /// checkout.js then renders the Shubhrax Mobility Limited merchant QR.
   Map<String, dynamic> get _options {
-    final image = widget.order.image;
+    final image = (widget.order.image != null && widget.order.image!.isNotEmpty)
+        ? widget.order.image
+        : '${EvuddyApi.origin}/Evuddy-logo-dark-E.png';
+    final rawName = widget.order.name.trim();
+    final name = (rawName.isEmpty || rawName.toUpperCase() == 'EVUDDY')
+        ? 'Shubhrax Mobility Limited'
+        : rawName;
     return {
       'key': widget.order.keyId,
       'amount': widget.order.amountPaise(widget.rupees),
       'currency': widget.order.currency.isEmpty ? 'INR' : widget.order.currency,
-      'name': widget.order.name.isEmpty ? 'EVUDDY' : widget.order.name,
-      'description': 'EVUDDY booking ${widget.bookingId}',
+      'name': name,
+      'description': 'Booking Payment - ${widget.bookingId}',
       'order_id': widget.order.orderId,
       'prefill': {
-        'name': widget.customerName,
-        'contact': widget.contact.length == 10 ? '+91${widget.contact}' : widget.contact,
+        'name': widget.customerName.isEmpty ? 'Rider' : widget.customerName,
+        'contact': _contact10,
       },
       'notes': {
         'bookingId': widget.bookingId,
-        if (widget.vehicleId != null) 'vehicleId': widget.vehicleId,
+        if (widget.vehicleId != null && widget.vehicleId!.isNotEmpty)
+          'vehicleId': widget.vehicleId,
       },
-      'theme': {'color': '#16A34A'},
-      if (image != null && image.isNotEmpty) 'image': image,
+      'theme': {'color': '#18B368'},
+      'image': image,
+      'one_click_checkout': false,
     };
   }
 
   @override
   void initState() {
     super.initState();
-    if (_native) {
-      final rzp = Razorpay();
-      rzp.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onNativeSuccess);
-      rzp.on(Razorpay.EVENT_PAYMENT_ERROR, _onNativeError);
-      _rzp = rzp;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _openNative());
+    if (_androidNative) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openAndroid());
     } else {
-      _initWeb();
+      _initFlutterWeb();
     }
   }
 
-  void _onNativeSuccess(PaymentSuccessResponse res) {
-    if (!mounted) return;
-    Navigator.pop(context, {
-      'orderId': res.orderId ?? widget.order.orderId,
-      'paymentId': res.paymentId ?? '',
-      'signature': res.signature ?? '',
-    });
-  }
-
-  void _onNativeError(PaymentFailureResponse res) {
-    if (!mounted) return;
-    setState(() {
-      _busy = false;
-      _error = res.message ?? 'Payment was cancelled or failed.';
-    });
-  }
-
-  Future<void> _openNative() async {
-    if (_opened || _busy) return;
-    final key = widget.order.keyId;
-    final orderId = widget.order.orderId;
-    if (key.isEmpty || orderId.isEmpty) {
-      setState(() => _error = 'Razorpay order is missing a key or order id. Retry from Book EV.');
-      return;
-    }
-    setState(() {
-      _opened = true;
-      _busy = true;
-      _error = null;
-    });
+  Future<void> _openAndroid() async {
+    if (_launching) return;
+    _launching = true;
     try {
-      _rzp!.open(_options);
+      final html = await rootBundle.loadString('assets/pay/checkout.html');
+      final raw = await _channel.invokeMethod<String>('open', {
+        'html': html,
+        'options': jsonEncode(_options),
+      });
+      if (!mounted) return;
+      if (raw == null || raw.isEmpty) {
+        Navigator.pop(context);
+        return;
+      }
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) {
+        Navigator.pop(context);
+        return;
+      }
+      final type = decoded['type']?.toString();
+      if (type == 'success') {
+        Navigator.pop(context, {
+          'orderId': decoded['razorpay_order_id']?.toString() ?? '',
+          'paymentId': decoded['razorpay_payment_id']?.toString() ?? '',
+          'signature': decoded['razorpay_signature']?.toString() ?? '',
+        });
+      } else if (type == 'failed') {
+        setState(() {
+          _launching = false;
+          _error = decoded['message']?.toString() ?? 'Payment failed.';
+        });
+      } else {
+        Navigator.pop(context);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _busy = false;
-        _opened = false;
+        _launching = false;
         _error = e.toString();
       });
     }
   }
 
-  Future<void> _initWeb() async {
+  Future<void> _initFlutterWeb() async {
     final web = WebViewController();
     web.setJavaScriptMode(JavaScriptMode.unrestricted);
-    web.setBackgroundColor(Evuddy.wash);
-    web.setNavigationDelegate(
-      NavigationDelegate(onNavigationRequest: (_) => NavigationDecision.navigate),
-    );
+    web.setBackgroundColor(const Color(0xFFF6FFF9));
     web.addJavaScriptChannel(
       'PayBridge',
       onMessageReceived: (m) {
-          final raw = jsonDecode(m.message);
-          if (raw is! Map) return;
-          final type = raw['type']?.toString();
-          if (type == 'ready') {
-            _openWeb(web);
-          } else if (type == 'success') {
-            if (!mounted) return;
-            Navigator.pop(context, {
-              'orderId': raw['razorpay_order_id']?.toString() ?? '',
-              'paymentId': raw['razorpay_payment_id']?.toString() ?? '',
-              'signature': raw['razorpay_signature']?.toString() ?? '',
-            });
-          } else if (type == 'dismiss') {
-            if (mounted) Navigator.pop(context);
-          } else if (type == 'failed') {
-            setState(() {
-              _busy = false;
-              _error = raw['message']?.toString() ?? 'Payment failed.';
-            });
-          }
+        final raw = jsonDecode(m.message);
+        if (raw is! Map) return;
+        final type = raw['type']?.toString();
+        if (type == 'ready' && !_opened) {
+          _opened = true;
+          web.runJavaScript('openPay(${jsonEncode(_options)})');
+        } else if (type == 'success' && mounted) {
+          Navigator.pop(context, {
+            'orderId': raw['razorpay_order_id']?.toString() ?? '',
+            'paymentId': raw['razorpay_payment_id']?.toString() ?? '',
+            'signature': raw['razorpay_signature']?.toString() ?? '',
+          });
+        } else if (type == 'dismiss' && mounted) {
+          Navigator.pop(context);
+        } else if (type == 'failed') {
+          setState(() => _error = raw['message']?.toString() ?? 'Payment failed.');
+        }
       },
     );
     if (web.platform is AndroidWebViewController) {
       final android = web.platform as AndroidWebViewController;
       await android.setMixedContentMode(MixedContentMode.alwaysAllow);
-      final cookies = WebViewCookieManager();
-      final cookiePlatform = cookies.platform;
-      if (cookiePlatform is AndroidWebViewCookieManager) {
-        await cookiePlatform.setAcceptThirdPartyCookies(android, true);
-      }
     }
     final html = await rootBundle.loadString('assets/pay/checkout.html');
     await web.loadHtmlString(html, baseUrl: EvuddyApi.origin);
@@ -169,93 +172,54 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     setState(() => _web = web);
   }
 
-  Future<void> _openWeb(WebViewController web) async {
-    if (_opened) return;
-    _opened = true;
-    await web.runJavaScript('openPay(${jsonEncode(_options)})');
-  }
-
-  @override
-  void dispose() {
-    _rzp?.clear();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Evuddy.wash,
+      backgroundColor: const Color(0xFFF6FFF9),
       appBar: AppBar(
-        backgroundColor: Evuddy.wash,
-        foregroundColor: Evuddy.ink,
-        elevation: 0,
+        backgroundColor: const Color(0xFF18B368),
+        foregroundColor: Colors.white,
         title: Text(
           'Pay securely',
           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const EvuddyLogo(height: 32),
-            const SizedBox(height: 18),
-            Text(
-              CatalogRates.inr(widget.rupees),
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 36,
-                fontWeight: FontWeight.w800,
-                color: Evuddy.ink,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              widget.bookingId.isEmpty ? 'Razorpay checkout' : 'Booking ${widget.bookingId}',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontWeight: FontWeight.w600),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(color: Evuddy.danger, fontWeight: FontWeight.w600),
-              ),
-            ],
-            const SizedBox(height: 22),
-            if (_native) ...[
-              FilledButton(
-                onPressed: _busy
-                    ? null
-                    : () {
-                        _opened = false;
-                        _openNative();
-                      },
-                style: FilledButton.styleFrom(
-                  backgroundColor: Evuddy.green,
-                  minimumSize: const Size.fromHeight(54),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                child: Text(
-                  _busy ? 'Opening Razorpay…' : 'Pay with Razorpay',
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+      body: _error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Evuddy.danger,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (_androidNative)
+                      FilledButton(
+                        onPressed: () {
+                          setState(() {
+                            _error = null;
+                            _launching = false;
+                          });
+                          _openAndroid();
+                        },
+                        child: const Text('Retry Razorpay'),
+                      ),
+                  ],
                 ),
               ),
-              const Spacer(),
-            ] else if (_web != null)
-              Expanded(child: WebViewWidget(controller: _web!))
-            else
-              const Expanded(child: Center(child: CircularProgressIndicator())),
-            Text(
-              'Card, UPI, netbanking. Amount is verified on evuddy.com after success.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12, height: 1.4),
-            ),
-          ],
-        ),
-      ),
+            )
+          : _androidNative
+              ? const Center(child: CircularProgressIndicator())
+              : (_web == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : WebViewWidget(controller: _web!)),
     );
   }
 }

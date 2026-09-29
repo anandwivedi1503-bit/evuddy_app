@@ -13,18 +13,16 @@ class InvestScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AuthScreen(
-      kicker: 'Fleet  ·  Advertisement',
-      title: 'Invest today. Earn monthly.',
+      kicker: 'Fleet partner',
+      title: 'Own the fleet.\nWe operate.',
       subtitle:
-          '60/40 with EVUDDY running the fleet for ${CatalogRates.partnerMonths} months. Daily rental ${CatalogRates.inr(CatalogRates.daily)} GST included. Apply on the website — no invest payment in this app.',
+          'FOCO · start with 5 scooters. EVUDDY runs riders, GPS, KYC and hub OTP. Monthly return as published. Apply on evuddy.com — no invest payment in this app.',
       footer: Column(
         children: [
           EvuddyButton(
-            label: 'Download partner PDF',
+            label: 'Download investment PDF',
             icon: Icons.picture_as_pdf_outlined,
-            onPressed: () {
-              shareFleetPartnerPdf();
-            },
+            onPressed: shareFleetPartnerPdf,
           ),
           const SizedBox(height: 10),
           EvuddyGhostButton(
@@ -34,148 +32,133 @@ class InvestScreen extends StatelessWidget {
         ],
       ),
       children: [
-        const ScenePhoto(asset: Evuddy.investPosterAsset, height: 280, fit: BoxFit.cover),
+        const ScenePhoto(asset: Evuddy.investPosterAsset, height: 220, fit: BoxFit.contain),
         const SizedBox(height: 16),
-        InfoNote(
-          text:
-              '${CatalogRates.scootersPerLakh} scooters per ₹1 lakh, rented at ${CatalogRates.inr(CatalogRates.daily)} / day GST included. About ${CatalogRates.inr(CatalogRates.investorPerScooterDay)} to you per scooter per day (60% of net).',
+        _FocoCard(
+          tag: 'LOW-SPEED',
+          title: 'Low-speed EV scooter',
+          invest: CatalogRates.inr(FleetPartner.low.invest(5)),
+          monthly: CatalogRates.inr(FleetPartner.low.monthlyForFive),
+          per: CatalogRates.inr(FleetPartner.low.perScooter),
+          accent: Evuddy.green,
         ),
-        const SizedBox(height: 18),
-        Text('PLANS', style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: 10),
-        _Plan(tag: 'STARTER', lakhs: 1),
-        const SizedBox(height: 10),
-        _Plan(tag: 'GROWTH', lakhs: 5),
-        const SizedBox(height: 10),
-        _Plan(tag: 'SCALE', lakhs: 10),
-        const SizedBox(height: 18),
-        Text('ALSO ON THE SITE', style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 10),
-        _LinkCard(
-          title: 'EVUDDY Dealer',
-          body: 'City showroom or pickup · ₹5 lakh minimum',
-          onTap: () => openEvuddyPath('/partners/dealer'),
-        ),
-        const SizedBox(height: 8),
-        _LinkCard(
-          title: 'EVUDDY Distributor',
-          body: 'Territory supply to dealers · ₹10 lakh minimum',
-          onTap: () => openEvuddyPath('/partners'),
+        _FocoCard(
+          tag: 'HIGH-SPEED',
+          title: 'High-speed EV scooter',
+          invest: CatalogRates.inr(FleetPartner.high.invest(5)),
+          monthly: CatalogRates.inr(FleetPartner.high.monthlyForFive),
+          per: CatalogRates.inr(FleetPartner.high.perScooter),
+          accent: Evuddy.magenta,
         ),
         const SizedBox(height: 14),
         Text(
-          'Subject to operational performance. Rider catalog matches this app and evuddy.com Book EV.',
-          style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
+          'Scale tables (10–100 scooters) are in the PDF. Final terms: Fleet Partner Agreement with EVUDDY / Shubhrax Mobility Ltd.',
+          style: GoogleFonts.plusJakartaSans(
+            color: const Color(0xFF44403C),
+            fontSize: 13,
+            height: 1.4,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
   }
 }
 
-class _Plan extends StatelessWidget {
-  const _Plan({required this.tag, required this.lakhs});
+class _FocoCard extends StatelessWidget {
+  const _FocoCard({
+    required this.tag,
+    required this.title,
+    required this.invest,
+    required this.monthly,
+    required this.per,
+    required this.accent,
+  });
+
   final String tag;
-  final int lakhs;
+  final String title;
+  final String invest;
+  final String monthly;
+  final String per;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    return SurfaceCard(
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        color: Colors.white,
+        border: Border.all(color: accent, width: 1.6),
+        boxShadow: Evuddy.lift,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Evuddy.greenSoft,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  tag,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: Evuddy.greenDeep,
-                    letterSpacing: 0.8,
-                  ),
-                ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(99),
+            ),
+            child: Text(
+              tag,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+                color: Colors.white,
               ),
-              const Spacer(),
-              Text(
-                CatalogRates.inr(lakhs * 100000),
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 10),
           Text(
-            '${CatalogRates.scootersPerLakh * lakhs} scooters',
-            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${CatalogRates.inr(CatalogRates.investorMonthly(lakhs))} / month',
+            title,
             style: GoogleFonts.plusJakartaSans(
               fontWeight: FontWeight.w800,
-              fontSize: 16,
+              fontSize: 18,
+              color: const Color(0xFF0C0A09),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            invest,
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.w800,
+              fontSize: 32,
+              letterSpacing: -0.8,
+              color: const Color(0xFF0C0A09),
+            ),
+          ),
+          Text(
+            '5 scooters · $per each',
+            style: GoogleFonts.plusJakartaSans(
+              color: const Color(0xFF292524),
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '$monthly / month',
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.w800,
+              fontSize: 20,
               color: Evuddy.greenDeep,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            '${CatalogRates.inr(CatalogRates.investorTerm(lakhs))} in ${CatalogRates.partnerMonths} months',
-            style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
-          ),
-          Text(
-            'Scrap value ${CatalogRates.inr(CatalogRates.scrapValue(lakhs))}',
-            style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
+            'FOCO · EVUDDY operates · ${CatalogRates.partnerMonths} months',
+            style: GoogleFonts.plusJakartaSans(
+              color: const Color(0xFF44403C),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _LinkCard extends StatelessWidget {
-  const _LinkCard({required this.title, required this.body, required this.onTap});
-  final String title;
-  final String body;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: SurfaceCard(
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      body,
-                      style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.open_in_new_rounded, color: Evuddy.greenDeep, size: 20),
-            ],
-          ),
-        ),
       ),
     );
   }

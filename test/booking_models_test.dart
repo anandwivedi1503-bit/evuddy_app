@@ -1,4 +1,5 @@
 import 'package:evuddy_app/api/evuddy_api.dart';
+import 'package:evuddy_app/api/partner_pdf.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -131,16 +132,25 @@ void main() {
   });
 
   test('catalog rates and Indian rupee format', () {
+    expect(CatalogRates.hourly, 60);
     expect(CatalogRates.daily, 250);
     expect(CatalogRates.weekly, 1750);
     expect(CatalogRates.monthly, 7500);
     expect(CatalogRates.rtoDaily, 300);
     expect(CatalogRates.rtoMonths, 20);
     expect(CatalogRates.securityDeposit, 2500);
+    expect(CatalogRates.inr(60), '₹60');
     expect(CatalogRates.inr(250), '₹250');
     expect(CatalogRates.inr(1750), '₹1,750');
     expect(CatalogRates.inr(7500), '₹7,500');
-    expect(CatalogRates.investorMonthly(1), 5130);
+    expect(CatalogRates.lowSpeedMonthly(5), 15000);
+    expect(CatalogRates.highSpeedMonthly(5), 18000);
+    expect(FleetPartner.low.invest(5), 300000);
+    expect(FleetPartner.high.invest(5), 450000);
+    expect(CatalogRates.amountForDuration('Hourly'), 60);
+    expect(CatalogRates.amountForDuration('Daily'), 250);
+    expect(CatalogRates.payload()['hourly'], 60);
+    expect(CatalogRates.payload()['daily'], 250);
     expect(RazorpayOrder.fromJson({
       'keyId': 'rzp',
       'orderId': 'order_1',
@@ -167,5 +177,25 @@ void main() {
     expect(order.keyId, 'rzp_live_test');
     expect(order.orderId, 'order_123');
     expect(order.amount, 100);
+    expect(
+      RazorpayOrder.fromJson({
+        'success': true,
+        'data': {
+          'keyId': 'rzp_live_nested',
+          'orderId': 'order_nested',
+          'amount': 100,
+          'name': 'Shubhrax Mobility Limited',
+        },
+      }).name,
+      'Shubhrax Mobility Limited',
+    );
+    expect(
+      RazorpayOrder.fromJson({
+        'keyId': 'rzp',
+        'orderId': 'order_1',
+        'amount': 100,
+      }).name,
+      'Shubhrax Mobility Limited',
+    );
   });
 }

@@ -120,34 +120,27 @@ class OfferAd {
 
 const offerAds = [
   OfferAd(
-    kicker: 'DEALER',
-    title: 'Retail EVUDDY in your city',
-    body: 'Showroom or pickup hub. ₹5 lakh minimum.',
-    cta: 'Become a dealer',
-    asset: Evuddy.sceneDealerAsset,
-    path: '/partners/dealer',
-  ),
-  OfferAd(
     kicker: 'FLEET PARTNER',
-    title: 'Earn 60% of net profit',
-    body: '₹1L · ₹5L · ₹10L · 42 months. Download the brief.',
-    cta: 'Open plans',
+    title: '₹3,00,000  ·  ₹15,000 / month',
+    body: '5 low-speed EVs. EVUDDY operates FOCO.',
+    cta: 'Open FOCO plans',
     asset: Evuddy.investPosterAsset,
     invest: true,
     pdf: true,
   ),
   OfferAd(
-    kicker: 'DISTRIBUTOR',
-    title: 'Supply dealers from ₹10 lakh',
-    body: 'Territory warehouse and brand standards.',
-    cta: 'Apply as distributor',
-    asset: Evuddy.sceneDistributorAsset,
-    path: '/partners',
+    kicker: 'HIGH-SPEED',
+    title: '₹4,50,000  ·  ₹18,000 / month',
+    body: '5 high-speed scooters. EVUDDY runs operations.',
+    cta: 'See high-speed',
+    asset: Evuddy.investPosterAsset,
+    invest: true,
+    pdf: true,
   ),
   OfferAd(
-    kicker: 'RIDERS',
-    title: 'GST-in fares. Hub OTP after pay.',
-    body: 'Daily ₹250 · GPS on every scooter.',
+    kicker: 'DAILY RIDE',
+    title: '₹250 / day GST included',
+    body: 'Hub OTP after Razorpay · live GPS on every scooter.',
     cta: 'Book an EV',
     asset: Evuddy.riderCityAsset,
     book: true,
@@ -162,20 +155,23 @@ class OfferAdCarousel extends StatefulWidget {
   State<OfferAdCarousel> createState() => _OfferAdCarouselState();
 }
 
-class _OfferAdCarouselState extends State<OfferAdCarousel> {
-  final page = PageController();
+class _OfferAdCarouselState extends State<OfferAdCarousel> with SingleTickerProviderStateMixin {
+  final page = PageController(viewportFraction: 0.92);
   int index = 0;
   Timer? timer;
+  late final AnimationController shine;
 
   @override
   void initState() {
     super.initState();
-    timer = Timer.periodic(const Duration(seconds: 5), (_) {
+    shine = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))
+      ..repeat();
+    timer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!page.hasClients) return;
       page.animateToPage(
         (index + 1) % offerAds.length,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 720),
+        curve: Curves.easeInOutCubic,
       );
     });
   }
@@ -183,6 +179,7 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
   @override
   void dispose() {
     timer?.cancel();
+    shine.dispose();
     page.dispose();
     super.dispose();
   }
@@ -192,8 +189,9 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
       widget.onBook?.call();
       return;
     }
-    if (ad.path != null) {
-      openEvuddyPath(ad.path!);
+    final path = ad.path;
+    if (path != null && path.isNotEmpty) {
+      openEvuddyPath(path);
       return;
     }
     Navigator.push(context, evuddyRoute(const InvestScreen()));
@@ -204,7 +202,7 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
     return Column(
       children: [
         SizedBox(
-          height: 214,
+          height: 292,
           child: PageView.builder(
             controller: page,
             onPageChanged: (i) => setState(() => index = i),
@@ -212,116 +210,96 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
             itemBuilder: (context, i) {
               final ad = offerAds[i];
               return Padding(
-                padding: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.only(right: 10),
                 child: GestureDetector(
                   onTap: () => _open(ad),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(22),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.asset(
-                          ad.asset,
-                          fit: BoxFit.cover,
-                          alignment: Alignment.center,
-                          filterQuality: FilterQuality.high,
-                        ),
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                ad.book
-                                    ? const Color(0xE016A34A)
-                                    : ad.invest
-                                        ? const Color(0xE0BE185D)
-                                        : const Color(0xE014532D),
-                                const Color(0x66050A08),
-                              ],
+                    child: ColoredBox(
+                      color: Colors.white,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: Image.asset(
+                              ad.asset,
+                              fit: BoxFit.cover,
+                              alignment: Alignment.center,
+                              filterQuality: FilterQuality.high,
                             ),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(18, 16, 16, 14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(99),
-                                ),
-                                child: Text(
+                          Container(
+                            color: const Color(0xFFF7F8F5),
+                            padding: const EdgeInsets.fromLTRB(14, 10, 12, 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
                                   ad.kicker,
                                   style: GoogleFonts.plusJakartaSans(
                                     color: Evuddy.greenDeep,
                                     fontWeight: FontWeight.w800,
-                                    fontSize: 10,
+                                    fontSize: 11,
                                     letterSpacing: 1.1,
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                ad.title,
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 22,
-                                  height: 1.12,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                ad.body,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: Colors.white,
-                                  fontSize: 13.5,
-                                  height: 1.35,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const Spacer(),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      '${ad.cta}  →',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 15,
-                                      ),
-                                    ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  ad.title,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: const Color(0xFF0C0A09),
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 17,
+                                    height: 1.2,
                                   ),
-                                  if (ad.pdf)
-                                    TextButton.icon(
-                                      onPressed: () => shareFleetPartnerPdf(),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: Colors.white,
-                                        backgroundColor: const Color(0x33FFFFFF),
-                                      ),
-                                      icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                                      label: Text(
-                                        'PDF',
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  ad.body,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: const Color(0xFF292524),
+                                    fontSize: 13,
+                                    height: 1.3,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '${ad.cta}  →',
                                         style: GoogleFonts.plusJakartaSans(
+                                          color: Evuddy.greenDeep,
                                           fontWeight: FontWeight.w800,
+                                          fontSize: 13,
                                         ),
                                       ),
                                     ),
-                                ],
-                              ),
-                            ],
+                                    if (ad.pdf)
+                                      TextButton.icon(
+                                        onPressed: shareFleetPartnerPdf,
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Evuddy.greenDeep,
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                        icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
+                                        label: Text(
+                                          'PDF',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -357,9 +335,9 @@ class RideSteps extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const steps = [
-      (Icons.sms_outlined, 'OTP autofill', 'SMS fills the 6 digits'),
-      (Icons.mic_none_rounded, 'Voice KYC', 'Speak name, mobile, email'),
-      (Icons.payments_outlined, 'Razorpay', 'Deposit hold or rent'),
+      (Icons.gps_fixed_rounded, 'Live GPS', 'Every scooter tracked'),
+      (Icons.lock_rounded, 'Hub OTP', 'Pickup after Razorpay'),
+      (Icons.bolt_rounded, 'UPI / QR', 'Same checkout as web'),
     ];
     return Row(
       children: [

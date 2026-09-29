@@ -14,6 +14,7 @@ class FareOffer {
     required this.hint,
     this.plan = 'rental',
     this.featured = false,
+    this.asset = Evuddy.yellowScooterAsset,
   });
 
   final String id;
@@ -23,16 +24,26 @@ class FareOffer {
   final String hint;
   final String plan;
   final bool featured;
+  final String asset;
 }
 
 final fareOffers = <FareOffer>[
+  FareOffer(
+    id: 'Hourly',
+    label: 'Hourly',
+    price: CatalogRates.inr(CatalogRates.hourly),
+    unit: 'per hour',
+    hint: 'GST included',
+    featured: true,
+    asset: Evuddy.yellowScooterAsset,
+  ),
   FareOffer(
     id: 'Daily',
     label: 'Daily',
     price: CatalogRates.inr(CatalogRates.daily),
     unit: 'per day',
     hint: 'GST included',
-    featured: true,
+    asset: Evuddy.riderCityAsset,
   ),
   FareOffer(
     id: 'Weekly',
@@ -40,6 +51,7 @@ final fareOffers = <FareOffer>[
     price: CatalogRates.inr(CatalogRates.weekly),
     unit: 'per week',
     hint: 'GST included',
+    asset: Evuddy.riderEveningAsset,
   ),
   FareOffer(
     id: 'Monthly',
@@ -47,14 +59,16 @@ final fareOffers = <FareOffer>[
     price: CatalogRates.inr(CatalogRates.monthly),
     unit: 'per month',
     hint: 'GST included',
+    asset: Evuddy.hubAsset,
   ),
   FareOffer(
     id: 'Rent to Own',
     label: 'Own',
     price: CatalogRates.inr(CatalogRates.rtoDaily),
     unit: 'per day',
-    hint: '${CatalogRates.rtoMonths} mo · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold',
+    hint: '${CatalogRates.rtoMonths} months · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold',
     plan: 'rto',
+    asset: Evuddy.sceneHomeAsset,
   ),
 ];
 
@@ -66,13 +80,20 @@ class FareGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: FareCard(offer: fareOffers[0], onTap: onPick)),
-            const SizedBox(width: 10),
-            Expanded(child: FareCard(offer: fareOffers[1], onTap: onPick)),
-          ],
+        _RateBanner(
+          offer: fareOffers[0],
+          kicker: 'HOURLY  ·  GST INCLUDED',
+          detail: '₹60 per hour  ·  hub OTP after Razorpay',
+          colors: const [Color(0xFF0F766E), Color(0xFF14B8A6)],
+          onTap: onPick,
+        ),
+        const SizedBox(height: 10),
+        _RateBanner(
+          offer: fareOffers[1],
+          kicker: 'DAILY  ·  GST INCLUDED',
+          detail: '₹250 per day  ·  hub OTP after Razorpay',
+          colors: const [Color(0xFF14532D), Color(0xFF16A34A)],
+          onTap: onPick,
         ),
         const SizedBox(height: 10),
         Row(
@@ -83,7 +104,87 @@ class FareGrid extends StatelessWidget {
             Expanded(child: FareCard(offer: fareOffers[3], onTap: onPick)),
           ],
         ),
+        const SizedBox(height: 10),
+        FareCard(offer: fareOffers[4], onTap: onPick),
       ],
+    );
+  }
+}
+
+class _RateBanner extends StatelessWidget {
+  const _RateBanner({
+    required this.offer,
+    required this.kicker,
+    required this.detail,
+    required this.colors,
+    this.onTap,
+  });
+  final FareOffer offer;
+  final String kicker;
+  final String detail;
+  final List<Color> colors;
+  final ValueChanged<FareOffer>? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap == null
+            ? null
+            : () {
+                HapticFeedback.selectionClick();
+                onTap!(offer);
+              },
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: LinearGradient(colors: colors),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      kicker,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      offer.price,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 32,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      detail,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -130,8 +231,9 @@ class FareCard extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
                   child: Image.asset(
-                    Evuddy.yellowScooterAsset,
-                    fit: BoxFit.contain,
+                    offer.asset,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,
                     filterQuality: FilterQuality.high,
                   ),
                 ),

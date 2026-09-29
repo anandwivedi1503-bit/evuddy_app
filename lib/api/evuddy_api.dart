@@ -385,6 +385,7 @@ class EvuddyApi {
 
 /// Rider catalog. GST-in rental prices; RTO is ₹300/day + ₹2,500 hold.
 class CatalogRates {
+  static const hourly = 60;
   static const daily = 250;
   static const weekly = 1750;
   static const monthly = 7500;
@@ -392,11 +393,12 @@ class CatalogRates {
   static const rtoMonths = 20;
   static const securityDeposit = 2500;
   static const gstNote = 'GST included on rental';
-  static const partnerShare = 0.60;
-  static const partnerMonths = 42;
-  static const scootersPerLakh = 3;
-  /// Scaled from the prior ₹52.2 / scooter / day at ₹230 rent.
-  static const investorPerScooterDay = 57;
+  static const partnerMonths = 48;
+  static const partnerMinFleet = 5;
+  static const lowSpeedPerScooter = 60000;
+  static const highSpeedPerScooter = 90000;
+  static const lowSpeedMonthlyForFive = 15000;
+  static const highSpeedMonthlyForFive = 18000;
 
   static String inr(num n) {
     final s = n.round().abs().toString();
@@ -418,14 +420,12 @@ class CatalogRates {
     return buf.toString();
   }
 
-  static int investorMonthly(int lakhs) =>
-      investorPerScooterDay * scootersPerLakh * lakhs * 30;
+  static int lowSpeedMonthly(int fleet) => 3000 * fleet;
 
-  static int investorTerm(int lakhs) => investorMonthly(lakhs) * partnerMonths;
-
-  static int scrapValue(int lakhs) => 18000 * lakhs;
+  static int highSpeedMonthly(int fleet) => 3600 * fleet;
 
   static Map<String, dynamic> payload() => {
+        'hourly': hourly,
         'daily': daily,
         'weekly': weekly,
         'monthly': monthly,
@@ -438,6 +438,8 @@ class CatalogRates {
 
   static int amountForDuration(String duration) {
     switch (duration) {
+      case 'Hourly':
+        return hourly;
       case 'Weekly':
         return weekly;
       case 'Monthly':
@@ -726,13 +728,23 @@ class RazorpayOrder {
   });
 
   factory RazorpayOrder.fromJson(Map e) {
+    final data = e['data'] is Map ? e['data'] as Map : const {};
+    String pick(List<String> keys) {
+      for (final k in keys) {
+        final v = e[k] ?? data[k];
+        if (v != null && v.toString().trim().isNotEmpty) return v.toString().trim();
+      }
+      return '';
+    }
+
+    final name = pick(['name', 'merchantName', 'businessName']);
     return RazorpayOrder(
-      keyId: e['keyId']?.toString() ?? e['key']?.toString() ?? '',
-      orderId: e['orderId']?.toString() ?? e['id']?.toString() ?? '',
-      amount: _asDouble(e['amount']) ?? 0,
-      currency: e['currency']?.toString() ?? 'INR',
-      name: e['name']?.toString() ?? 'EVUDDY',
-      image: e['image']?.toString(),
+      keyId: pick(['keyId', 'key']),
+      orderId: pick(['orderId', 'id', 'order_id']),
+      amount: _asDouble(e['amount']) ?? _asDouble(data['amount']) ?? 0,
+      currency: pick(['currency']).isEmpty ? 'INR' : pick(['currency']),
+      name: name.isEmpty ? 'Shubhrax Mobility Limited' : name,
+      image: pick(['image']).isEmpty ? null : pick(['image']),
     );
   }
 
