@@ -23,17 +23,19 @@
         post({ type: "failed", message: "Razorpay checkout.js did not load. Check network." });
         return;
       }
+      var prefill = n.prefill || {};
+      if (!prefill.method) prefill.method = "card";
       var options = {
         key: n.key,
         amount: n.amount,
         currency: n.currency || "INR",
         name: n.name || "EVUDDY",
-        image: n.image,
         description: n.description || "EVUDDY booking",
         order_id: n.order_id,
-        prefill: n.prefill || {},
+        prefill: prefill,
         notes: n.notes || {},
         theme: { color: "#16A34A" },
+        retry: { enabled: true, max_count: 1 },
         handler: function (response) {
           post({
             type: "success",

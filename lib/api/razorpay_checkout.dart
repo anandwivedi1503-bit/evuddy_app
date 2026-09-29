@@ -21,6 +21,7 @@ class RazorpayCheckoutPage extends StatefulWidget {
     required this.contact,
     required this.customerName,
     required this.rupees,
+    this.email = '',
     this.vehicleId,
   });
 
@@ -29,6 +30,7 @@ class RazorpayCheckoutPage extends StatefulWidget {
   final String contact;
   final String customerName;
   final double rupees;
+  final String email;
   final String? vehicleId;
 
   @override
@@ -44,8 +46,22 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
 
   bool get _native => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
+  String get _contact {
+    final digits = widget.contact.replaceAll(RegExp(r'\D'), '');
+    final ten = digits.length >= 10 ? digits.substring(digits.length - 10) : digits;
+    return ten.length == 10 ? '+91$ten' : widget.contact;
+  }
+
+  String get _email {
+    final e = widget.email.trim();
+    if (e.contains('@')) return e;
+    final digits = widget.contact.replaceAll(RegExp(r'\D'), '');
+    final ten = digits.length >= 10 ? digits.substring(digits.length - 10) : 'rider';
+    return 'rider$ten@evuddy.com';
+  }
+
+  /// Razorpay Continue only proceeds when contact + email + method are set.
   Map<String, dynamic> get _options {
-    final image = widget.order.image;
     return {
       'key': widget.order.keyId,
       'amount': widget.order.amountPaise(widget.rupees),
@@ -53,16 +69,22 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       'name': widget.order.name.isEmpty ? 'EVUDDY' : widget.order.name,
       'description': 'EVUDDY booking ${widget.bookingId}',
       'order_id': widget.order.orderId,
+      'timeout': 300,
+      'send_sms_hash': true,
+      'remember_customer': false,
+      'retry': {'enabled': true, 'max_count': 1},
       'prefill': {
-        'name': widget.customerName,
-        'contact': widget.contact.length == 10 ? '+91${widget.contact}' : widget.contact,
-      },
-      'notes': {
-        'bookingId': widget.bookingId,
-        if (widget.vehicleId != null) 'vehicleId': widget.vehicleId,
+        'name': widget.customerName.isEmpty ? 'Rider' : widget.customerName,
+        'email': _email,
+        'contact': _contact,
+        'method': 'card',
       },
       'theme': {'color': '#16A34A'},
-      if (image != null && image.isNotEmpty) 'image': image,
+      'notes': {
+        'bookingId': widget.bookingId,
+        if (widget.vehicleId != null && widget.vehicleId!.isNotEmpty)
+          'vehicleId': widget.vehicleId,
+      },
     };
   }
 
@@ -73,6 +95,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       final rzp = Razorpay();
       rzp.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onNativeSuccess);
       rzp.on(Razorpay.EVENT_PAYMENT_ERROR, _onNativeError);
+      rzp.on(Razorpay.EVENT_EXTERNAL_WALLET, _onWallet);
       _rzp = rzp;
       WidgetsBinding.instance.addPostFrameCallback((_) => _openNative());
     } else {
@@ -93,12 +116,21 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     if (!mounted) return;
     setState(() {
       _busy = false;
+      _opened = false;
       _error = res.message ?? 'Payment was cancelled or failed.';
     });
   }
 
+  void _onWallet(ExternalWalletResponse res) {
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _error = 'Open ${res.walletName ?? "the wallet"} to finish this payment.';
+    });
+  }
+
   Future<void> _openNative() async {
-    if (_opened || _busy) return;
+    if (_busy) return;
     final key = widget.order.keyId;
     final orderId = widget.order.orderId;
     if (key.isEmpty || orderId.isEmpty) {
@@ -127,7 +159,9 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     web.setJavaScriptMode(JavaScriptMode.unrestricted);
     web.setBackgroundColor(Evuddy.wash);
     web.setNavigationDelegate(
-      NavigationDelegate(onNavigationRequest: (_) => NavigationDecision.navigate),
+      NavigationDelegate(
+        onNavigationRequest: (_) => NavigationDecision.navigate,
+      ),
     );
     web.addJavaScriptChannel(
       'PayBridge',
