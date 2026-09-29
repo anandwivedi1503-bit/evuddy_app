@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -265,7 +266,7 @@ class EvuddyApi {
     return RazorpayOrder.fromJson(j);
   }
 
-  static Future<RiderBooking> verifyPayment({
+  static Future<Map<String, dynamic>> _postVerifyPayment({
     required String idToken,
     required String bookingMongoId,
     String? orderId,
@@ -287,7 +288,43 @@ class EvuddyApi {
           }),
         )
         .timeout(const Duration(seconds: 20));
-    final j = _json(r);
+    return _json(r);
+  }
+
+  static Future<RiderBooking> verifyPayment({
+    required String idToken,
+    required String bookingMongoId,
+    String? orderId,
+    String? paymentId,
+    String? signature,
+    bool recover = false,
+  }) async {
+    Map<String, dynamic>? j;
+    if (!recover) {
+      for (var i = 0; i < 3; i++) {
+        j = await _postVerifyPayment(
+          idToken: idToken,
+          bookingMongoId: bookingMongoId,
+          orderId: orderId,
+          paymentId: paymentId,
+          signature: signature,
+        );
+        if (j['success'] == true) break;
+        if (i < 2) {
+          await Future<void>.delayed(const Duration(milliseconds: 1200));
+        }
+      }
+    }
+    if (j == null || j['success'] != true) {
+      j = await _postVerifyPayment(
+        idToken: idToken,
+        bookingMongoId: bookingMongoId,
+        orderId: orderId,
+        paymentId: paymentId,
+        signature: signature,
+        recover: true,
+      );
+    }
     if (j['success'] != true) {
       throw ApiException(_message(j, 'Could not verify payment.'));
     }
@@ -307,7 +344,7 @@ class EvuddyApi {
         .timeout(const Duration(seconds: 15));
   }
 
-  static Future<String> rideAction({
+  static Future<RideActionResult> rideAction({
     required String idToken,
     required bool start,
     String? bookingId,
@@ -326,10 +363,15 @@ class EvuddyApi {
     if (j['success'] != true) {
       throw ApiException(_message(j, 'Unable to update ride.'));
     }
-    return j['message']?.toString() ??
-        (start
-            ? 'Ride started. Pay any remaining amount before you return.'
-            : 'Ride end OTP is ready. Tell this to the yard to return the scooter.');
+    final booking = RiderBooking.fromJson(j);
+    return RideActionResult(
+      message: j['message']?.toString() ??
+          (start
+              ? 'Ride started. Pay any remaining amount before you return.'
+              : 'Ride end OTP is ready. Tell this to the yard to return the scooter.'),
+      rideEndOtp: booking.rideEndOtp,
+      rideStatus: booking.rideStatus,
+    );
   }
 
   static String _message(Map<String, dynamic> j, String fallback) {
@@ -525,16 +567,35 @@ class RiderBooking {
 
   factory RiderBooking.fromJson(Map e) {
     final nested = e['data'];
-    final m = nested is Map ? nested : e;
+    final booking = e['booking'];
+    final m = nested is Map
+        ? nested
+        : (booking is Map ? booking : e);
+    final pending = _asDouble(
+          m['pendingAmount'] ??
+              e['pendingAmount'] ??
+              m['remainingAmount'] ??
+              e['remainingAmount'],
+        ) ??
+        0;
+    final received = _asDouble(
+          m['receivedAmount'] ?? e['receivedAmount'] ?? e['paidAmount'] ?? m['paidAmount'],
+        ) ??
+        0;
+    final billed = _asDouble(m['paymentDue'] ?? e['paymentDue']) ?? 0;
     return RiderBooking(
-      mongoId: m['_id']?.toString() ?? e['bookingMongoId']?.toString() ?? '',
+      mongoId: m['_id']?.toString() ??
+          m['id']?.toString() ??
+          e['bookingMongoId']?.toString() ??
+          e['_id']?.toString() ??
+          '',
       bookingId: m['bookingId']?.toString() ?? e['bookingId']?.toString() ?? '',
       rentalMode: m['rentalMode']?.toString() ?? '',
       paymentStatus: (m['paymentStatus'] ?? e['paymentStatus'])?.toString() ?? '',
       rideStatus: (m['rideStatus'] ?? e['rideStatus'])?.toString() ?? '',
-      pendingAmount: _asDouble(m['pendingAmount'] ?? e['pendingAmount']) ?? 0,
-      receivedAmount: _asDouble(m['receivedAmount'] ?? e['receivedAmount'] ?? e['paidAmount']) ?? 0,
-      paymentDue: _asDouble(m['paymentDue'] ?? e['paymentDue']) ?? 0,
+      pendingAmount: pending,
+      receivedAmount: received,
+      paymentDue: billed,
       pickupOtp: (m['pickupOTP'] ??
               m['pickupOtp'] ??
               e['pickupOTP'] ??
@@ -577,11 +638,81 @@ class RiderBooking {
   final String city;
   final String message;
 
-  double get due => pendingAmount > 0.009
-      ? pendingAmount
-      : (paymentDue > 0.009 ? paymentDue : 0);
+  /// Remaining Razorpay due — same rules as evuddy.com (`pendingAmount` /
+  /// `remainingAmount`, else `paymentDue` minus already received).
+  double get due {
+    if (pendingAmount > 0.009) return pendingAmount;
+    if (paymentDue > 0.009) {
+      if (receivedAmount > 0.009 && paymentDue > receivedAmount + 0.009) {
+        return paymentDue - receivedAmount;
+      }
+      return paymentDue;
+    }
+    return 0;
+  }
 
   bool get hasPickupOtp => pickupOtp.isNotEmpty;
+
+  bool get isRemainingPayment =>
+      receivedAmount >= 1 || hasPickupOtp || pickupOtpVerified;
+
+  bool get inRide =>
+      rideStatus.toLowerCase() == 'in ride' || pickupOtpVerified;
+
+  RiderBooking copy({
+    String? rideEndOtp,
+    String? rideStatus,
+    String? pickupOtp,
+    String? message,
+  }) {
+    return RiderBooking(
+      mongoId: mongoId,
+      bookingId: bookingId,
+      rentalMode: rentalMode,
+      paymentStatus: paymentStatus,
+      rideStatus: rideStatus ?? this.rideStatus,
+      pendingAmount: pendingAmount,
+      receivedAmount: receivedAmount,
+      paymentDue: paymentDue,
+      pickupOtp: pickupOtp ?? this.pickupOtp,
+      rideEndOtp: rideEndOtp ?? this.rideEndOtp,
+      pickupOtpVerified: pickupOtpVerified,
+      vehicleId: vehicleId,
+      vehicleModel: vehicleModel,
+      vehicleNumber: vehicleNumber,
+      startHub: startHub,
+      pickupHubName: pickupHubName,
+      city: city,
+      message: message ?? this.message,
+    );
+  }
+
+  RiderBooking mergedWith(RiderBooking live) {
+    final preferLive = live.receivedAmount + 0.009 >= receivedAmount;
+    return RiderBooking(
+      mongoId: live.mongoId.isNotEmpty ? live.mongoId : mongoId,
+      bookingId: live.bookingId.isNotEmpty ? live.bookingId : bookingId,
+      rentalMode: live.rentalMode.isNotEmpty ? live.rentalMode : rentalMode,
+      paymentStatus:
+          live.paymentStatus.isNotEmpty ? live.paymentStatus : paymentStatus,
+      rideStatus: live.rideStatus.isNotEmpty ? live.rideStatus : rideStatus,
+      pendingAmount: preferLive ? live.pendingAmount : pendingAmount,
+      receivedAmount: preferLive ? live.receivedAmount : receivedAmount,
+      paymentDue: live.paymentDue > 0.009 ? live.paymentDue : paymentDue,
+      pickupOtp: live.pickupOtp.isNotEmpty ? live.pickupOtp : pickupOtp,
+      rideEndOtp: live.rideEndOtp.isNotEmpty ? live.rideEndOtp : rideEndOtp,
+      pickupOtpVerified: live.pickupOtpVerified || pickupOtpVerified,
+      vehicleId: live.vehicleId.isNotEmpty ? live.vehicleId : vehicleId,
+      vehicleModel: live.vehicleModel.isNotEmpty ? live.vehicleModel : vehicleModel,
+      vehicleNumber:
+          live.vehicleNumber.isNotEmpty ? live.vehicleNumber : vehicleNumber,
+      startHub: live.startHub.isNotEmpty ? live.startHub : startHub,
+      pickupHubName:
+          live.pickupHubName.isNotEmpty ? live.pickupHubName : pickupHubName,
+      city: live.city.isNotEmpty ? live.city : city,
+      message: message.isNotEmpty ? message : live.message,
+    );
+  }
 }
 
 class RazorpayOrder {
@@ -670,6 +801,18 @@ class ApiException implements Exception {
   final String message;
   @override
   String toString() => message;
+}
+
+class RideActionResult {
+  const RideActionResult({
+    required this.message,
+    this.rideEndOtp = '',
+    this.rideStatus = '',
+  });
+
+  final String message;
+  final String rideEndOtp;
+  final String rideStatus;
 }
 
 class RiderLookup {

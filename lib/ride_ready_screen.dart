@@ -46,6 +46,38 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   String get rentalMode =>
       rental ? duration : 'Rent To Own';
 
+  bool get remainingPay {
+    final b = booking;
+    if (b == null) return false;
+    return b.isRemainingPayment && _remainingCharge(b) > 0.009;
+  }
+
+  double _remainingCharge(RiderBooking b) {
+    if (b.due > 0.009) return b.due;
+    if (!b.isRemainingPayment) return 0;
+    final catalog = rental
+        ? CatalogRates.amountForDuration(duration).toDouble()
+        : CatalogRates.rtoDaily.toDouble();
+    final left = catalog - b.receivedAmount;
+    return left > 0.009 ? left : 0;
+  }
+
+  String _moneyInput(double n) {
+    if ((n - n.round()).abs() < 0.009) return n.round().toString();
+    return n.toStringAsFixed(2);
+  }
+
+  void _fillAmount(RiderBooking? b) {
+    if (b == null) return;
+    if (b.due > 0.009) {
+      amount.text = _moneyInput(b.due);
+    } else if (b.isRemainingPayment && _remainingCharge(b) > 0.009) {
+      amount.text = _moneyInput(_remainingCharge(b));
+    } else if (!rental && amount.text.isEmpty) {
+      amount.text = '${CatalogRates.securityDeposit}';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -102,11 +134,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         selected = atHub.isEmpty ? null : atHub.first;
         booking = mine;
         loading = false;
-        if (mine != null && mine.due > 0.009) {
-          amount.text = mine.due.toStringAsFixed(0);
-        } else if (!rental && amount.text.isEmpty) {
-          amount.text = '${CatalogRates.securityDeposit}';
-        }
+        _fillAmount(mine);
       });
     } catch (e) {
       if (!mounted) return;
@@ -193,11 +221,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                 ? 'Scooter reserved. Pay from ₹1 to get pickup OTP.'
                 : 'Scooter reserved. Pay ${CatalogRates.inr(CatalogRates.securityDeposit)} security deposit — hold only, not a recharge.')
             : created.message;
-        if (created.due > 0.009) {
-          amount.text = created.due.toStringAsFixed(0);
-        } else if (!rental) {
-          amount.text = '${CatalogRates.securityDeposit}';
-        }
+        _fillAmount(created);
       });
     } catch (e) {
       if (!mounted) return;
@@ -210,18 +234,38 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
 
   Future<void> _pay() async {
     final token = await _token();
-    final b = booking;
-    if (token == null || b == null || b.mongoId.isEmpty) {
+    var b = booking;
+    if (token == null || b == null) {
       setState(() => error = 'Reserve a scooter first.');
       return;
     }
-    final maxDue = b.due;
-    final pay = double.tryParse(amount.text.trim()) ?? 0;
+    if (b.mongoId.isEmpty) {
+      final mine = await EvuddyApi.myBooking(token);
+      if (mine != null) {
+        b = mine;
+        registrationDraft.activeBooking = mine;
+        if (mounted) setState(() => booking = mine);
+      }
+    }
+    if (b.mongoId.isEmpty) {
+      setState(() => error = 'Booking id is missing. Refresh, then pay remaining.');
+      return;
+    }
+    final remaining = remainingPay;
+    final maxDue = remaining ? _remainingCharge(b) : b.due;
     final depositOnly = !rental && maxDue < 0.01;
-    if (pay < 1 || (!depositOnly && maxDue > 0.009 && pay > maxDue + 0.009)) {
-      setState(() => error = depositOnly
-          ? 'Enter the ${CatalogRates.inr(CatalogRates.securityDeposit)} hold (or the amount the yard billed).'
-          : 'Enter a payment between ₹1 and ₹${maxDue.toStringAsFixed(0)}.');
+    final pay = remaining
+        ? maxDue
+        : (double.tryParse(amount.text.trim()) ?? 0);
+    if (remaining) {
+      amount.text = _moneyInput(pay);
+    }
+    if (pay < 1 || (!depositOnly && !remaining && maxDue > 0.009 && pay > maxDue + 0.009)) {
+      setState(() => error = remaining
+          ? 'Could not load remaining due. Refresh booking and try again.'
+          : (depositOnly
+              ? 'Enter the ${CatalogRates.inr(CatalogRates.securityDeposit)} hold (or the amount the yard billed).'
+              : 'Enter a payment between ₹1 and ₹${maxDue.toStringAsFixed(0)}.'));
       return;
     }
     setState(() {
@@ -258,9 +302,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         paymentId: result['paymentId'],
         signature: result['signature'],
       );
-      if (!verified.hasPickupOtp) {
-        verified = await EvuddyApi.myBooking(token) ?? verified;
-      }
+      final mine = await EvuddyApi.myBooking(token);
+      if (mine != null) verified = verified.mergedWith(mine);
       registrationDraft.activeBooking = verified;
       if (!rental && pay >= 1) {
         final held = (registrationDraft.depositHeld + pay)
@@ -279,16 +322,46 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           );
         } catch (_) {}
       }
+      var noteText = verified.message;
+      if (noteText.isEmpty) {
+        noteText = remaining
+            ? (verified.due > 0.009
+                ? 'Remaining ${CatalogRates.inr(verified.due)} is still due before ride-end OTP.'
+                : 'Remaining paid. Ride-end OTP is being generated.')
+            : (verified.hasPickupOtp
+                ? 'Payment successful. Show pickup OTP at the yard. Remaining ${CatalogRates.inr(verified.due)} is loaded for the next Razorpay pay.'
+                : 'Payment successful.');
+      }
+      if (remaining && verified.due <= 0.009 && verified.rideEndOtp.isEmpty) {
+        try {
+          final ended = await EvuddyApi.rideAction(
+            idToken: token,
+            start: false,
+            bookingId: verified.bookingId.isEmpty ? b.bookingId : verified.bookingId,
+          );
+          noteText = ended.message;
+          verified = (await EvuddyApi.myBooking(token) ?? verified).copy(
+            rideEndOtp: ended.rideEndOtp.isNotEmpty ? ended.rideEndOtp : null,
+            rideStatus: ended.rideStatus.isNotEmpty ? ended.rideStatus : null,
+            message: ended.message,
+          );
+          registrationDraft.activeBooking = verified;
+          if (verified.rideEndOtp.isNotEmpty) {
+            noteText =
+                'Remaining paid. Ride-end OTP ${verified.rideEndOtp} — tell this to the yard to return the scooter.';
+          }
+        } catch (e) {
+          noteText = verified.inRide
+              ? 'Remaining is ₹0. Generate ride-end OTP at the yard.'
+              : 'Remaining is ₹0. Mark the ride started at the yard, then generate ride-end OTP.';
+        }
+      }
       if (!mounted) return;
       setState(() {
         booking = verified;
         busy = false;
-        note = verified.message.isEmpty
-            ? 'Payment successful. Show pickup OTP at the yard.'
-            : verified.message;
-        if (verified.due > 0.009) {
-          amount.text = verified.due.toStringAsFixed(0);
-        }
+        note = noteText;
+        _fillAmount(verified);
       });
     } catch (e) {
       if (!mounted) return;
@@ -307,12 +380,19 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       error = null;
     });
     try {
-      final msg = await EvuddyApi.rideAction(
+      final ended = await EvuddyApi.rideAction(
         idToken: token,
         start: start,
         bookingId: booking?.bookingId,
       );
-      final mine = await EvuddyApi.myBooking(token);
+      var mine = await EvuddyApi.myBooking(token) ?? booking;
+      if (mine != null) {
+        mine = mine.copy(
+          rideEndOtp: ended.rideEndOtp.isNotEmpty ? ended.rideEndOtp : null,
+          rideStatus: ended.rideStatus.isNotEmpty ? ended.rideStatus : null,
+          message: ended.message,
+        );
+      }
       if (!start &&
           registrationDraft.depositHeld > 0 &&
           registrationDraft.depositStatus == 'held') {
@@ -322,7 +402,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       setState(() {
         booking = mine ?? booking;
         busy = false;
-        note = msg;
+        note = ended.message;
+        _fillAmount(mine ?? booking);
       });
     } catch (e) {
       if (!mounted) return;
@@ -440,7 +521,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Paid ₹${b.receivedAmount.toStringAsFixed(0)} · remaining ₹${b.due.toStringAsFixed(0)}',
+                  'Paid ${CatalogRates.inr(b.receivedAmount)} · remaining ${CatalogRates.inr(_remainingCharge(b))}',
                   style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 6),
@@ -464,38 +545,74 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                       letterSpacing: 6,
                     ),
                   ),
-                  if (b.rideEndOtp.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text('RIDE END OTP', style: Theme.of(context).textTheme.labelSmall),
-                    const SizedBox(height: 8),
-                    SelectableText(
-                      b.rideEndOtp,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 4,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
           ],
-          if (b.due > 0.009 || needsDepositHold) ...[
-            const SizedBox(height: 16),
-            TextField(
-              controller: amount,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-              decoration: InputDecoration(
-                labelText: needsDepositHold && b.due < 0.01
-                    ? 'Security deposit hold (₹)'
-                    : 'Pay amount (₹1 to remaining)',
-                filled: true,
-                fillColor: Evuddy.paper,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+          if (b.rideEndOtp.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SurfaceCard(
+              child: Column(
+                children: [
+                  Text('RIDE END OTP', style: Theme.of(context).textTheme.labelSmall),
+                  const SizedBox(height: 8),
+                  SelectableText(
+                    b.rideEndOtp,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 6,
+                    ),
+                  ),
+                ],
               ),
             ),
+          ],
+          if (b.due > 0.009 || remainingPay || needsDepositHold) ...[
+            const SizedBox(height: 16),
+            if (remainingPay)
+              SurfaceCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'REMAINING DUE',
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      CatalogRates.inr(_remainingCharge(b)),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Loaded from this booking. Razorpay will charge only the remaining due — same as evuddy.com.',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Evuddy.muted,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              TextField(
+                controller: amount,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                decoration: InputDecoration(
+                  labelText: needsDepositHold && b.due < 0.01
+                      ? 'Security deposit hold (₹)'
+                      : 'Pay amount (₹1 to remaining)',
+                  filled: true,
+                  fillColor: Evuddy.paper,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
           ],
         ],
         if (note != null) ...[
@@ -532,11 +649,13 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       }
       return EvuddyButton(label: 'Reserve scooter', onPressed: _reserve);
     }
-    if (b.due > 0.009 || needsDepositHold) {
+    if (b.due > 0.009 || remainingPay || needsDepositHold) {
       return EvuddyButton(
-        label: needsDepositHold && b.due < 0.01
-            ? 'Hold deposit on Razorpay'
-            : 'Pay with Razorpay',
+        label: remainingPay
+            ? 'Pay remaining ${CatalogRates.inr(_remainingCharge(b))} with Razorpay'
+            : (needsDepositHold && b.due < 0.01
+                ? 'Hold deposit on Razorpay'
+                : 'Pay with Razorpay'),
         onPressed: _pay,
       );
     }
@@ -546,7 +665,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         onPressed: () => _ride(true),
       );
     }
-    if (b.rideStatus == 'In Ride' && b.due <= 0.009) {
+    if ((b.inRide || b.rideStatus.toLowerCase() == 'in ride') &&
+        b.due <= 0.009 &&
+        b.rideEndOtp.isEmpty) {
       return EvuddyButton(
         label: 'Generate ride-end OTP',
         onPressed: () => _ride(false),

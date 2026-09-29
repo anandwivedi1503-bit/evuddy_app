@@ -63,6 +63,53 @@ void main() {
       }).rideEndOtp,
       '2222',
     );
+    expect(
+      RiderBooking.fromJson({
+        'success': true,
+        'remainingAmount': 249,
+        'receivedAmount': 1,
+        'booking': {
+          'id': 'mongo2',
+          'bookingId': 'BK-10',
+          'pickupOTP': '5555',
+          'paymentStatus': 'Partial',
+        },
+      }).due,
+      249,
+    );
+    expect(
+      RiderBooking.fromJson({
+        'data': {
+          '_id': 'mongo3',
+          'receivedAmount': 1,
+          'paymentDue': 250,
+          'pickupOTP': '9001',
+        },
+      }).due,
+      249,
+    );
+    expect(
+      RiderBooking.fromJson({
+        'receivedAmount': 1,
+        'pendingAmount': 249,
+      }).isRemainingPayment,
+      isTrue,
+    );
+    final verified = RiderBooking.fromJson({
+      'receivedAmount': 250,
+      'pendingAmount': 0,
+      'pickupOTP': '1111',
+      'rideEndOTP': '9999',
+    });
+    final staleMine = RiderBooking.fromJson({
+      'receivedAmount': 1,
+      'pendingAmount': 249,
+      'pickupOTP': '1111',
+    });
+    final merged = verified.mergedWith(staleMine);
+    expect(merged.receivedAmount, 250);
+    expect(merged.due, 0);
+    expect(merged.rideEndOtp, '9999');
   });
 
   test('sniffs jpeg/png/webp and rejects mismatch names', () {

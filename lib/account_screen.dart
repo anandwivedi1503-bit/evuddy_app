@@ -136,6 +136,18 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                   ),
                 ],
+                if (d.activeBooking!.rideEndOtp.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text('RIDE END OTP', style: Theme.of(context).textTheme.labelSmall),
+                  SelectableText(
+                    d.activeBooking!.rideEndOtp,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 4,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
