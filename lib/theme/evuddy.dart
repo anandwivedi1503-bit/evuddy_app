@@ -118,7 +118,6 @@ class EvuddyLogo extends StatelessWidget {
   }
 }
 
-/// Solid-field splash mark (Rapido: wordmark only, no stamp card).
 class EvuddySplashMark extends StatelessWidget {
   const EvuddySplashMark({super.key});
 
@@ -128,8 +127,15 @@ class EvuddySplashMark extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Image.asset(
+          Evuddy.logoMarkAsset,
+          height: 64,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+        ),
+        const SizedBox(height: 18),
+        Image.asset(
           Evuddy.wordmarkAsset,
-          height: 72,
+          height: 44,
           fit: BoxFit.contain,
           filterQuality: FilterQuality.high,
         ),

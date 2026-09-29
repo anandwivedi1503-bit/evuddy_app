@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../api/partner_pdf.dart';
 import '../invest_screen.dart';
-import '../open_link.dart';
 import '../theme/evuddy.dart';
 import 'chrome.dart';
 
@@ -123,32 +122,24 @@ const offerAds = [
     kicker: 'FLEET PARTNER',
     title: 'Own 5 EVs. We operate.',
     body: 'Low-speed ₹3L · ₹15,000 / month. FOCO.',
-    cta: 'Open new plans',
+    cta: 'Open plans',
     asset: Evuddy.investPosterAsset,
     invest: true,
     pdf: true,
   ),
   OfferAd(
     kicker: 'HIGH-SPEED',
-    title: '₹4.5L fleet. ₹18,000 / month.',
-    body: '5 high-speed scooters. Scale to 100.',
+    title: '₹4.5L · ₹18,000 / month',
+    body: '5 high-speed scooters. Scale when you are ready.',
     cta: 'See high-speed',
     asset: Evuddy.yellowScooterAsset,
     invest: true,
     pdf: true,
   ),
   OfferAd(
-    kicker: 'DEALER',
-    title: 'Retail EVUDDY in your city',
-    body: 'Showroom or pickup hub. ₹5 lakh minimum.',
-    cta: 'Become a dealer',
-    asset: Evuddy.sceneDealerAsset,
-    path: '/partners/dealer',
-  ),
-  OfferAd(
-    kicker: 'RIDERS',
-    title: 'GST-in fares. Hub OTP after pay.',
-    body: 'Daily ₹250 · GPS on every scooter.',
+    kicker: 'DAILY RIDE',
+    title: '₹60 / day GST included',
+    body: 'Hub OTP after pay · live GPS on every scooter.',
     cta: 'Book an EV',
     asset: Evuddy.riderCityAsset,
     book: true,
@@ -389,9 +380,9 @@ class RideSteps extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const steps = [
-      (Icons.sms_outlined, 'OTP autofill', 'SMS fills the 6 digits'),
-      (Icons.mic_none_rounded, 'Voice KYC', 'Speak name, mobile, email'),
-      (Icons.payments_outlined, 'Razorpay', 'Deposit hold or rent'),
+      (Icons.gps_fixed_rounded, 'Live GPS', 'Every scooter tracked'),
+      (Icons.lock_rounded, 'Hub OTP', 'Pickup after Razorpay'),
+      (Icons.bolt_rounded, 'UPI / QR', 'Same checkout as web'),
     ];
     return Row(
       children: [

@@ -132,15 +132,15 @@ void main() {
   });
 
   test('catalog rates and Indian rupee format', () {
-    expect(CatalogRates.daily, 250);
-    expect(CatalogRates.weekly, 1750);
-    expect(CatalogRates.monthly, 7500);
+    expect(CatalogRates.daily, 60);
+    expect(CatalogRates.weekly, 420);
+    expect(CatalogRates.monthly, 1800);
     expect(CatalogRates.rtoDaily, 300);
     expect(CatalogRates.rtoMonths, 20);
     expect(CatalogRates.securityDeposit, 2500);
-    expect(CatalogRates.inr(250), '₹250');
-    expect(CatalogRates.inr(1750), '₹1,750');
-    expect(CatalogRates.inr(7500), '₹7,500');
+    expect(CatalogRates.inr(60), '₹60');
+    expect(CatalogRates.inr(420), '₹420');
+    expect(CatalogRates.inr(1800), '₹1,800');
     expect(CatalogRates.lowSpeedMonthly(5), 15000);
     expect(CatalogRates.highSpeedMonthly(5), 18000);
     expect(FleetPartner.low.invest(5), 300000);

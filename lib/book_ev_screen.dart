@@ -192,11 +192,6 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
               text:
                   'Same catalog as the website. Razorpay checkout after you reserve a live scooter.',
             ),
-          )
-        else if (canBook)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 16),
-            child: InfoNote(text: 'You’re approved. Choose Normal booking or Rent to Own.'),
           ),
         _PlanCard(
           frozen: canBook && plan == 'rto',
@@ -204,9 +199,9 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
           title: 'Normal booking',
           body: 'Daily, weekly or monthly. GST included. Return the scooter when the plan ends.',
           rates: [
-            'Daily ${CatalogRates.inr(CatalogRates.daily)} GST in',
-            'Weekly ${CatalogRates.inr(CatalogRates.weekly)}',
-            'Monthly ${CatalogRates.inr(CatalogRates.monthly)}',
+            'Daily ${CatalogRates.inr(CatalogRates.daily)} GST included',
+            'Weekly ${CatalogRates.inr(CatalogRates.weekly)} GST included',
+            'Monthly ${CatalogRates.inr(CatalogRates.monthly)} GST included',
           ],
           onTap: () => _pickPlan('rental'),
           selected: plan == 'rental',

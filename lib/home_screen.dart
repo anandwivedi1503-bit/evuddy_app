@@ -132,10 +132,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 18),
                     BookSearchBar(onBook: () => _book()),
-                    const SizedBox(height: 14),
-                    if (d.phoneVerified) _StatusChip(onTap: () => _book()),
                     if (d.activeBooking != null) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       _LiveTripBanner(
                         booking: d.activeBooking!,
                         onOpen: () {
@@ -143,12 +141,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       ),
                     ],
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     const RideTodayHero(),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 20),
                     OfferAdCarousel(onBook: () => _book()),
                     const SizedBox(height: 22),
-                    Text('PLANS', style: Theme.of(context).textTheme.labelSmall),
+                    Text('RIDE', style: Theme.of(context).textTheme.labelSmall),
                     const SizedBox(height: 10),
                     FareGrid(onPick: (fare) => _book(fare: fare)),
                     const SizedBox(height: 18),
@@ -156,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 18),
                     QuickActions(
                       registerLabel: d.phoneVerified
-                          ? (d.canBook ? 'Approved' : 'KYC')
+                          ? (d.canBook ? 'Account' : 'KYC')
                           : 'Register',
                       onBook: () => _book(),
                       onRegister: () {
@@ -374,52 +372,6 @@ class BookSearchBar extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final d = registrationDraft;
-    final approved = d.canBook;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: approved ? Evuddy.greenSoft : const Color(0xFFFFF7ED),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: approved ? const Color(0xFF86EFAC) : const Color(0xFFFDBA74),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              approved ? Icons.verified_rounded : Icons.hourglass_top_rounded,
-              color: approved ? Evuddy.greenDeep : const Color(0xFFC2410C),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                approved
-                    ? 'Approved · Normal booking and Rent to Own are open'
-                    : 'KYC ${d.approvalStatus.isEmpty ? "under review" : d.approvalStatus} · waiting for admin',
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                  color: Evuddy.ink,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

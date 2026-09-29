@@ -53,7 +53,7 @@ class _AccountScreenState extends State<AccountScreen> {
     final status = !d.phoneVerified
         ? 'Not signed in'
         : d.canBook
-            ? 'Approved · Book EV open'
+            ? 'Ready to ride'
             : (d.approvalStatus.isEmpty ? 'KYC pending' : d.approvalStatus);
     return AuthScreen(
       showBack: false,

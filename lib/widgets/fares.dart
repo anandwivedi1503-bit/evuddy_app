@@ -53,7 +53,7 @@ final fareOffers = <FareOffer>[
     label: 'Own',
     price: CatalogRates.inr(CatalogRates.rtoDaily),
     unit: 'per day',
-    hint: '${CatalogRates.rtoMonths} mo · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold',
+    hint: '${CatalogRates.rtoMonths} months · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold',
     plan: 'rto',
   ),
 ];

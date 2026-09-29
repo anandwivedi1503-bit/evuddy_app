@@ -385,9 +385,9 @@ class EvuddyApi {
 
 /// Rider catalog. GST-in rental prices; RTO is ₹300/day + ₹2,500 hold.
 class CatalogRates {
-  static const daily = 250;
-  static const weekly = 1750;
-  static const monthly = 7500;
+  static const daily = 60;
+  static const weekly = 420;
+  static const monthly = 1800;
   static const rtoDaily = 300;
   static const rtoMonths = 20;
   static const securityDeposit = 2500;
