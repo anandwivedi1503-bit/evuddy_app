@@ -13,8 +13,11 @@
   <p>Opening Razorpay…</p>
   <script>
     function post(obj) {
-      if (window.PayBridge && window.PayBridge.postMessage) {
-        window.PayBridge.postMessage(JSON.stringify(obj));
+      var msg = JSON.stringify(obj);
+      if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+        window.flutter_inappwebview.callHandler("PayBridge", msg);
+      } else if (window.PayBridge && window.PayBridge.postMessage) {
+        window.PayBridge.postMessage(msg);
       }
     }
     function openPay(raw) {
@@ -34,6 +37,7 @@
         prefill: n.prefill || {},
         notes: n.notes || {},
         theme: { color: "#18B368" },
+        config: n.config,
         handler: function (response) {
           post({
             type: "success",
