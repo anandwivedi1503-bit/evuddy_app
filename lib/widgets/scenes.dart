@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../api/partner_pdf.dart';
 import '../invest_screen.dart';
+import '../open_link.dart';
 import '../theme/evuddy.dart';
 import 'chrome.dart';
 
@@ -188,8 +189,9 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> with SingleTickerProv
       widget.onBook?.call();
       return;
     }
-    if (ad.path != null) {
-      openEvuddyPath(ad.path!);
+    final path = ad.path;
+    if (path != null && path.isNotEmpty) {
+      openEvuddyPath(path);
       return;
     }
     Navigator.push(context, evuddyRoute(const InvestScreen()));
