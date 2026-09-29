@@ -14,9 +14,7 @@
   <script>
     function post(obj) {
       var msg = JSON.stringify(obj);
-      if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
-        window.flutter_inappwebview.callHandler("PayBridge", msg);
-      } else if (window.PayBridge && window.PayBridge.postMessage) {
+      if (window.PayBridge && window.PayBridge.postMessage) {
         window.PayBridge.postMessage(msg);
       }
     }
@@ -34,7 +32,11 @@
         image: n.image,
         description: n.description || "Booking Payment",
         order_id: n.order_id,
+        send_sms_hash: true,
+        one_click_checkout: false,
         prefill: n.prefill || {},
+        method: n.method,
+        upi: n.upi || { flow: "qr" },
         notes: n.notes || {},
         theme: { color: "#18B368" },
         config: n.config,
