@@ -167,5 +167,25 @@ void main() {
     expect(order.keyId, 'rzp_live_test');
     expect(order.orderId, 'order_123');
     expect(order.amount, 100);
+    expect(
+      RazorpayOrder.fromJson({
+        'success': true,
+        'data': {
+          'keyId': 'rzp_live_nested',
+          'orderId': 'order_nested',
+          'amount': 100,
+          'name': 'Shubhrax Mobility Limited',
+        },
+      }).name,
+      'Shubhrax Mobility Limited',
+    );
+    expect(
+      RazorpayOrder.fromJson({
+        'keyId': 'rzp',
+        'orderId': 'order_1',
+        'amount': 100,
+      }).name,
+      'Shubhrax Mobility Limited',
+    );
   });
 }

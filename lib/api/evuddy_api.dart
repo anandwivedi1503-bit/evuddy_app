@@ -726,13 +726,23 @@ class RazorpayOrder {
   });
 
   factory RazorpayOrder.fromJson(Map e) {
+    final data = e['data'] is Map ? e['data'] as Map : const {};
+    String pick(List<String> keys) {
+      for (final k in keys) {
+        final v = e[k] ?? data[k];
+        if (v != null && v.toString().trim().isNotEmpty) return v.toString().trim();
+      }
+      return '';
+    }
+
+    final name = pick(['name', 'merchantName', 'businessName']);
     return RazorpayOrder(
-      keyId: e['keyId']?.toString() ?? e['key']?.toString() ?? '',
-      orderId: e['orderId']?.toString() ?? e['id']?.toString() ?? '',
-      amount: _asDouble(e['amount']) ?? 0,
-      currency: e['currency']?.toString() ?? 'INR',
-      name: e['name']?.toString() ?? 'EVUDDY',
-      image: e['image']?.toString(),
+      keyId: pick(['keyId', 'key']),
+      orderId: pick(['orderId', 'id', 'order_id']),
+      amount: _asDouble(e['amount']) ?? _asDouble(data['amount']) ?? 0,
+      currency: pick(['currency']).isEmpty ? 'INR' : pick(['currency']),
+      name: name.isEmpty ? 'Shubhrax Mobility Limited' : name,
+      image: pick(['image']).isEmpty ? null : pick(['image']),
     );
   }
 

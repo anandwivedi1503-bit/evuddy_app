@@ -10,7 +10,7 @@
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
-  <p>Opening Razorpay…</p>
+  <p>Opening Shubhrax Mobility Limited checkout…</p>
   <script>
     function post(obj) {
       var msg = JSON.stringify(obj);
@@ -24,22 +24,18 @@
         post({ type: "failed", message: "Razorpay checkout.js did not load. Check network." });
         return;
       }
+      // Same options evuddy.com/book-bike passes to new window.Razorpay({...}).
       var options = {
         key: n.key,
         amount: n.amount,
         currency: n.currency || "INR",
-        name: n.name || "EVUDDY",
+        name: n.name || "Shubhrax Mobility Limited",
         image: n.image,
         description: n.description || "Booking Payment",
         order_id: n.order_id,
-        send_sms_hash: true,
-        one_click_checkout: false,
         prefill: n.prefill || {},
-        method: n.method,
-        upi: n.upi || { flow: "qr" },
         notes: n.notes || {},
         theme: { color: "#18B368" },
-        config: n.config,
         handler: function (response) {
           post({
             type: "success",
