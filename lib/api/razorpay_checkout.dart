@@ -54,7 +54,9 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   /// Same payload evuddy.com passes to `new window.Razorpay({...})`.
   /// checkout.js then renders the Shubhrax Mobility Limited merchant QR.
   Map<String, dynamic> get _options {
-    final image = widget.order.image;
+    final image = (widget.order.image != null && widget.order.image!.isNotEmpty)
+        ? widget.order.image
+        : '${EvuddyApi.origin}/Evuddy-logo-dark-E.png';
     final rawName = widget.order.name.trim();
     final name = (rawName.isEmpty || rawName.toUpperCase() == 'EVUDDY')
         ? 'Shubhrax Mobility Limited'
@@ -76,7 +78,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
           'vehicleId': widget.vehicleId,
       },
       'theme': {'color': '#18B368'},
-      if (image != null && image.isNotEmpty) 'image': image,
+      'image': image,
     };
   }
 

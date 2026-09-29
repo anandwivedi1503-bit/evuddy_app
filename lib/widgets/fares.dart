@@ -66,24 +66,90 @@ class FareGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: FareCard(offer: fareOffers[0], onTap: onPick)),
-            const SizedBox(width: 10),
-            Expanded(child: FareCard(offer: fareOffers[1], onTap: onPick)),
-          ],
-        ),
+        _DailyBanner(offer: fareOffers[0], onTap: onPick),
         const SizedBox(height: 10),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: FareCard(offer: fareOffers[2], onTap: onPick)),
+            Expanded(child: FareCard(offer: fareOffers[1], onTap: onPick)),
             const SizedBox(width: 10),
-            Expanded(child: FareCard(offer: fareOffers[3], onTap: onPick)),
+            Expanded(child: FareCard(offer: fareOffers[2], onTap: onPick)),
           ],
         ),
+        const SizedBox(height: 10),
+        FareCard(offer: fareOffers[3], onTap: onPick),
       ],
+    );
+  }
+}
+
+class _DailyBanner extends StatelessWidget {
+  const _DailyBanner({required this.offer, this.onTap});
+  final FareOffer offer;
+  final ValueChanged<FareOffer>? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap == null
+            ? null
+            : () {
+                HapticFeedback.selectionClick();
+                onTap!(offer);
+              },
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF14532D), Color(0xFF16A34A)],
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'DAILY  ·  GST INCLUDED',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      offer.price,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 32,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'per day  ·  hub OTP after Razorpay',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

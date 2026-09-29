@@ -189,7 +189,7 @@ class _AccountScreenState extends State<AccountScreen> {
           onTap: () => Navigator.push(context, evuddyRoute(const InvestScreen())),
           child: const ScenePhoto(
             asset: Evuddy.investPosterAsset,
-            height: 280,
+            height: 200,
             fit: BoxFit.contain,
           ),
         ),

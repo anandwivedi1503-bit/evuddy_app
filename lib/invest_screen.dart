@@ -32,7 +32,7 @@ class InvestScreen extends StatelessWidget {
         ],
       ),
       children: [
-        const ScenePhoto(asset: Evuddy.investPosterAsset, height: 220, fit: BoxFit.cover),
+        const ScenePhoto(asset: Evuddy.investPosterAsset, height: 168, fit: BoxFit.cover),
         const SizedBox(height: 16),
         _FocoCard(
           tag: 'LOW-SPEED',

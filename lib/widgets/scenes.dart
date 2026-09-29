@@ -121,19 +121,19 @@ class OfferAd {
 const offerAds = [
   OfferAd(
     kicker: 'FLEET PARTNER',
-    title: 'Own 5 EVs. We operate.',
-    body: 'Low-speed ₹3L · ₹15,000 / month. FOCO.',
-    cta: 'Open plans',
+    title: 'Own the fleet. We operate.',
+    body: '5 low-speed EVs · ₹3,00,000 · ₹15,000 / month',
+    cta: 'Open FOCO plans',
     asset: Evuddy.investPosterAsset,
     invest: true,
     pdf: true,
   ),
   OfferAd(
     kicker: 'HIGH-SPEED',
-    title: '₹4.5L · ₹18,000 / month',
-    body: '5 high-speed scooters. Scale when you are ready.',
+    title: '₹4,50,000 · ₹18,000 / month',
+    body: '5 high-speed scooters. EVUDDY runs operations.',
     cta: 'See high-speed',
-    asset: Evuddy.yellowScooterAsset,
+    asset: Evuddy.investPosterAsset,
     invest: true,
     pdf: true,
   ),
@@ -231,18 +231,25 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> with SingleTickerProv
                           ),
                           DecoratedBox(
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  ad.book
-                                      ? const Color(0xE016A34A)
-                                      : ad.invest
-                                          ? const Color(0xE0BE185D)
-                                          : const Color(0xE014532D),
-                                  const Color(0x66050A08),
-                                ],
-                              ),
+                              gradient: ad.invest
+                                  ? const LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Color(0x00000000),
+                                        Color(0x99071B12),
+                                      ],
+                                    )
+                                  : LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        ad.book
+                                            ? const Color(0xCC16A34A)
+                                            : const Color(0xCC14532D),
+                                        const Color(0x66050A08),
+                                      ],
+                                    ),
                             ),
                           ),
                           AnimatedBuilder(

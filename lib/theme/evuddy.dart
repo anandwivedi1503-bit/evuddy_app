@@ -35,7 +35,7 @@ class Evuddy {
   static const sceneDistributorAsset = 'assets/images/scene_distributor.jpg';
   static const sceneFranchiseAsset = 'assets/images/scene_franchise.jpg';
   static const sceneFilmAsset = 'assets/images/scene_film.jpg';
-  static const investPosterAsset = 'assets/images/invest_poster.jpg';
+  static const investPosterAsset = 'assets/images/fleet_partner_foco.png';
 
   static List<BoxShadow> get lift => const [
         BoxShadow(
@@ -123,23 +123,11 @@ class EvuddySplashMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Image.asset(
-          Evuddy.logoMarkAsset,
-          height: 64,
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-        ),
-        const SizedBox(height: 18),
-        Image.asset(
-          Evuddy.wordmarkAsset,
-          height: 44,
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-        ),
-      ],
+    return Image.asset(
+      Evuddy.wordmarkAsset,
+      height: 56,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
     );
   }
 }
