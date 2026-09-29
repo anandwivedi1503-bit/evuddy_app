@@ -83,6 +83,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
         city = registrationDraft.chosenCity ?? (c.isEmpty ? null : c.first.name);
         hubId = registrationDraft.chosenHubId;
         loading = false;
+        _ensureHub();
       });
     } catch (_) {
       if (!mounted) return;
@@ -95,9 +96,47 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
 
   List<EvuddyHub> get hubsInCity {
     if (city == null) return hubs;
-    return hubs
+    final match = hubs
         .where((h) => h.city.toLowerCase() == city!.toLowerCase())
         .toList();
+    return match.isEmpty ? hubs : match;
+  }
+
+  void _ensureHub() {
+    final listed = hubsInCity;
+    if (listed.isEmpty) {
+      hubId = null;
+      return;
+    }
+    if (hubId != null && listed.any((h) => h.id == hubId)) return;
+    hubId = listed.first.id;
+  }
+
+  void _continue() {
+    if (!canBook) {
+      Navigator.push(
+        context,
+        evuddyRoute(
+          waitingKyc ? const SubmittedScreen() : const ConfirmMobileScreen(),
+        ),
+      );
+      return;
+    }
+    if (registrationDraft.chosenPlan == null) {
+      setState(() => error = 'Choose Normal booking or Rent to Own first.');
+      return;
+    }
+    _ensureHub();
+    if (hubId == null) {
+      setState(() => error = 'Select a pickup hub, then tap Continue.');
+      return;
+    }
+    setState(() => error = null);
+    registrationDraft
+      ..chosenCity = city
+      ..chosenHubId = hubId
+      ..persist();
+    Navigator.push(context, evuddyRoute(const RideReadyScreen()));
   }
 
   Future<void> _pickPlan(String plan) async {
@@ -132,18 +171,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
         label: !canBook
             ? (waitingKyc ? 'Waiting for admin approval' : 'Verify mobile to book')
             : (plan == null ? 'Choose a plan above' : 'Continue'),
-        onPressed: !canBook
-            ? (waitingKyc
-                ? () => Navigator.push(context, evuddyRoute(const SubmittedScreen()))
-                : () => Navigator.push(context, evuddyRoute(const ConfirmMobileScreen())))
-            : (plan == null || hubId == null
-                ? null
-                : () {
-                    registrationDraft.chosenCity = city;
-                    registrationDraft.chosenHubId = hubId;
-                    registrationDraft.persist();
-                    Navigator.push(context, evuddyRoute(const RideReadyScreen()));
-                  }),
+        onPressed: _continue,
       ),
       children: [
         const ScenePhoto(asset: Evuddy.yellowScooterAsset, height: 210),
@@ -203,6 +231,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
           onChanged: (v) => setState(() {
             city = v;
             hubId = null;
+            _ensureHub();
           }),
         ),
         const SizedBox(height: 20),
