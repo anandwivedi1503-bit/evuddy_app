@@ -120,29 +120,30 @@ class OfferAd {
 
 const offerAds = [
   OfferAd(
+    kicker: 'FLEET PARTNER',
+    title: 'Own 5 EVs. We operate.',
+    body: 'Low-speed ₹3L · ₹15,000 / month. FOCO.',
+    cta: 'Open new plans',
+    asset: Evuddy.investPosterAsset,
+    invest: true,
+    pdf: true,
+  ),
+  OfferAd(
+    kicker: 'HIGH-SPEED',
+    title: '₹4.5L fleet. ₹18,000 / month.',
+    body: '5 high-speed scooters. Scale to 100.',
+    cta: 'See high-speed',
+    asset: Evuddy.yellowScooterAsset,
+    invest: true,
+    pdf: true,
+  ),
+  OfferAd(
     kicker: 'DEALER',
     title: 'Retail EVUDDY in your city',
     body: 'Showroom or pickup hub. ₹5 lakh minimum.',
     cta: 'Become a dealer',
     asset: Evuddy.sceneDealerAsset,
     path: '/partners/dealer',
-  ),
-  OfferAd(
-    kicker: 'FLEET PARTNER',
-    title: 'Earn 60% of net profit',
-    body: '₹1L · ₹5L · ₹10L · 42 months. Download the brief.',
-    cta: 'Open plans',
-    asset: Evuddy.investPosterAsset,
-    invest: true,
-    pdf: true,
-  ),
-  OfferAd(
-    kicker: 'DISTRIBUTOR',
-    title: 'Supply dealers from ₹10 lakh',
-    body: 'Territory warehouse and brand standards.',
-    cta: 'Apply as distributor',
-    asset: Evuddy.sceneDistributorAsset,
-    path: '/partners',
   ),
   OfferAd(
     kicker: 'RIDERS',
@@ -162,20 +163,23 @@ class OfferAdCarousel extends StatefulWidget {
   State<OfferAdCarousel> createState() => _OfferAdCarouselState();
 }
 
-class _OfferAdCarouselState extends State<OfferAdCarousel> {
-  final page = PageController();
+class _OfferAdCarouselState extends State<OfferAdCarousel> with SingleTickerProviderStateMixin {
+  final page = PageController(viewportFraction: 0.92);
   int index = 0;
   Timer? timer;
+  late final AnimationController shine;
 
   @override
   void initState() {
     super.initState();
-    timer = Timer.periodic(const Duration(seconds: 5), (_) {
+    shine = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))
+      ..repeat();
+    timer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!page.hasClients) return;
       page.animateToPage(
         (index + 1) % offerAds.length,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 720),
+        curve: Curves.easeInOutCubic,
       );
     });
   }
@@ -183,6 +187,7 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
   @override
   void dispose() {
     timer?.cancel();
+    shine.dispose();
     page.dispose();
     super.dispose();
   }
@@ -204,44 +209,70 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
     return Column(
       children: [
         SizedBox(
-          height: 214,
+          height: 228,
           child: PageView.builder(
             controller: page,
             onPageChanged: (i) => setState(() => index = i),
             itemCount: offerAds.length,
             itemBuilder: (context, i) {
               final ad = offerAds[i];
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: GestureDetector(
-                  onTap: () => _open(ad),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(22),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.asset(
-                          ad.asset,
-                          fit: BoxFit.cover,
-                          alignment: Alignment.center,
-                          filterQuality: FilterQuality.high,
-                        ),
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                ad.book
-                                    ? const Color(0xE016A34A)
-                                    : ad.invest
-                                        ? const Color(0xE0BE185D)
-                                        : const Color(0xE014532D),
-                                const Color(0x66050A08),
-                              ],
+              final on = i == index;
+              return AnimatedScale(
+                scale: on ? 1 : 0.94,
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeOutCubic,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: GestureDetector(
+                    onTap: () => _open(ad),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(26),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.asset(
+                            ad.asset,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.center,
+                            filterQuality: FilterQuality.high,
+                          ),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  ad.book
+                                      ? const Color(0xE016A34A)
+                                      : ad.invest
+                                          ? const Color(0xE0BE185D)
+                                          : const Color(0xE014532D),
+                                  const Color(0x66050A08),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
+                          AnimatedBuilder(
+                            animation: shine,
+                            builder: (context, _) {
+                              final t = shine.value;
+                              return IgnorePointer(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment(-1.4 + t * 2.4, -1),
+                                      end: Alignment(-0.4 + t * 2.4, 1),
+                                      colors: [
+                                        Colors.white.withValues(alpha: 0),
+                                        Colors.white.withValues(alpha: 0.18),
+                                        Colors.white.withValues(alpha: 0),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(18, 16, 16, 14),
                           child: Column(
@@ -325,8 +356,9 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
                     ),
                   ),
                 ),
-              );
-            },
+              ),
+            );
+              },
           ),
         ),
         const SizedBox(height: 10),

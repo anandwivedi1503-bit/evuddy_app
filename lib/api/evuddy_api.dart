@@ -392,11 +392,12 @@ class CatalogRates {
   static const rtoMonths = 20;
   static const securityDeposit = 2500;
   static const gstNote = 'GST included on rental';
-  static const partnerShare = 0.60;
-  static const partnerMonths = 42;
-  static const scootersPerLakh = 3;
-  /// Scaled from the prior ₹52.2 / scooter / day at ₹230 rent.
-  static const investorPerScooterDay = 57;
+  static const partnerMonths = 48;
+  static const partnerMinFleet = 5;
+  static const lowSpeedPerScooter = 60000;
+  static const highSpeedPerScooter = 90000;
+  static const lowSpeedMonthlyForFive = 15000;
+  static const highSpeedMonthlyForFive = 18000;
 
   static String inr(num n) {
     final s = n.round().abs().toString();
@@ -418,12 +419,9 @@ class CatalogRates {
     return buf.toString();
   }
 
-  static int investorMonthly(int lakhs) =>
-      investorPerScooterDay * scootersPerLakh * lakhs * 30;
+  static int lowSpeedMonthly(int fleet) => 3000 * fleet;
 
-  static int investorTerm(int lakhs) => investorMonthly(lakhs) * partnerMonths;
-
-  static int scrapValue(int lakhs) => 18000 * lakhs;
+  static int highSpeedMonthly(int fleet) => 3600 * fleet;
 
   static Map<String, dynamic> payload() => {
         'daily': daily,

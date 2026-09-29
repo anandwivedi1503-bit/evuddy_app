@@ -1,4 +1,5 @@
 import 'package:evuddy_app/api/evuddy_api.dart';
+import 'package:evuddy_app/api/partner_pdf.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -140,7 +141,10 @@ void main() {
     expect(CatalogRates.inr(250), '₹250');
     expect(CatalogRates.inr(1750), '₹1,750');
     expect(CatalogRates.inr(7500), '₹7,500');
-    expect(CatalogRates.investorMonthly(1), 5130);
+    expect(CatalogRates.lowSpeedMonthly(5), 15000);
+    expect(CatalogRates.highSpeedMonthly(5), 18000);
+    expect(FleetPartner.low.invest(5), 300000);
+    expect(FleetPartner.high.invest(5), 450000);
     expect(RazorpayOrder.fromJson({
       'keyId': 'rzp',
       'orderId': 'order_1',

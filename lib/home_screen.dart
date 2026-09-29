@@ -114,23 +114,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       'Where are you\nriding today?',
                       style: GoogleFonts.plusJakartaSans(
-                        fontSize: 34,
-                        height: 1.08,
+                        fontSize: 36,
+                        height: 1.05,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -1.2,
+                        letterSpacing: -1.4,
                         color: Evuddy.ink,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     Text(
-                      'Hub pickup · Live GPS · EV only',
+                      'Hub pickup  ·  Live GPS  ·  EV only',
                       style: GoogleFonts.plusJakartaSans(
                         color: Evuddy.muted,
                         fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        fontSize: 14.5,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
                     BookSearchBar(onBook: () => _book()),
                     const SizedBox(height: 14),
                     if (d.phoneVerified) _StatusChip(onTap: () => _book()),
@@ -304,43 +304,64 @@ class BookSearchBar extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onBook,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(28),
         child: Ink(
-          height: 58,
+          height: 64,
           decoration: BoxDecoration(
-            color: const Color(0xFFF4F6F3),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Evuddy.line),
+            color: Evuddy.rapidoYellow,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33F59E0B),
+                blurRadius: 24,
+                offset: Offset(0, 10),
+              ),
+            ],
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
             child: Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: const BoxDecoration(
-                    color: Evuddy.green,
+                    color: Colors.white,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.electric_moped_rounded, color: Colors.white),
+                  child: const Icon(Icons.electric_moped_rounded, color: Evuddy.ink),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    'Book an EV',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                      color: Evuddy.ink,
-                    ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Book an EV',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 17,
+                          color: Evuddy.ink,
+                          height: 1.1,
+                        ),
+                      ),
+                      Text(
+                        'Pickup at your hub',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          color: const Color(0xFF4B5563),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Evuddy.green,
-                    borderRadius: BorderRadius.circular(14),
+                    color: Evuddy.ink,
+                    borderRadius: BorderRadius.circular(22),
                   ),
                   child: Text(
                     'Go',
