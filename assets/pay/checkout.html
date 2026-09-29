@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <style>
-    html, body { margin: 0; padding: 24px; background: #F7F8F5; font-family: sans-serif; color: #1C1917; }
-    p { color: #78716C; }
+    html, body { margin: 0; padding: 24px; background: #F6FFF9; font-family: sans-serif; color: #0F172A; }
+    p { color: #64748B; }
   </style>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
@@ -23,19 +23,17 @@
         post({ type: "failed", message: "Razorpay checkout.js did not load. Check network." });
         return;
       }
-      var prefill = n.prefill || {};
-      if (!prefill.method) prefill.method = "card";
       var options = {
         key: n.key,
         amount: n.amount,
         currency: n.currency || "INR",
         name: n.name || "EVUDDY",
-        description: n.description || "EVUDDY booking",
+        image: n.image,
+        description: n.description || "Booking Payment",
         order_id: n.order_id,
-        prefill: prefill,
+        prefill: n.prefill || {},
         notes: n.notes || {},
-        theme: { color: "#16A34A" },
-        retry: { enabled: true, max_count: 1 },
+        theme: { color: "#18B368" },
         handler: function (response) {
           post({
             type: "success",

@@ -325,36 +325,17 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       }
       var noteText = verified.message;
       if (noteText.isEmpty) {
-        noteText = remaining
-            ? (verified.due > 0.009
-                ? 'Remaining ${CatalogRates.inr(verified.due)} is still due before ride-end OTP.'
-                : 'Remaining paid. Ride-end OTP is being generated.')
-            : (verified.hasPickupOtp
-                ? 'Payment successful. Show pickup OTP at the yard. Remaining ${CatalogRates.inr(verified.due)} is loaded for the next Razorpay pay.'
-                : 'Payment successful.');
-      }
-      if (remaining && verified.due <= 0.009 && verified.rideEndOtp.isEmpty) {
-        try {
-          final ended = await EvuddyApi.rideAction(
-            idToken: token,
-            start: false,
-            bookingId: verified.bookingId.isEmpty ? b.bookingId : verified.bookingId,
-          );
-          noteText = ended.message;
-          verified = (await EvuddyApi.myBooking(token) ?? verified).copy(
-            rideEndOtp: ended.rideEndOtp.isNotEmpty ? ended.rideEndOtp : null,
-            rideStatus: ended.rideStatus.isNotEmpty ? ended.rideStatus : null,
-            message: ended.message,
-          );
-          registrationDraft.activeBooking = verified;
-          if (verified.rideEndOtp.isNotEmpty) {
-            noteText =
-                'Remaining paid. Ride-end OTP ${verified.rideEndOtp} — tell this to the yard to return the scooter.';
-          }
-        } catch (e) {
-          noteText = verified.inRide
-              ? 'Remaining is ₹0. Generate ride-end OTP at the yard.'
-              : 'Remaining is ₹0. Mark the ride started at the yard, then generate ride-end OTP.';
+        if (verified.due > 0.009 && verified.hasPickupOtp) {
+          noteText =
+              'Pickup OTP ${verified.pickupOtp}. Tell this to the yard. Remaining ${CatalogRates.inr(verified.due)} must be paid before ride-end OTP.';
+        } else if (verified.due <= 0.009 && verified.hasPickupOtp) {
+          noteText =
+              'Payment successful. Pickup OTP ${verified.pickupOtp}. Show this at the hub.';
+        } else if (verified.due <= 0.009) {
+          noteText =
+              'Remaining is ₹0. Start the ride at the yard, then generate ride-end OTP — same as evuddy.com.';
+        } else {
+          noteText = 'Payment saved.';
         }
       }
       if (!mounted) return;
