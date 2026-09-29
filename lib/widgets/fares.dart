@@ -14,6 +14,7 @@ class FareOffer {
     required this.hint,
     this.plan = 'rental',
     this.featured = false,
+    this.asset = Evuddy.yellowScooterAsset,
   });
 
   final String id;
@@ -23,6 +24,7 @@ class FareOffer {
   final String hint;
   final String plan;
   final bool featured;
+  final String asset;
 }
 
 final fareOffers = <FareOffer>[
@@ -33,6 +35,7 @@ final fareOffers = <FareOffer>[
     unit: 'per hour',
     hint: 'GST included',
     featured: true,
+    asset: Evuddy.yellowScooterAsset,
   ),
   FareOffer(
     id: 'Daily',
@@ -40,6 +43,7 @@ final fareOffers = <FareOffer>[
     price: CatalogRates.inr(CatalogRates.daily),
     unit: 'per day',
     hint: 'GST included',
+    asset: Evuddy.riderCityAsset,
   ),
   FareOffer(
     id: 'Weekly',
@@ -47,6 +51,7 @@ final fareOffers = <FareOffer>[
     price: CatalogRates.inr(CatalogRates.weekly),
     unit: 'per week',
     hint: 'GST included',
+    asset: Evuddy.riderEveningAsset,
   ),
   FareOffer(
     id: 'Monthly',
@@ -54,6 +59,7 @@ final fareOffers = <FareOffer>[
     price: CatalogRates.inr(CatalogRates.monthly),
     unit: 'per month',
     hint: 'GST included',
+    asset: Evuddy.hubAsset,
   ),
   FareOffer(
     id: 'Rent to Own',
@@ -62,6 +68,7 @@ final fareOffers = <FareOffer>[
     unit: 'per day',
     hint: '${CatalogRates.rtoMonths} months · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold',
     plan: 'rto',
+    asset: Evuddy.sceneHomeAsset,
   ),
 ];
 
@@ -224,8 +231,9 @@ class FareCard extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
                   child: Image.asset(
-                    Evuddy.yellowScooterAsset,
-                    fit: BoxFit.contain,
+                    offer.asset,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,
                     filterQuality: FilterQuality.high,
                   ),
                 ),
