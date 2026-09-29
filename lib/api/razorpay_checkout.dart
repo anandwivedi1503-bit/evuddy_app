@@ -1,16 +1,18 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../theme/evuddy.dart';
 import 'evuddy_api.dart';
 
-/// checkout.js like evuddy.com. Uses InAppWebView so Razorpay Continue can
-/// `window.open` the UPI QR step (webview_flutter cannot).
+/// Android: native WebView that allows Razorpay `window.open` (Continue → UPI QR).
+/// Other platforms: checkout.js in a Flutter WebView (same options as evuddy.com).
 class RazorpayCheckoutPage extends StatefulWidget {
   const RazorpayCheckoutPage({
     super.key,
@@ -36,36 +38,12 @@ class RazorpayCheckoutPage extends StatefulWidget {
 }
 
 class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
-  InAppWebViewController? _web;
+  static const _channel = MethodChannel('evuddy/razorpay');
+
+  WebViewController? _web;
   String? _error;
   bool _opened = false;
-  String? _html;
-
-  static final _settings = InAppWebViewSettings(
-    javaScriptEnabled: true,
-    javaScriptCanOpenWindowsAutomatically: true,
-    supportMultipleWindows: true,
-    domStorageEnabled: true,
-    databaseEnabled: true,
-    thirdPartyCookiesEnabled: true,
-    mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
-    useHybridComposition: true,
-    allowsInlineMediaPlayback: true,
-    mediaPlaybackRequiresUserGesture: false,
-    useShouldOverrideUrlLoading: true,
-  );
-
-  static const _upiSchemes = {
-    'upi',
-    'phonepe',
-    'paytmmp',
-    'tez',
-    'gpay',
-    'credpay',
-    'bhim',
-    'ppe',
-    'intent',
-  };
+  bool _launching = false;
 
   String get _contact10 {
     final digits = widget.contact.replaceAll(RegExp(r'\D'), '');
@@ -114,46 +92,96 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     };
   }
 
+  bool get _androidNative => !kIsWeb && Platform.isAndroid;
+
   @override
   void initState() {
     super.initState();
-    rootBundle.loadString('assets/pay/checkout.html').then((html) {
-      if (mounted) setState(() => _html = html);
-    });
+    if (_androidNative) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openAndroid());
+    } else {
+      _initFlutterWeb();
+    }
   }
 
-  void _onPayMessage(String raw) {
-    final decoded = jsonDecode(raw);
-    if (decoded is! Map) return;
-    final type = decoded['type']?.toString();
-    if (type == 'ready') {
-      _openPay();
-    } else if (type == 'success') {
-      if (!mounted) return;
-      Navigator.pop(context, {
-        'orderId': decoded['razorpay_order_id']?.toString() ?? '',
-        'paymentId': decoded['razorpay_payment_id']?.toString() ?? '',
-        'signature': decoded['razorpay_signature']?.toString() ?? '',
+  Future<void> _openAndroid() async {
+    if (_launching) return;
+    _launching = true;
+    try {
+      final html = await rootBundle.loadString('assets/pay/checkout.html');
+      final raw = await _channel.invokeMethod<String>('open', {
+        'html': html,
+        'options': jsonEncode(_options),
       });
-    } else if (type == 'dismiss') {
-      if (mounted) Navigator.pop(context);
-    } else if (type == 'failed') {
-      setState(() => _error = decoded['message']?.toString() ?? 'Payment failed.');
+      if (!mounted) return;
+      if (raw == null || raw.isEmpty) {
+        Navigator.pop(context);
+        return;
+      }
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) {
+        Navigator.pop(context);
+        return;
+      }
+      final type = decoded['type']?.toString();
+      if (type == 'success') {
+        Navigator.pop(context, {
+          'orderId': decoded['razorpay_order_id']?.toString() ?? '',
+          'paymentId': decoded['razorpay_payment_id']?.toString() ?? '',
+          'signature': decoded['razorpay_signature']?.toString() ?? '',
+        });
+      } else if (type == 'failed') {
+        setState(() {
+          _launching = false;
+          _error = decoded['message']?.toString() ?? 'Payment failed.';
+        });
+      } else {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _launching = false;
+        _error = e.toString();
+      });
     }
   }
 
-  Future<void> _openPay() async {
-    if (_opened || _web == null) return;
-    _opened = true;
-    await _web!.evaluateJavascript(source: 'openPay(${jsonEncode(_options)})');
-  }
-
-  Future<NavigationActionPolicy> _handleUrl(Uri? uri) async {
-    if (uri != null && _upiSchemes.contains(uri.scheme.toLowerCase())) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-      return NavigationActionPolicy.CANCEL;
+  Future<void> _initFlutterWeb() async {
+    final web = WebViewController();
+    web.setJavaScriptMode(JavaScriptMode.unrestricted);
+    web.setBackgroundColor(const Color(0xFFF6FFF9));
+    web.addJavaScriptChannel(
+      'PayBridge',
+      onMessageReceived: (m) {
+        final raw = jsonDecode(m.message);
+        if (raw is! Map) return;
+        final type = raw['type']?.toString();
+        if (type == 'ready' && !_opened) {
+          _opened = true;
+          web.runJavaScript('openPay(${jsonEncode(_options)})');
+        } else if (type == 'success') {
+          if (!mounted) return;
+          Navigator.pop(context, {
+            'orderId': raw['razorpay_order_id']?.toString() ?? '',
+            'paymentId': raw['razorpay_payment_id']?.toString() ?? '',
+            'signature': raw['razorpay_signature']?.toString() ?? '',
+          });
+        } else if (type == 'dismiss') {
+          if (mounted) Navigator.pop(context);
+        } else if (type == 'failed') {
+          setState(() => _error = raw['message']?.toString() ?? 'Payment failed.');
+        }
+      },
+    );
+    if (web.platform is AndroidWebViewController) {
+      final android = web.platform as AndroidWebViewController;
+      await android.setMixedContentMode(MixedContentMode.alwaysAllow);
     }
-    return NavigationActionPolicy.ALLOW;
+    final html = await rootBundle.loadString('assets/pay/checkout.html');
+    await web.loadHtmlString(html, baseUrl: EvuddyApi.origin);
+    if (!mounted) return;
+    setState(() => _web = web);
   }
 
   @override
@@ -169,91 +197,42 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
         ),
       ),
-      body: Column(
-        children: [
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(
-                  color: Evuddy.danger,
-                  fontWeight: FontWeight.w600,
+      body: _error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Evuddy.danger,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (_androidNative)
+                      FilledButton(
+                        onPressed: () {
+                          setState(() {
+                            _error = null;
+                            _launching = false;
+                          });
+                          _openAndroid();
+                        },
+                        child: const Text('Retry Razorpay'),
+                      ),
+                  ],
                 ),
               ),
-            ),
-          Expanded(
-            child: _html == null
-                ? const Center(child: CircularProgressIndicator())
-                : InAppWebView(
-                    initialSettings: _settings,
-                    onWebViewCreated: (controller) async {
-                      _web = controller;
-                      controller.addJavaScriptHandler(
-                        handlerName: 'PayBridge',
-                        callback: (args) {
-                          if (args.isEmpty) return null;
-                          _onPayMessage(args.first.toString());
-                          return null;
-                        },
-                      );
-                      await controller.loadData(
-                        data: _html!,
-                        baseUrl: WebUri(EvuddyApi.origin),
-                        historyUrl: WebUri(EvuddyApi.origin),
-                      );
-                    },
-                    shouldOverrideUrlLoading: (controller, action) =>
-                        _handleUrl(action.request.url),
-                    onCreateWindow: (controller, action) async {
-                      if (!mounted) return false;
-                      await Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => _RazorpayWindow(
-                            windowId: action.windowId,
-                            settings: _settings,
-                            onUrl: _handleUrl,
-                          ),
-                        ),
-                      );
-                      return true;
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RazorpayWindow extends StatelessWidget {
-  const _RazorpayWindow({
-    required this.windowId,
-    required this.settings,
-    required this.onUrl,
-  });
-
-  final int windowId;
-  final InAppWebViewSettings settings;
-  final Future<NavigationActionPolicy> Function(Uri?) onUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF18B368),
-        foregroundColor: Colors.white,
-        title: const Text('UPI / QR'),
-      ),
-      body: InAppWebView(
-        windowId: windowId,
-        initialSettings: settings,
-        shouldOverrideUrlLoading: (controller, action) => onUrl(action.request.url),
-        onCloseWindow: (controller) {
-          if (Navigator.of(context).canPop()) Navigator.of(context).pop();
-        },
-      ),
+            )
+          : _androidNative
+              ? const Center(child: CircularProgressIndicator())
+              : (_web == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : WebViewWidget(controller: _web!)),
     );
   }
 }
