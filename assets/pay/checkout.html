@@ -31,9 +31,11 @@
         image: n.image,
         description: n.description || "Booking Payment",
         order_id: n.order_id,
+        redirect: n.redirect === true,
         prefill: n.prefill || {},
         notes: n.notes || {},
         theme: { color: "#18B368" },
+        config: n.config,
         handler: function (response) {
           post({
             type: "success",

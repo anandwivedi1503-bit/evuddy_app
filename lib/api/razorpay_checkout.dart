@@ -6,11 +6,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 
 import '../theme/evuddy.dart';
 import 'evuddy_api.dart';
 
-/// Same checkout.js flow as evuddy.com Book EV (not native Magic Checkout).
+/// Razorpay checkout.js inside a WebView — same as evuddy.com.
 class RazorpayCheckoutPage extends StatefulWidget {
   const RazorpayCheckoutPage({
     super.key,
@@ -46,7 +47,12 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     return digits;
   }
 
-  /// Matches evuddy.com: `new Razorpay({ key, amount: n.amount, prefill: { name, contact } })`.
+  String get _email {
+    final e = widget.email.trim();
+    if (e.contains('@')) return e;
+    return 'rider$_contact10@evuddy.com';
+  }
+
   Map<String, dynamic> get _options {
     final image = widget.order.image;
     return {
@@ -56,9 +62,12 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       'name': widget.order.name.isEmpty ? 'EVUDDY' : widget.order.name,
       'description': 'Booking Payment - ${widget.bookingId}',
       'order_id': widget.order.orderId,
+      'redirect': true,
       'prefill': {
         'name': widget.customerName.isEmpty ? 'Rider' : widget.customerName,
+        'email': _email,
         'contact': _contact10,
+        'method': 'card',
       },
       'notes': {
         'bookingId': widget.bookingId,
@@ -66,6 +75,31 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
           'vehicleId': widget.vehicleId,
       },
       'theme': {'color': '#18B368'},
+      'config': {
+        'display': {
+          'blocks': {
+            'card': {
+              'name': 'Pay using Card',
+              'instruments': [
+                {'method': 'card'}
+              ],
+            },
+            'upi': {
+              'name': 'Pay using UPI',
+              'instruments': [
+                {'method': 'upi'}
+              ],
+            },
+          },
+          'hide': [
+            {'method': 'emi'},
+            {'method': 'wallet'},
+            {'method': 'paylater'},
+          ],
+          'sequence': ['block.upi', 'block.card'],
+          'preferences': {'show_default_blocks': false},
+        },
+      },
       if (image != null && image.isNotEmpty) 'image': image,
     };
   }
@@ -79,6 +113,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     'credpay',
     'bhim',
     'ppe',
+    'intent',
   };
 
   @override
@@ -128,7 +163,25 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     if (web.platform is AndroidWebViewController) {
       final android = web.platform as AndroidWebViewController;
       await android.setMixedContentMode(MixedContentMode.alwaysAllow);
+      await android.setPaymentRequestEnabled(true);
+      await android.setUseWideViewPort(true);
+      await android.setGeolocationEnabled(true);
       android.setOnPlatformPermissionRequest((request) => request.grant());
+      await android.setCustomWidgetCallbacks(
+        onShowCustomWidget: (child, onHidden) {
+          if (!mounted) return;
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => Scaffold(body: child),
+            ),
+          ).whenComplete(onHidden);
+        },
+        onHideCustomWidget: () {
+          if (mounted && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        },
+      );
       final cookies = WebViewCookieManager();
       final cookiePlatform = cookies.platform;
       if (cookiePlatform is AndroidWebViewCookieManager) {
@@ -147,13 +200,26 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     await web.runJavaScript('openPay(${jsonEncode(_options)})');
   }
 
+  Widget _webView() {
+    final controller = _web!;
+    if (controller.platform is AndroidWebViewController) {
+      return WebViewWidget.fromPlatformCreationParams(
+        params: AndroidWebViewWidgetCreationParams.fromPlatformWebViewWidgetCreationParams(
+          PlatformWebViewWidgetCreationParams(controller: controller.platform),
+          displayWithHybridComposition: true,
+        ),
+      );
+    }
+    return WebViewWidget(controller: controller);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF6FFF9),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF6FFF9),
-        foregroundColor: Evuddy.ink,
+        backgroundColor: const Color(0xFF18B368),
+        foregroundColor: Colors.white,
         elevation: 0,
         title: Text(
           'Pay securely',
@@ -163,20 +229,9 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
-            child: Text(
-              CatalogRates.inr(widget.rupees),
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
           if (_error != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
+              padding: const EdgeInsets.all(12),
               child: Text(
                 _error!,
                 textAlign: TextAlign.center,
@@ -189,7 +244,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
           Expanded(
             child: _web == null
                 ? const Center(child: CircularProgressIndicator())
-                : WebViewWidget(controller: _web!),
+                : _webView(),
           ),
         ],
       ),
