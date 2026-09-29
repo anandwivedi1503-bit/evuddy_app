@@ -51,6 +51,12 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     return digits;
   }
 
+  String get _email {
+    final e = widget.email.trim();
+    if (e.contains('@')) return e;
+    return 'rider$_contact10@evuddy.com';
+  }
+
   Map<String, dynamic> get _options {
     final image = widget.order.image;
     return {
@@ -60,9 +66,11 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       'name': widget.order.name.isEmpty ? 'EVUDDY' : widget.order.name,
       'description': 'Booking Payment - ${widget.bookingId}',
       'order_id': widget.order.orderId,
+      'send_sms_hash': true,
       'prefill': {
         'name': widget.customerName.isEmpty ? 'Rider' : widget.customerName,
-        'contact': _contact10,
+        'email': _email,
+        'contact': '+91$_contact10',
         'method': 'upi',
       },
       'notes': {
@@ -84,8 +92,15 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
               ],
             },
           },
+          'hide': [
+            {'method': 'card'},
+            {'method': 'netbanking'},
+            {'method': 'wallet'},
+            {'method': 'emi'},
+            {'method': 'paylater'},
+          ],
           'sequence': ['block.upi_qr'],
-          'preferences': {'show_default_blocks': true},
+          'preferences': {'show_default_blocks': false},
         },
       },
       if (image != null && image.isNotEmpty) 'image': image,
