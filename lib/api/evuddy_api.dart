@@ -263,7 +263,11 @@ class EvuddyApi {
     if (j['success'] != true) {
       throw ApiException(_message(j, 'Unable to create Razorpay order.'));
     }
-    return RazorpayOrder.fromJson(j);
+    final order = RazorpayOrder.fromJson(j);
+    if (order.keyId.isEmpty || order.orderId.isEmpty) {
+      throw ApiException('evuddy.com did not return a Razorpay key or order id.');
+    }
+    return order;
   }
 
   static Future<Map<String, dynamic>> _postVerifyPayment({
@@ -739,7 +743,7 @@ class RazorpayOrder {
 
     final name = pick(['name', 'merchantName', 'businessName']);
     return RazorpayOrder(
-      keyId: pick(['keyId', 'key']),
+      keyId: pick(['keyId', 'key', 'key_id', 'razorpayKeyId', 'razorpay_key']),
       orderId: pick(['orderId', 'id', 'order_id']),
       amount: _asDouble(e['amount']) ?? _asDouble(data['amount']) ?? 0,
       currency: pick(['currency']).isEmpty ? 'INR' : pick(['currency']),

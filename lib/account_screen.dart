@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
+import 'confirm_mobile_screen.dart';
 import 'deposit_wallet_screen.dart';
 import 'invest_screen.dart';
+import 'login_screen.dart';
 import 'open_link.dart';
+import 'ride_ready_screen.dart';
 import 'state/registration_draft.dart';
+import 'submitted_screen.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 import 'widgets/promo.dart';
@@ -47,25 +51,75 @@ class _AccountScreenState extends State<AccountScreen> {
     setState(() => checking = false);
   }
 
+  void _switchNumber() {
+    registrationDraft.clearSession();
+    widget.onLoggedOut?.call();
+    Navigator.push(context, evuddyRoute(const ConfirmMobileScreen()));
+  }
+
+  Widget _footer(RegistrationDraft d) {
+    if (!d.phoneVerified) {
+      return EvuddyButton(
+        label: 'Confirm mobile',
+        onPressed: () => Navigator.push(context, evuddyRoute(const ConfirmMobileScreen())),
+      );
+    }
+    if (d.activeBooking != null) {
+      return EvuddyButton(
+        label: 'Open booking ${d.activeBooking!.bookingId}',
+        onPressed: () => Navigator.push(context, evuddyRoute(const RideReadyScreen())),
+      );
+    }
+    if (d.canBook) {
+      return EvuddyButton(
+        label: 'Book an EV',
+        onPressed: () {
+          registrationDraft.jumpToTab(1);
+        },
+      );
+    }
+    if (d.isPendingKyc) {
+      return EvuddyButton(
+        label: 'View KYC status',
+        onPressed: () => Navigator.push(context, evuddyRoute(const SubmittedScreen())),
+      );
+    }
+    return EvuddyButton(
+      label: 'Complete registration',
+      onPressed: () => Navigator.push(context, evuddyRoute(const LoginScreen())),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final d = registrationDraft;
     final status = !d.phoneVerified
-        ? 'Not signed in'
+        ? 'Confirm the same mobile as evuddy.com'
         : d.canBook
-            ? 'Ready to ride'
+            ? 'Approved · ready to book'
             : (d.approvalStatus.isEmpty ? 'KYC pending' : d.approvalStatus);
     return AuthScreen(
       showBack: false,
       kicker: 'Account',
       title: d.fullName.isEmpty ? 'Your EVUDDY' : d.fullName,
       subtitle: status,
-      footer: EvuddyGhostButton(
-        label: 'Log out on this phone',
-        onPressed: () {
-          d.clearSession();
-          widget.onLoggedOut?.call();
-        },
+      footer: Column(
+        children: [
+          _footer(d),
+          if (d.phoneVerified) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _switchNumber,
+              child: Text(
+                'Use a different number',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF44403C),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
       children: [
         if (d.phoneVerified)
@@ -206,7 +260,7 @@ class _AccountScreenState extends State<AccountScreen> {
         const SizedBox(height: 14),
         const InfoNote(
           text:
-              'OTP uses Firebase on evuddy.com. We never store your SMS inbox. Helpdesk · helpdesk@kebuone.in · +91 8726006512',
+              'Same screens as evuddy.com Book EV: confirm mobile → OTP → book if approved. OTP uses Firebase. Helpdesk · helpdesk@kebuone.in · +91 8726006512',
         ),
       ],
     );

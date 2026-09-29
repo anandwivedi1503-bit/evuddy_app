@@ -29,14 +29,13 @@
         key: n.key,
         amount: n.amount,
         currency: n.currency || "INR",
-        name: n.name || "Shubhrax Mobility Limited",
+        name: n.name || "EVUDDY",
         image: n.image,
         description: n.description || "Booking Payment",
         order_id: n.order_id,
         prefill: n.prefill || {},
         notes: n.notes || {},
         theme: { color: "#18B368" },
-        one_click_checkout: false,
         handler: function (response) {
           post({
             type: "success",
