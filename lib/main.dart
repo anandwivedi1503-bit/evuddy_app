@@ -36,7 +36,7 @@ class EvuddyApp extends StatelessWidget {
   }
 }
 
-/// Brand-colour splash: wordmark only, then fade into the white home.
+/// Yellow brand hold → white canvas with a pulsing wordmark → home.
 class EvuddySplashScreen extends StatefulWidget {
   const EvuddySplashScreen({super.key});
 
@@ -45,34 +45,57 @@ class EvuddySplashScreen extends StatefulWidget {
 }
 
 class _EvuddySplashScreenState extends State<EvuddySplashScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _in;
-  late final Animation<double> _fade;
-  late final Animation<double> _scale;
+    with TickerProviderStateMixin {
+  late final AnimationController _hold;
+  late final AnimationController _toWhite;
+  late final AnimationController _pulse;
+  late final Animation<Color?> _bg;
+  late final Animation<double> _logoScale;
 
   @override
   void initState() {
     super.initState();
-    _in = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
-    _fade = CurvedAnimation(parent: _in, curve: Curves.easeOut);
-    _scale = Tween<double>(begin: 0.92, end: 1).animate(
-      CurvedAnimation(parent: _in, curve: Curves.easeOutCubic),
+    _hold = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _toWhite = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _bg = ColorTween(begin: Evuddy.rapidoYellow, end: Colors.white).animate(
+      CurvedAnimation(parent: _toWhite, curve: Curves.easeInOutCubic),
     );
-    _in.forward();
+    _logoScale = Tween<double>(begin: 0.86, end: 1).animate(
+      CurvedAnimation(parent: _pulse, curve: Curves.easeInOutCubic),
+    );
     EvuddyApi.health();
     registrationDraft.restore().then((_) {
       if (registrationDraft.phoneVerified) {
         registrationDraft.refreshFromServer();
       }
     });
-    Future<void>.delayed(const Duration(milliseconds: 1150), _go);
+    _run();
   }
 
-  Future<void> _go() async {
+  Future<void> _run() async {
+    await _hold.forward();
     if (!mounted) return;
+    _pulse.repeat(reverse: true);
+    await _toWhite.forward();
+    if (!mounted) return;
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 1100));
+    if (!mounted) return;
+    _go();
+  }
+
+  void _go() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 380),
+        transitionDuration: const Duration(milliseconds: 420),
         pageBuilder: (_, __, ___) => const RiderShell(),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(opacity: animation, child: child);
@@ -83,34 +106,39 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
 
   @override
   void dispose() {
-    _in.dispose();
+    _hold.dispose();
+    _toWhite.dispose();
+    _pulse.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Evuddy.rapidoYellow,
-        systemNavigationBarIconBrightness: Brightness.dark,
-      ),
-      child: Scaffold(
-        backgroundColor: Evuddy.rapidoYellow,
-        body: FadeTransition(
-          opacity: _fade,
-          child: ScaleTransition(
-            scale: _scale,
-            child: const Center(
+    return AnimatedBuilder(
+      animation: Listenable.merge([_toWhite, _pulse]),
+      builder: (context, _) {
+        final color = _bg.value ?? Evuddy.rapidoYellow;
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.dark,
+            systemNavigationBarColor: color,
+            systemNavigationBarIconBrightness: Brightness.dark,
+          ),
+          child: Scaffold(
+            backgroundColor: color,
+            body: Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 40),
-                child: EvuddySplashMark(),
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: ScaleTransition(
+                  scale: _logoScale,
+                  child: const EvuddySplashMark(),
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

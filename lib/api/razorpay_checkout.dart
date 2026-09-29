@@ -51,16 +51,13 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     return digits;
   }
 
-  /// Same payload evuddy.com passes to `new window.Razorpay({...})`.
-  /// checkout.js then renders the Shubhrax Mobility Limited merchant QR.
+  /// Same fields BikeBooking.tsx passes to `new window.Razorpay({...})`.
+  /// Live `keyId` comes from POST /api/razorpay/create-order — never from app .env.
   Map<String, dynamic> get _options {
     final image = (widget.order.image != null && widget.order.image!.isNotEmpty)
         ? widget.order.image
         : '${EvuddyApi.origin}/Evuddy-logo-dark-E.png';
-    final rawName = widget.order.name.trim();
-    final name = (rawName.isEmpty || rawName.toUpperCase() == 'EVUDDY')
-        ? 'Shubhrax Mobility Limited'
-        : rawName;
+    final name = widget.order.name.trim().isEmpty ? 'EVUDDY' : widget.order.name.trim();
     return {
       'key': widget.order.keyId,
       'amount': widget.order.amountPaise(widget.rupees),
@@ -79,7 +76,6 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       },
       'theme': {'color': '#18B368'},
       'image': image,
-      'one_click_checkout': false,
     };
   }
 
