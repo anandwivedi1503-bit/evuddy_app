@@ -147,6 +147,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                     const SizedBox(height: 18),
+                    const RideTodayHero(),
+                    const SizedBox(height: 18),
                     OfferAdCarousel(onBook: () => _book()),
                     const SizedBox(height: 22),
                     Text('RIDE', style: Theme.of(context).textTheme.labelSmall),

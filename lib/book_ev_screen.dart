@@ -197,8 +197,9 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
           frozen: canBook && plan == 'rto',
           tag: 'FLEXIBLE RENTAL',
           title: 'Normal booking',
-          body: 'Daily, weekly or monthly. GST included. Return the scooter when the plan ends.',
+          body: 'Hourly, daily, weekly or monthly. GST included. Return the scooter when the plan ends.',
           rates: [
+            'Hourly ${CatalogRates.inr(CatalogRates.hourly)} GST included',
             'Daily ${CatalogRates.inr(CatalogRates.daily)} GST included',
             'Weekly ${CatalogRates.inr(CatalogRates.weekly)} GST included',
             'Monthly ${CatalogRates.inr(CatalogRates.monthly)} GST included',

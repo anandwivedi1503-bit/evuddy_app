@@ -121,28 +121,28 @@ class OfferAd {
 const offerAds = [
   OfferAd(
     kicker: 'FLEET PARTNER',
-    title: 'Own the fleet. We operate.',
-    body: '5 low-speed EVs · ₹3,00,000 · ₹15,000 / month',
+    title: '₹3,00,000  ·  ₹15,000 / month',
+    body: '5 low-speed EVs. EVUDDY operates FOCO.',
     cta: 'Open FOCO plans',
-    asset: Evuddy.investPosterAsset,
+    asset: Evuddy.yellowScooterAsset,
     invest: true,
     pdf: true,
   ),
   OfferAd(
     kicker: 'HIGH-SPEED',
-    title: '₹4,50,000 · ₹18,000 / month',
+    title: '₹4,50,000  ·  ₹18,000 / month',
     body: '5 high-speed scooters. EVUDDY runs operations.',
     cta: 'See high-speed',
-    asset: Evuddy.investPosterAsset,
+    asset: Evuddy.riderCityAsset,
     invest: true,
     pdf: true,
   ),
   OfferAd(
     kicker: 'DAILY RIDE',
-    title: '₹60 / day GST included',
-    body: 'Hub OTP after pay · live GPS on every scooter.',
+    title: '₹250 / day GST included',
+    body: 'Hub OTP after Razorpay · live GPS on every scooter.',
     cta: 'Book an EV',
-    asset: Evuddy.riderCityAsset,
+    asset: Evuddy.hubAsset,
     book: true,
   ),
 ];
@@ -202,163 +202,109 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> with SingleTickerProv
     return Column(
       children: [
         SizedBox(
-          height: 228,
+          height: 292,
           child: PageView.builder(
             controller: page,
             onPageChanged: (i) => setState(() => index = i),
             itemCount: offerAds.length,
             itemBuilder: (context, i) {
               final ad = offerAds[i];
-              final on = i == index;
-              return AnimatedScale(
-                scale: on ? 1 : 0.94,
-                duration: const Duration(milliseconds: 320),
-                curve: Curves.easeOutCubic,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: GestureDetector(
-                    onTap: () => _open(ad),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(26),
-                      child: Stack(
-                        fit: StackFit.expand,
+              return Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: GestureDetector(
+                  onTap: () => _open(ad),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: ColoredBox(
+                      color: Colors.white,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Image.asset(
-                            ad.asset,
-                            fit: BoxFit.cover,
-                            alignment: Alignment.center,
-                            filterQuality: FilterQuality.high,
-                          ),
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: ad.invest
-                                  ? const LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Color(0x00000000),
-                                        Color(0x99071B12),
-                                      ],
-                                    )
-                                  : LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        ad.book
-                                            ? const Color(0xCC16A34A)
-                                            : const Color(0xCC14532D),
-                                        const Color(0x66050A08),
-                                      ],
-                                    ),
+                          Expanded(
+                            child: Image.asset(
+                              ad.asset,
+                              fit: BoxFit.cover,
+                              alignment: Alignment.center,
+                              filterQuality: FilterQuality.high,
                             ),
                           ),
-                          AnimatedBuilder(
-                            animation: shine,
-                            builder: (context, _) {
-                              final t = shine.value;
-                              return IgnorePointer(
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment(-1.4 + t * 2.4, -1),
-                                      end: Alignment(-0.4 + t * 2.4, 1),
-                                      colors: [
-                                        Colors.white.withValues(alpha: 0),
-                                        Colors.white.withValues(alpha: 0.18),
-                                        Colors.white.withValues(alpha: 0),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(18, 16, 16, 14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(99),
-                                ),
-                                child: Text(
+                          Container(
+                            color: const Color(0xFFF7F8F5),
+                            padding: const EdgeInsets.fromLTRB(14, 10, 12, 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
                                   ad.kicker,
                                   style: GoogleFonts.plusJakartaSans(
                                     color: Evuddy.greenDeep,
                                     fontWeight: FontWeight.w800,
-                                    fontSize: 10,
+                                    fontSize: 11,
                                     letterSpacing: 1.1,
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                ad.title,
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 22,
-                                  height: 1.12,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                ad.body,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: Colors.white,
-                                  fontSize: 13.5,
-                                  height: 1.35,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const Spacer(),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      '${ad.cta}  →',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 15,
-                                      ),
-                                    ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  ad.title,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: const Color(0xFF0C0A09),
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 17,
+                                    height: 1.2,
                                   ),
-                                  if (ad.pdf)
-                                    TextButton.icon(
-                                      onPressed: () => shareFleetPartnerPdf(),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: Colors.white,
-                                        backgroundColor: const Color(0x33FFFFFF),
-                                      ),
-                                      icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                                      label: Text(
-                                        'PDF',
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  ad.body,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: const Color(0xFF292524),
+                                    fontSize: 13,
+                                    height: 1.3,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '${ad.cta}  →',
                                         style: GoogleFonts.plusJakartaSans(
+                                          color: Evuddy.greenDeep,
                                           fontWeight: FontWeight.w800,
+                                          fontSize: 13,
                                         ),
                                       ),
                                     ),
-                                ],
-                              ),
-                            ],
+                                    if (ad.pdf)
+                                      TextButton.icon(
+                                        onPressed: shareFleetPartnerPdf,
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Evuddy.greenDeep,
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                        icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
+                                        label: Text(
+                                          'PDF',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            );
-              },
+              );
+            },
           ),
         ),
         const SizedBox(height: 10),

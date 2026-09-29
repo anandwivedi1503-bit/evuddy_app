@@ -17,9 +17,7 @@ class RideReadyScreen extends StatefulWidget {
 }
 
 class _RideReadyScreenState extends State<RideReadyScreen> {
-  String duration = registrationDraft.chosenDuration == 'Hourly'
-      ? 'Daily'
-      : (registrationDraft.chosenDuration ?? 'Daily');
+  String duration = registrationDraft.chosenDuration ?? 'Daily';
   List<EvuddyVehicle> vehicles = [];
   EvuddyHub? hub;
   EvuddyVehicle? selected;
@@ -357,6 +355,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   Future<void> _ride(bool start) async {
     final token = await _token();
     if (token == null) return;
+    final current = booking;
+    if (!start && current != null && _remainingCharge(current) > 0.009) {
+      setState(() => error = 'Pay remaining ${CatalogRates.inr(_remainingCharge(current))} on Razorpay before ride-end OTP.');
+      return;
+    }
     setState(() {
       busy = true;
       error = null;
@@ -406,7 +409,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           ? 'Booking ${b.bookingId}'
           : (rental ? 'Choose a duration' : '${CatalogRates.rtoMonths}-month ownership'),
       subtitle: rental
-          ? 'GST included. First ₹1 issues pickup OTP. No recharge wallet.'
+          ? 'Same as evuddy.com: reserve → Razorpay UPI QR → pickup OTP after ₹1 → remaining due → ride-end OTP. GST included. Hourly ₹60 · Daily ₹250.'
           : '${CatalogRates.inr(CatalogRates.rtoDaily)}/day · ${CatalogRates.rtoMonths} months · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold, refunded when the scooter is back.',
       error: error,
       footer: _footer(b),
@@ -438,7 +441,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         const SizedBox(height: 16),
         if (rental && b == null)
           ChoicePills(
-            options: const ['Daily', 'Weekly', 'Monthly'],
+            options: const ['Hourly', 'Daily', 'Weekly', 'Monthly'],
             value: duration,
             onChanged: (v) => setState(() => duration = v),
           ),

@@ -32,7 +32,7 @@ class InvestScreen extends StatelessWidget {
         ],
       ),
       children: [
-        const ScenePhoto(asset: Evuddy.investPosterAsset, height: 168, fit: BoxFit.cover),
+        const ScenePhoto(asset: Evuddy.investPosterAsset, height: 220, fit: BoxFit.contain),
         const SizedBox(height: 16),
         _FocoCard(
           tag: 'LOW-SPEED',
@@ -54,7 +54,12 @@ class InvestScreen extends StatelessWidget {
         const SizedBox(height: 14),
         Text(
           'Scale tables (10–100 scooters) are in the PDF. Final terms: Fleet Partner Agreement with EVUDDY / Shubhrax Mobility Ltd.',
-          style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12, height: 1.4),
+          style: GoogleFonts.plusJakartaSans(
+            color: const Color(0xFF44403C),
+            fontSize: 13,
+            height: 1.4,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
@@ -85,58 +90,73 @@ class _FocoCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [accent.withValues(alpha: 0.12), Colors.white],
-        ),
-        border: Border.all(color: accent.withValues(alpha: 0.28)),
+        color: Colors.white,
+        border: Border.all(color: accent, width: 1.6),
         boxShadow: Evuddy.lift,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            tag,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
               color: accent,
+              borderRadius: BorderRadius.circular(99),
+            ),
+            child: Text(
+              tag,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+                color: Colors.white,
+              ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
           Text(
             title,
-            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18),
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+              color: const Color(0xFF0C0A09),
+            ),
           ),
           const SizedBox(height: 12),
           Text(
             invest,
             style: GoogleFonts.plusJakartaSans(
               fontWeight: FontWeight.w800,
-              fontSize: 28,
+              fontSize: 32,
               letterSpacing: -0.8,
-              color: Evuddy.ink,
+              color: const Color(0xFF0C0A09),
             ),
           ),
           Text(
             '5 scooters · $per each',
-            style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontWeight: FontWeight.w600),
+            style: GoogleFonts.plusJakartaSans(
+              color: const Color(0xFF292524),
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
           ),
           const SizedBox(height: 10),
           Text(
             '$monthly / month',
             style: GoogleFonts.plusJakartaSans(
               fontWeight: FontWeight.w800,
-              fontSize: 18,
+              fontSize: 20,
               color: Evuddy.greenDeep,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             'FOCO · EVUDDY operates · ${CatalogRates.partnerMonths} months',
-            style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
+            style: GoogleFonts.plusJakartaSans(
+              color: const Color(0xFF44403C),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

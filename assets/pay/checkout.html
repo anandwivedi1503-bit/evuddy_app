@@ -10,7 +10,7 @@
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
-  <p>Opening Shubhrax Mobility Limited checkout…</p>
+  <p>Opening Shubhrax Mobility Limited UPI QR…</p>
   <script>
     function post(obj) {
       var msg = JSON.stringify(obj);
@@ -24,7 +24,8 @@
         post({ type: "failed", message: "Razorpay checkout.js did not load. Check network." });
         return;
       }
-      // Same options evuddy.com/book-bike passes to new window.Razorpay({...}).
+      // Website Standard Checkout (checkout.js). UPI QR only — no Magic Checkout,
+      // PhonePe intent list, cards, wallets or netbanking.
       var options = {
         key: n.key,
         amount: n.amount,
@@ -33,9 +34,38 @@
         image: n.image,
         description: n.description || "Booking Payment",
         order_id: n.order_id,
-        prefill: n.prefill || {},
+        prefill: Object.assign({ method: "upi" }, n.prefill || {}),
         notes: n.notes || {},
         theme: { color: "#18B368" },
+        one_click_checkout: false,
+        remember_customer: false,
+        method: {
+          upi: true,
+          card: false,
+          netbanking: false,
+          wallet: false,
+          emi: false,
+          paylater: false
+        },
+        config: {
+          display: {
+            hide: [
+              { method: "card" },
+              { method: "netbanking" },
+              { method: "wallet" },
+              { method: "emi" },
+              { method: "paylater" }
+            ],
+            blocks: {
+              utib: {
+                name: "Pay using UPI QR",
+                instruments: [{ method: "upi", flows: ["qr"] }]
+              }
+            },
+            sequence: ["block.utib"],
+            preferences: { show_default_blocks: false }
+          }
+        },
         handler: function (response) {
           post({
             type: "success",
@@ -45,7 +75,8 @@
           });
         },
         modal: {
-          ondismiss: function () { post({ type: "dismiss" }); }
+          ondismiss: function () { post({ type: "dismiss" }); },
+          confirm_close: true
         }
       };
       try {

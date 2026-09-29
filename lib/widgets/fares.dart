@@ -27,12 +27,19 @@ class FareOffer {
 
 final fareOffers = <FareOffer>[
   FareOffer(
+    id: 'Hourly',
+    label: 'Hourly',
+    price: CatalogRates.inr(CatalogRates.hourly),
+    unit: 'per hour',
+    hint: 'GST included',
+    featured: true,
+  ),
+  FareOffer(
     id: 'Daily',
     label: 'Daily',
     price: CatalogRates.inr(CatalogRates.daily),
     unit: 'per day',
     hint: 'GST included',
-    featured: true,
   ),
   FareOffer(
     id: 'Weekly',
@@ -66,26 +73,49 @@ class FareGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _DailyBanner(offer: fareOffers[0], onTap: onPick),
+        _RateBanner(
+          offer: fareOffers[0],
+          kicker: 'HOURLY  ·  GST INCLUDED',
+          detail: '₹60 per hour  ·  hub OTP after Razorpay',
+          colors: const [Color(0xFF0F766E), Color(0xFF14B8A6)],
+          onTap: onPick,
+        ),
+        const SizedBox(height: 10),
+        _RateBanner(
+          offer: fareOffers[1],
+          kicker: 'DAILY  ·  GST INCLUDED',
+          detail: '₹250 per day  ·  hub OTP after Razorpay',
+          colors: const [Color(0xFF14532D), Color(0xFF16A34A)],
+          onTap: onPick,
+        ),
         const SizedBox(height: 10),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: FareCard(offer: fareOffers[1], onTap: onPick)),
-            const SizedBox(width: 10),
             Expanded(child: FareCard(offer: fareOffers[2], onTap: onPick)),
+            const SizedBox(width: 10),
+            Expanded(child: FareCard(offer: fareOffers[3], onTap: onPick)),
           ],
         ),
         const SizedBox(height: 10),
-        FareCard(offer: fareOffers[3], onTap: onPick),
+        FareCard(offer: fareOffers[4], onTap: onPick),
       ],
     );
   }
 }
 
-class _DailyBanner extends StatelessWidget {
-  const _DailyBanner({required this.offer, this.onTap});
+class _RateBanner extends StatelessWidget {
+  const _RateBanner({
+    required this.offer,
+    required this.kicker,
+    required this.detail,
+    required this.colors,
+    this.onTap,
+  });
   final FareOffer offer;
+  final String kicker;
+  final String detail;
+  final List<Color> colors;
   final ValueChanged<FareOffer>? onTap;
 
   @override
@@ -104,9 +134,7 @@ class _DailyBanner extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF14532D), Color(0xFF16A34A)],
-            ),
+            gradient: LinearGradient(colors: colors),
           ),
           child: Row(
             children: [
@@ -115,7 +143,7 @@ class _DailyBanner extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'DAILY  ·  GST INCLUDED',
+                      kicker,
                       style: GoogleFonts.plusJakartaSans(
                         color: Colors.white70,
                         fontWeight: FontWeight.w800,
@@ -135,7 +163,7 @@ class _DailyBanner extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'per day  ·  hub OTP after Razorpay',
+                      detail,
                       style: GoogleFonts.plusJakartaSans(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,

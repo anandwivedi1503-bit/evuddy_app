@@ -71,6 +71,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       'prefill': {
         'name': widget.customerName.isEmpty ? 'Rider' : widget.customerName,
         'contact': _contact10,
+        'method': 'upi',
       },
       'notes': {
         'bookingId': widget.bookingId,
@@ -79,6 +80,40 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       },
       'theme': {'color': '#18B368'},
       'image': image,
+      'one_click_checkout': false,
+      'remember_customer': false,
+      'method': {
+        'upi': true,
+        'card': false,
+        'netbanking': false,
+        'wallet': false,
+        'emi': false,
+        'paylater': false,
+      },
+      'config': {
+        'display': {
+          'hide': [
+            {'method': 'card'},
+            {'method': 'netbanking'},
+            {'method': 'wallet'},
+            {'method': 'emi'},
+            {'method': 'paylater'},
+          ],
+          'blocks': {
+            'utib': {
+              'name': 'Pay using UPI QR',
+              'instruments': [
+                {
+                  'method': 'upi',
+                  'flows': ['qr'],
+                },
+              ],
+            },
+          },
+          'sequence': ['block.utib'],
+          'preferences': {'show_default_blocks': false},
+        },
+      },
     };
   }
 
