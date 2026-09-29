@@ -47,12 +47,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     return digits;
   }
 
-  String get _email {
-    final e = widget.email.trim();
-    if (e.contains('@')) return e;
-    return 'rider$_contact10@evuddy.com';
-  }
-
+  /// Same payload as evuddy.com Book EV `new Razorpay({...})`.
   Map<String, dynamic> get _options {
     final image = widget.order.image;
     return {
@@ -62,12 +57,10 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       'name': widget.order.name.isEmpty ? 'EVUDDY' : widget.order.name,
       'description': 'Booking Payment - ${widget.bookingId}',
       'order_id': widget.order.orderId,
-      'redirect': true,
       'prefill': {
         'name': widget.customerName.isEmpty ? 'Rider' : widget.customerName,
-        'email': _email,
         'contact': _contact10,
-        'method': 'card',
+        'method': 'upi',
       },
       'notes': {
         'bookingId': widget.bookingId,
@@ -78,26 +71,18 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       'config': {
         'display': {
           'blocks': {
-            'card': {
-              'name': 'Pay using Card',
+            'upi_qr': {
+              'name': 'UPI / QR',
               'instruments': [
-                {'method': 'card'}
-              ],
-            },
-            'upi': {
-              'name': 'Pay using UPI',
-              'instruments': [
-                {'method': 'upi'}
+                {
+                  'method': 'upi',
+                  'flows': ['qr', 'collect', 'intent'],
+                }
               ],
             },
           },
-          'hide': [
-            {'method': 'emi'},
-            {'method': 'wallet'},
-            {'method': 'paylater'},
-          ],
-          'sequence': ['block.upi', 'block.card'],
-          'preferences': {'show_default_blocks': false},
+          'sequence': ['block.upi_qr'],
+          'preferences': {'show_default_blocks': true},
         },
       },
       if (image != null && image.isNotEmpty) 'image': image,
@@ -163,7 +148,9 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     if (web.platform is AndroidWebViewController) {
       final android = web.platform as AndroidWebViewController;
       await android.setMixedContentMode(MixedContentMode.alwaysAllow);
-      await android.setPaymentRequestEnabled(true);
+      try {
+        await android.setPaymentRequestEnabled(true);
+      } catch (_) {}
       await android.setUseWideViewPort(true);
       await android.setGeolocationEnabled(true);
       android.setOnPlatformPermissionRequest((request) => request.grant());
