@@ -68,7 +68,7 @@ class QuickActions extends StatelessWidget {
     final items = [
       (Icons.electric_moped_rounded, 'Book EV', onBook, Evuddy.green),
       (Icons.badge_outlined, registerLabel, onRegister, Evuddy.greenDeep),
-      (Icons.trending_up_rounded, 'Invest', onInvest, Evuddy.magenta),
+      (Icons.trending_up_rounded, 'Calculator', onInvest, Evuddy.magenta),
       (Icons.phone_in_talk_outlined, 'Helpdesk', onHelp, const Color(0xFF0F766E)),
     ];
     return Row(

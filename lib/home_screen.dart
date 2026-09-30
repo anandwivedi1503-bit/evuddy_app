@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'api/evuddy_api.dart';
 import 'book_ev_screen.dart';
 import 'confirm_mobile_screen.dart';
+import 'fleet_calculator_screen.dart';
 import 'invest_screen.dart';
 import 'login_screen.dart';
 import 'open_link.dart';
@@ -162,6 +163,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     const RideTodayHero(),
                     const SizedBox(height: 18),
                     OfferAdCarousel(onBook: () => _book()),
+                    const SizedBox(height: 12),
+                    EvuddyButton(
+                      label: 'Fleet calculator',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          evuddyRoute(const FleetCalculatorScreen()),
+                        );
+                      },
+                    ),
                     const SizedBox(height: 22),
                     if (d.canBook) ...[
                       SurfaceCard(
@@ -219,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Navigator.push(context, evuddyRoute(const LoginScreen()));
                       },
                       onInvest: () {
-                        Navigator.push(context, evuddyRoute(const InvestScreen()));
+                        Navigator.push(context, evuddyRoute(const FleetCalculatorScreen()));
                       },
                       onHelp: dialHelpdesk,
                     ),

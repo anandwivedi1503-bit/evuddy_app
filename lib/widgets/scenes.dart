@@ -120,7 +120,7 @@ const offerAds = [
     kicker: 'FLEET PARTNER',
     title: 'Own the fleet.\nWe operate everything.',
     body: 'FOCO · you own the EVs · EVUDDY runs riders, GPS and hub OTP',
-    cta: 'See the program',
+    cta: 'Fleet calculator',
     colors: [Color(0xFFFFCC00), Color(0xFFFFE566)],
     darkText: true,
   ),
@@ -128,14 +128,14 @@ const offerAds = [
     kicker: 'LOW-SPEED  ·  5 SCOOTERS',
     title: '₹3,00,000',
     body: '₹15,000 / month  ·  ₹60,000 per scooter',
-    cta: 'Open plan PDF',
+    cta: 'Fleet calculator',
     colors: [Color(0xFF14532D), Color(0xFF22C55E)],
   ),
   OfferAd(
     kicker: 'HIGH-SPEED  ·  5 SCOOTERS',
     title: '₹4,50,000',
     body: '₹18,000 / month  ·  ₹90,000 per scooter',
-    cta: 'Open plan PDF',
+    cta: 'Fleet calculator',
     colors: [Color(0xFF9D174D), Color(0xFFE11D8F)],
     highSpeed: true,
   ),
@@ -265,29 +265,43 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
                                     ),
                                   ),
                                   const SizedBox(height: 10),
-                                  GestureDetector(
-                                    onTap: () {
-                                      if (ad.pdf) {
-                                        shareFleetPartnerPdf();
-                                      } else {
-                                        _openCalculator(ad);
-                                      }
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                                      decoration: BoxDecoration(
-                                        color: ad.darkText ? Colors.black : Colors.white,
-                                        borderRadius: BorderRadius.circular(99),
-                                      ),
-                                      child: Text(
-                                        ad.cta,
-                                        style: GoogleFonts.plusJakartaSans(
-                                          color: ad.darkText ? Colors.white : Evuddy.greenDeep,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 12,
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 6,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () => _openCalculator(ad),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                          decoration: BoxDecoration(
+                                            color: ad.darkText ? Colors.black : Colors.white,
+                                            borderRadius: BorderRadius.circular(99),
+                                          ),
+                                          child: Text(
+                                            ad.cta,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              color: ad.darkText ? Colors.white : Evuddy.greenDeep,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 12,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                      if (ad.pdf)
+                                        GestureDetector(
+                                          onTap: shareFleetPartnerPdf,
+                                          child: Text(
+                                            'PDF',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              color: ink,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 12,
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ],
                               ),
