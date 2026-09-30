@@ -2,15 +2,55 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <!-- Desktop width so Razorpay Standard Checkout shows UPI QR (evuddy.com laptop), not PhonePe intent. -->
+  <meta name="viewport" content="width=1280, initial-scale=0.28, maximum-scale=1" />
   <style>
-    html, body { margin: 0; padding: 24px; background: #F6FFF9; font-family: sans-serif; color: #0F172A; }
+    html, body { margin: 0; padding: 16px; background: #F6FFF9; font-family: sans-serif; color: #0F172A; width: 1280px; min-height: 800px; }
     p { color: #64748B; }
   </style>
+  <script>
+    (function forceDesktop() {
+      var w = 1280, h = 800;
+      var ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+      function def(obj, key, val) {
+        try {
+          Object.defineProperty(obj, key, { configurable: true, get: function () { return val; } });
+        } catch (e) {}
+      }
+      def(window, "innerWidth", w);
+      def(window, "innerHeight", h);
+      def(window, "outerWidth", w);
+      def(window, "outerHeight", h);
+      def(screen, "width", w);
+      def(screen, "height", h);
+      def(screen, "availWidth", w);
+      def(screen, "availHeight", h);
+      try { def(navigator, "userAgent", ua); } catch (e) {}
+      try { def(navigator, "platform", "Win32"); } catch (e) {}
+      try { def(navigator, "maxTouchPoints", 0); } catch (e) {}
+      try { def(navigator, "vendor", "Google Inc."); } catch (e) {}
+      window.matchMedia = function (query) {
+        var q = String(query || "").toLowerCase();
+        var mobile = /max-width|pointer:\s*coarse|hover:\s*none|only screen and \(max/.test(q);
+        var desktop = /min-width|pointer:\s*fine|hover:\s*hover/.test(q);
+        var matches = desktop ? true : mobile ? false : false;
+        return {
+          matches: matches,
+          media: query,
+          onchange: null,
+          addListener: function () {},
+          removeListener: function () {},
+          addEventListener: function () {},
+          removeEventListener: function () {},
+          dispatchEvent: function () { return false; }
+        };
+      };
+    })();
+  </script>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
-  <p>Opening EVUDDY Razorpay checkout…</p>
+  <p>Opening EVUDDY Razorpay checkout… scan the QR like evuddy.com (Shubhrax Mobility Limited).</p>
   <script>
     function post(obj) {
       var msg = JSON.stringify(obj);
@@ -24,8 +64,7 @@
         post({ type: "failed", message: "Razorpay checkout.js did not load. Check network." });
         return;
       }
-      // Standard Razorpay Checkout only (same as evuddy.com/book-bike).
-      // Magic Checkout / PhonePe / other app pickers stay off.
+      // Same fields as evuddy.com BikeBooking, plus desktop UPI QR (not PhonePe intent).
       var options = {
         key: n.key,
         amount: n.amount,
@@ -39,14 +78,16 @@
         theme: { color: "#18B368" },
         one_click_checkout: false,
         remember_customer: false,
-        retry: { enabled: true },
-        config: n.config || {
+        upi: { flow: "qr" },
+        method: { netbanking: true, card: true, upi: true, wallet: false, emi: false, paylater: false },
+        config: {
           display: {
             hide: [
               { method: "wallet" },
               { method: "paylater" },
               { method: "emi" }
-            ]
+            ],
+            preferences: { show_default_blocks: true }
           }
         },
         handler: function (response) {

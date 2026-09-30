@@ -1,6 +1,6 @@
 # EVUDDY rider app
 
-Same APIs as [evuddy.com](https://www.evuddy.com). Website source is not modified. Booking, Razorpay, pickup OTP and ride-end OTP follow `kebuone-website`.
+Same APIs as [evuddy.com](https://www.evuddy.com). Website source is not modified. Booking, Razorpay, pickup OTP, ride-end OTP and support tickets follow `kebuone-website`.
 
 ## Look
 
@@ -12,7 +12,7 @@ Premium cream canvas, official lockup, Rapido-style yellow splash, a **Book an E
 - **Book EV** — confirm mobile → admin Approve unlocks booking → city/hub → scooter → reserve → Razorpay (from ₹1) → **pickup OTP** → yard confirms → Mark ride started → pay remaining → **Generate ride-end OTP** (not for Rent to Own)
 - **OTP** — Firebase SMS for login; booking OTPs come from evuddy.com (`/api/notify/booking-otp`, `/api/rides/rider-start`, `/api/rides/rider-end`)
 - **Fleet calculator** — investors enter scooters or rupees and see fleet size + monthly return; business planner sees annual, 48-month and FOCO ops. Numbers match the Fleet Partner PDF (₹60,000 / ₹90,000 per scooter)
-- **Account** — approval, copyable pickup / ride-end OTP, deposit hold, calculator
+- **Account** — approval, **Log out**, copyable pickup / ride-end OTP, deposit hold, support tickets (`/api/tickets`), calculator
 
 ## CEO handover (merge + deploy)
 

@@ -15,6 +15,7 @@ import 'submitted_screen.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 import 'widgets/promo.dart';
+import 'widgets/support_tickets.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key, this.onLoggedOut});
@@ -57,6 +58,13 @@ class _AccountScreenState extends State<AccountScreen> {
     registrationDraft.clearSession();
     widget.onLoggedOut?.call();
     Navigator.push(context, evuddyRoute(const ConfirmMobileScreen()));
+  }
+
+  Future<void> _logout() async {
+    if (!await confirmEvuddyLogout(context)) return;
+    if (!mounted) return;
+    await registrationDraft.logout();
+    widget.onLoggedOut?.call();
   }
 
   Widget _footer(RegistrationDraft d) {
@@ -105,11 +113,32 @@ class _AccountScreenState extends State<AccountScreen> {
       kicker: 'Account',
       title: d.fullName.isEmpty ? 'Your EVUDDY' : d.fullName,
       subtitle: status,
+      headerTrailing: d.phoneVerified
+          ? LogoutTextButton(onPressed: _logout)
+          : null,
       footer: Column(
         children: [
           _footer(d),
           if (d.phoneVerified) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 56,
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _logout,
+                icon: const Icon(Icons.logout_rounded),
+                label: Text(
+                  'Log out',
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Evuddy.danger,
+                  side: const BorderSide(color: Color(0xFFFECACA)),
+                  backgroundColor: const Color(0xFFFEF3F2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                ),
+              ),
+            ),
             TextButton(
               onPressed: _switchNumber,
               child: Text(
@@ -124,6 +153,13 @@ class _AccountScreenState extends State<AccountScreen> {
         ],
       ),
       children: [
+        if (d.phoneVerified) ...[
+          Align(
+            alignment: Alignment.centerRight,
+            child: LogoutTextButton(onPressed: _logout),
+          ),
+          const SizedBox(height: 8),
+        ],
         if (d.phoneVerified)
           Padding(
             padding: const EdgeInsets.only(bottom: 14),
@@ -269,6 +305,13 @@ class _AccountScreenState extends State<AccountScreen> {
           label: 'Call helpdesk 24×7',
           onPressed: dialHelpdesk,
         ),
+        if (d.phoneVerified) ...[
+          const SizedBox(height: 14),
+          SupportTicketsCard(
+            bookingId: d.activeBooking?.bookingId,
+            rideStatus: d.activeBooking?.rideStatus ?? '',
+          ),
+        ],
         const SizedBox(height: 14),
         const InfoNote(
           text:

@@ -270,6 +270,31 @@ class EvuddyApi {
     return order;
   }
 
+  /// EVUDDY credit wallet on evuddy.com — not PhonePe / UPI apps.
+  static Future<RiderBooking> payWithWallet({
+    required String idToken,
+    required String bookingMongoId,
+    required double amountRupees,
+  }) async {
+    final r = await http
+        .post(
+          _u('/api/razorpay/create-order'),
+          headers: _auth(idToken),
+          body: jsonEncode({
+            'bookingMongoId': bookingMongoId,
+            'amount': amountRupees,
+            'useWallet': true,
+            'firebaseIdToken': idToken,
+          }),
+        )
+        .timeout(const Duration(seconds: 20));
+    final j = _json(r);
+    if (j['success'] != true) {
+      throw ApiException(_message(j, 'Wallet payment failed.'));
+    }
+    return RiderBooking.fromJson(j);
+  }
+
   static Future<Map<String, dynamic>> _postVerifyPayment({
     required String idToken,
     required String bookingMongoId,
@@ -376,6 +401,50 @@ class EvuddyApi {
       rideEndOtp: booking.rideEndOtp,
       rideStatus: booking.rideStatus,
     );
+  }
+
+  static Future<SupportTicket> createTicket({
+    required String idToken,
+    required String ticketId,
+    required String userId,
+    required String category,
+    required String description,
+    String? bookingId,
+  }) async {
+    final r = await http
+        .post(
+          _u('/api/tickets'),
+          headers: _auth(idToken),
+          body: jsonEncode({
+            'ticketId': ticketId,
+            'userId': userId,
+            'category': category,
+            'description': description,
+            'firebaseIdToken': idToken,
+            if (bookingId != null && bookingId.isNotEmpty) 'bookingId': bookingId,
+            'ticketSource': 'Mobile App',
+          }),
+        )
+        .timeout(const Duration(seconds: 20));
+    final j = _json(r);
+    if (j['success'] != true) {
+      throw ApiException(_message(j, 'Could not send ticket.'));
+    }
+    if (j['data'] is Map) return SupportTicket.fromJson(j['data'] as Map);
+    return SupportTicket.fromJson(j);
+  }
+
+  static Future<List<SupportTicket>> myTickets(String idToken) async {
+    final r = await http
+        .get(_u('/api/tickets/mine'), headers: _auth(idToken))
+        .timeout(const Duration(seconds: 15));
+    final j = _json(r);
+    if (j['success'] != true) {
+      throw ApiException(_message(j, 'Unable to load your tickets.'));
+    }
+    final data = j['data'];
+    if (data is! List) return [];
+    return data.whereType<Map>().map(SupportTicket.fromJson).toList();
   }
 
   static String _message(Map<String, dynamic> j, String fallback) {
@@ -659,8 +728,11 @@ class RiderBooking {
 
   bool get hasPickupOtp => pickupOtp.isNotEmpty;
 
-  bool get isRemainingPayment =>
-      receivedAmount >= 1 || hasPickupOtp || pickupOtpVerified;
+  bool get isRemainingPayment => remainingPayLocked;
+
+  /// Website: `remainingPayLocked = bookingDone && (paidAmount > 0 || isRentToOwn)`.
+  bool get remainingPayLocked =>
+      receivedAmount > 0.009 || hasPickupOtp || pickupOtpVerified || isRentToOwn;
 
   /// Yard has accepted pickup OTP. Rider still swipes start (same as evuddy.com).
   bool get readyForPickup {
@@ -705,6 +777,27 @@ class RiderBooking {
       message: message ?? this.message,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        '_id': mongoId,
+        'bookingId': bookingId,
+        'rentalMode': rentalMode,
+        'paymentStatus': paymentStatus,
+        'rideStatus': rideStatus,
+        'pendingAmount': pendingAmount,
+        'receivedAmount': receivedAmount,
+        'paymentDue': paymentDue,
+        'pickupOTP': pickupOtp,
+        'rideEndOTP': rideEndOtp,
+        'pickupOTPVerified': pickupOtpVerified,
+        'vehicleId': vehicleId,
+        'vehicleModel': vehicleModel,
+        'vehicleNumber': vehicleNumber,
+        'startHub': startHub,
+        'pickupHubName': pickupHubName,
+        'city': city,
+        'message': message,
+      };
 
   RiderBooking mergedWith(RiderBooking live) {
     final preferLive = live.receivedAmount + 0.009 >= receivedAmount;
@@ -832,6 +925,35 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+class SupportTicket {
+  const SupportTicket({
+    this.ticketId = '',
+    this.bookingId = '',
+    this.category = '',
+    this.status = '',
+    this.description = '',
+    this.adminRemarks = '',
+  });
+
+  factory SupportTicket.fromJson(Map e) {
+    return SupportTicket(
+      ticketId: e['ticketId']?.toString() ?? '',
+      bookingId: e['bookingId']?.toString() ?? '',
+      category: e['category']?.toString() ?? '',
+      status: e['status']?.toString() ?? '',
+      description: e['description']?.toString() ?? '',
+      adminRemarks: e['adminRemarks']?.toString() ?? '',
+    );
+  }
+
+  final String ticketId;
+  final String bookingId;
+  final String category;
+  final String status;
+  final String description;
+  final String adminRemarks;
+}
+
 class RideActionResult {
   const RideActionResult({
     required this.message,
@@ -853,6 +975,8 @@ class RiderLookup {
     this.fullName,
     this.email,
     this.message,
+    this.walletAvailable = 0,
+    this.walletStatus = '',
   });
   const RiderLookup.missing() : this(found: false);
 
@@ -877,6 +1001,8 @@ class RiderLookup {
       fullName: (d['fullName'] ?? d['name'])?.toString(),
       email: d['email']?.toString(),
       message: message,
+      walletAvailable: _asDouble(d['walletAvailable'] ?? d['walletBalance']) ?? 0,
+      walletStatus: d['walletStatus']?.toString() ?? '',
     );
   }
 
@@ -919,6 +1045,8 @@ class RiderLookup {
   final String? fullName;
   final String? email;
   final String? message;
+  final double walletAvailable;
+  final String walletStatus;
 }
 
 class RegisterResult {

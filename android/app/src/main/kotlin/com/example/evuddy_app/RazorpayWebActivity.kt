@@ -16,8 +16,8 @@ import android.widget.FrameLayout
 import org.json.JSONObject
 
 /**
- * Hosts checkout.js like evuddy.com Book EV.
- * Standard Razorpay only (UPI QR / cards in the sheet). Does not open PhonePe.
+ * Hosts checkout.js the same way evuddy.com Book EV does on a laptop:
+ * Standard Checkout with UPI QR (Shubhrax Mobility Limited). No PhonePe intent.
  */
 class RazorpayWebActivity : Activity() {
     private lateinit var container: FrameLayout
@@ -29,6 +29,7 @@ class RazorpayWebActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WebView.setWebContentsDebuggingEnabled(true)
         container = FrameLayout(this)
         container.setBackgroundColor(Color.parseColor("#F6FFF9"))
         setContentView(container)
@@ -40,12 +41,7 @@ class RazorpayWebActivity : Activity() {
         main = newWebView()
         main.addJavascriptInterface(Bridge(), "PayBridge")
         main.webChromeClient = chrome()
-        main.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(
-                view: WebView,
-                request: WebResourceRequest,
-            ): Boolean = stayOnRazorpay(request.url.toString())
-        }
+        main.webViewClient = client()
         container.addView(
             main,
             FrameLayout.LayoutParams(
@@ -58,8 +54,17 @@ class RazorpayWebActivity : Activity() {
             html,
             "text/html",
             "UTF-8",
-            null,
+            "https://www.evuddy.com/book-bike",
         )
+    }
+
+    private fun client(): WebViewClient {
+        return object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(
+                view: WebView,
+                request: WebResourceRequest,
+            ): Boolean = handleUrl(view, request.url.toString())
+        }
     }
 
     private fun chrome(): WebChromeClient {
@@ -72,12 +77,7 @@ class RazorpayWebActivity : Activity() {
             ): Boolean {
                 val extra = newWebView()
                 extra.webChromeClient = this
-                extra.webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(
-                        view: WebView,
-                        request: WebResourceRequest,
-                    ): Boolean = stayOnRazorpay(request.url.toString())
-                }
+                extra.webViewClient = client()
                 dropPopup()
                 popup = extra
                 container.addView(
@@ -111,17 +111,27 @@ class RazorpayWebActivity : Activity() {
         settings.databaseEnabled = true
         settings.javaScriptCanOpenWindowsAutomatically = true
         settings.setSupportMultipleWindows(true)
+        settings.setSupportZoom(true)
+        settings.builtInZoomControls = false
+        settings.displayZoomControls = false
+        settings.loadWithOverviewMode = true
+        settings.useWideViewPort = true
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         settings.cacheMode = WebSettings.LOAD_DEFAULT
+        settings.mediaPlaybackRequiresUserGesture = false
         settings.userAgentString =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
         web.setBackgroundColor(Color.parseColor("#F6FFF9"))
+        val widthPx = resources.displayMetrics.widthPixels
+        if (widthPx > 0) {
+            web.setInitialScale((widthPx * 100) / 1280)
+        }
         return web
     }
 
-    /** Keep checkout.js in the WebView. Do not hand off to PhonePe / GPay / Paytm. */
-    private fun stayOnRazorpay(url: String): Boolean {
+    /** Keep checkout.js in the WebView like desktop evuddy.com. Do not open PhonePe / GPay / Paytm. */
+    private fun handleUrl(_view: WebView, url: String): Boolean {
         val lower = url.lowercase()
         if (
             lower.startsWith("http://") ||

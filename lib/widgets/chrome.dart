@@ -20,6 +20,7 @@ class AuthScreen extends StatelessWidget {
     this.titleStyle,
     this.expanded,
     this.expandedInset,
+    this.headerTrailing,
   });
 
   final String title;
@@ -35,6 +36,7 @@ class AuthScreen extends StatelessWidget {
   /// Fills leftover height (used so Recaptcha image grids are not clipped).
   final Widget? expanded;
   final EdgeInsetsGeometry? expandedInset;
+  final Widget? headerTrailing;
 
   @override
   Widget build(BuildContext context) {
@@ -56,9 +58,8 @@ class AuthScreen extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
                     child: EvuddyHeader(
                       showBack: showBack,
-                      trailing: step == null
-                          ? null
-                          : StepChip(step: step!, of: of),
+                      trailing: headerTrailing ??
+                          (step == null ? null : StepChip(step: step!, of: of)),
                     ),
                   ),
                   Expanded(
@@ -185,6 +186,52 @@ class EvuddyHeader extends StatelessWidget {
           ),
           trailing ?? const SizedBox(width: 40),
         ],
+      ),
+    );
+  }
+}
+
+Future<bool> confirmEvuddyLogout(BuildContext context) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(
+        'Log out',
+        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+      ),
+      content: Text(
+        'This signs you out on this phone. Bookings stay on evuddy.com. Log in again with the same number.',
+        style: GoogleFonts.plusJakartaSans(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Stay signed in'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Log out'),
+        ),
+      ],
+    ),
+  );
+  return ok == true;
+}
+
+class LogoutTextButton extends StatelessWidget {
+  const LogoutTextButton({super.key, required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onPressed,
+      child: Text(
+        'Log out',
+        style: GoogleFonts.plusJakartaSans(
+          fontWeight: FontWeight.w800,
+          color: Evuddy.danger,
+        ),
       ),
     );
   }

@@ -1,7 +1,9 @@
 package com.example.evuddy_app
 
 import android.content.Intent
+import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
+import com.razorpay.Checkout
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -15,6 +17,11 @@ class MainActivity : FlutterFragmentActivity() {
             payResult?.success(payload)
             payResult = null
         }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Checkout.preload(applicationContext)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

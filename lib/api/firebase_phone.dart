@@ -117,6 +117,17 @@ class EvuddyFirebase {
     }
   }
 
+  static Future<void> signOut() async {
+    await ensure();
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        await FirebaseAuth.instance.signOut();
+      }
+    } catch (e) {
+      debugPrint('Firebase signOut: $e');
+    }
+  }
+
   static Future<User> confirmOtp({
     required String verificationId,
     required String smsCode,
