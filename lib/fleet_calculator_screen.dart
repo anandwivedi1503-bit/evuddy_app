@@ -189,6 +189,7 @@ class _FleetCalculatorScreenState extends State<FleetCalculatorScreen> {
                 'You own the scooters. EVUDDY operates them. Monthly return follows the published Fleet Partner brief — not a live payout in this app.',
           ),
         ],
+        const SizedBox(height: 120),
       ],
     );
   }
