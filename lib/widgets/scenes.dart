@@ -10,10 +10,9 @@ import '../theme/evuddy.dart';
 import 'chrome.dart';
 
 const heroPhotos = [
+  Evuddy.yellowScooterAsset,
   Evuddy.riderCityAsset,
   Evuddy.riderEveningAsset,
-  Evuddy.yellowScooterAsset,
-  Evuddy.hubAsset,
 ];
 
 /// Photo carousel only — Book EV lives in the Rapido-style search bar above.
@@ -124,7 +123,7 @@ const offerAds = [
     title: 'Own the fleet. We operate.',
     body: '5 low-speed EVs · ₹3,00,000 · ₹15,000 / month',
     cta: 'Open FOCO plans',
-    asset: Evuddy.investPosterAsset,
+    asset: Evuddy.yellowScooterAsset,
     invest: true,
     pdf: true,
   ),
@@ -133,7 +132,7 @@ const offerAds = [
     title: '₹4,50,000 · ₹18,000 / month',
     body: '5 high-speed scooters. EVUDDY runs operations.',
     cta: 'See high-speed',
-    asset: Evuddy.investPosterAsset,
+    asset: Evuddy.yellowScooterAsset,
     invest: true,
     pdf: true,
   ),
@@ -142,7 +141,7 @@ const offerAds = [
     title: '₹250 / day GST included',
     body: 'Hub OTP after Razorpay · live GPS on every scooter.',
     cta: 'Book an EV',
-    asset: Evuddy.riderCityAsset,
+    asset: Evuddy.yellowScooterAsset,
     book: true,
   ),
 ];

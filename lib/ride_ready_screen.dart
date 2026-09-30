@@ -614,6 +614,12 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                       letterSpacing: 6,
                     ),
                   ),
+                  TextButton(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: b.pickupOtp));
+                    },
+                    child: const Text('Copy pickup OTP'),
+                  ),
                 ],
               ),
             ),
@@ -632,6 +638,12 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                       fontWeight: FontWeight.w800,
                       letterSpacing: 6,
                     ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: b.rideEndOtp));
+                    },
+                    child: const Text('Copy ride-end OTP'),
                   ),
                 ],
               ),

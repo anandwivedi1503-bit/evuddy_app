@@ -43,7 +43,7 @@ class RazorpayWebActivity : Activity() {
             override fun shouldOverrideUrlLoading(
                 view: WebView,
                 request: WebResourceRequest,
-            ): Boolean = false
+            ): Boolean = handleUrl(view, request.url.toString())
         }
         container.addView(
             main,
@@ -75,7 +75,7 @@ class RazorpayWebActivity : Activity() {
                     override fun shouldOverrideUrlLoading(
                         view: WebView,
                         request: WebResourceRequest,
-                    ): Boolean = false
+                    ): Boolean = handleUrl(view, request.url.toString())
                 }
                 dropPopup()
                 popup = extra
@@ -112,12 +112,36 @@ class RazorpayWebActivity : Activity() {
         settings.setSupportMultipleWindows(true)
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         settings.cacheMode = WebSettings.LOAD_DEFAULT
-        // Same checkout.js as a laptop on evuddy.com — not the Android PhonePe intent sheet.
         settings.userAgentString =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
         web.setBackgroundColor(Color.parseColor("#F6FFF9"))
         return web
+    }
+
+    private fun handleUrl(view: WebView, url: String): Boolean {
+        val lower = url.lowercase()
+        if (
+            lower.startsWith("http://") ||
+            lower.startsWith("https://") ||
+            lower.startsWith("about:") ||
+            lower.startsWith("javascript:")
+        ) {
+            return false
+        }
+        return try {
+            val intent =
+                if (lower.startsWith("intent:")) {
+                    Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
+                } else {
+                    Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                }
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun dropPopup() {

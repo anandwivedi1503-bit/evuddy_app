@@ -76,6 +76,8 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       },
       'theme': {'color': '#18B368'},
       'image': image,
+      'one_click_checkout': false,
+      'remember_customer': false,
     };
   }
 
