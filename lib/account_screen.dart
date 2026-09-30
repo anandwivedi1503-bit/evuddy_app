@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
+import 'api/fleet_calculator.dart';
 import 'confirm_mobile_screen.dart';
 import 'deposit_wallet_screen.dart';
 import 'fleet_calculator_screen.dart';
@@ -249,6 +250,19 @@ class _AccountScreenState extends State<AccountScreen> {
         EvuddyGhostButton(
           label: 'Fleet calculator',
           onPressed: () => Navigator.push(context, evuddyRoute(const FleetCalculatorScreen())),
+        ),
+        const SizedBox(height: 10),
+        EvuddyGhostButton(
+          label: 'Business planner',
+          onPressed: () => Navigator.push(
+            context,
+            evuddyRoute(
+              const FleetCalculatorScreen(
+                audience: FleetAudience.planner,
+                lockPlanner: false,
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 10),
         EvuddyGhostButton(

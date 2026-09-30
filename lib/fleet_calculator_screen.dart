@@ -13,10 +13,13 @@ class FleetCalculatorScreen extends StatefulWidget {
     super.key,
     this.audience = FleetAudience.investor,
     this.highSpeed = false,
+    this.lockPlanner = true,
   });
 
   final FleetAudience audience;
   final bool highSpeed;
+  /// Riders/investors cannot open the full FOCO sheet. Staff use Invest → Business planner.
+  final bool lockPlanner;
 
   @override
   State<FleetCalculatorScreen> createState() => _FleetCalculatorScreenState();
@@ -32,7 +35,7 @@ class _FleetCalculatorScreenState extends State<FleetCalculatorScreen> {
   @override
   void initState() {
     super.initState();
-    audience = widget.audience;
+    audience = widget.lockPlanner ? FleetAudience.investor : widget.audience;
     highSpeed = widget.highSpeed;
   }
 
@@ -84,15 +87,56 @@ class _FleetCalculatorScreenState extends State<FleetCalculatorScreen> {
         ],
       ),
       children: [
-        ChoicePills(
-          options: const ['Investor view', 'Business planner'],
-          value: planner ? 'Business planner' : 'Investor view',
-          onChanged: (v) => setState(() {
-            audience = v == 'Business planner'
-                ? FleetAudience.planner
-                : FleetAudience.investor;
-          }),
-        ),
+        if (widget.lockPlanner) ...[
+          Row(
+            children: [
+              Expanded(
+                child: ChoicePills(
+                  options: const ['Investor view'],
+                  value: 'Investor view',
+                  onChanged: (_) {},
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Business planner is frozen here. Open it from Investment plans.',
+                      ),
+                    ),
+                  );
+                },
+                child: Opacity(
+                  opacity: 0.45,
+                  child: IgnorePointer(
+                    child: ChoicePills(
+                      options: const ['Business planner'],
+                      value: '',
+                      onChanged: (_) {},
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const InfoNote(
+            text:
+                'You see fleet size, investment and monthly return. Annual, 48-month and ops stay on the business planner screen — both can be used at the same time.',
+          ),
+        ] else ...[
+          ChoicePills(
+            options: const ['Investor view', 'Business planner'],
+            value: planner ? 'Business planner' : 'Investor view',
+            onChanged: (v) => setState(() {
+              audience = v == 'Business planner'
+                  ? FleetAudience.planner
+                  : FleetAudience.investor;
+            }),
+          ),
+        ],
         const SizedBox(height: 12),
         ChoicePills(
           options: const ['Low-speed', 'High-speed'],
