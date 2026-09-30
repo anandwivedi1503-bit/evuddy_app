@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
@@ -36,14 +37,13 @@ class RazorpayCheckoutPage extends StatefulWidget {
 }
 
 class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
-  static const _channel = MethodChannel('evuddy/razorpay');
-
+  Razorpay? _sdk;
   WebViewController? _web;
   String? _error;
   bool _opened = false;
-  bool _launching = false;
+  bool _busy = true;
 
-  bool get _androidNative => !kIsWeb && Platform.isAndroid;
+  bool get _useSdk => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
   String get _contact10 {
     final digits = widget.contact.replaceAll(RegExp(r'\D'), '');
@@ -51,8 +51,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     return digits;
   }
 
-  /// Same fields BikeBooking.tsx passes to `new window.Razorpay({...})`.
-  /// Live `keyId` comes from POST /api/razorpay/create-order — never from app .env.
+  /// Same payload as evuddy.com `new window.Razorpay({...})`.
   Map<String, dynamic> get _options {
     final image = (widget.order.image != null && widget.order.image!.isNotEmpty)
         ? widget.order.image
@@ -77,72 +76,71 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       },
       'theme': {'color': '#18B368'},
       'image': image,
-      'one_click_checkout': false,
-      'remember_customer': false,
-      'retry': {'enabled': true},
-      'config': {
-        'display': {
-          'hide': [
-            {'method': 'wallet'},
-            {'method': 'paylater'},
-            {'method': 'emi'},
-          ],
-        },
-      },
     };
   }
 
   @override
   void initState() {
     super.initState();
-    if (_androidNative) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _openAndroid());
+    if (_useSdk) {
+      _sdk = Razorpay();
+      _sdk!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSdkSuccess);
+      _sdk!.on(Razorpay.EVENT_PAYMENT_ERROR, _onSdkError);
+      _sdk!.on(Razorpay.EVENT_EXTERNAL_WALLET, _onSdkWallet);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openSdk());
     } else {
       _initFlutterWeb();
     }
   }
 
-  Future<void> _openAndroid() async {
-    if (_launching) return;
-    _launching = true;
+  @override
+  void dispose() {
+    _sdk?.clear();
+    super.dispose();
+  }
+
+  void _openSdk() {
     try {
-      final html = await rootBundle.loadString('assets/pay/checkout.html');
-      final raw = await _channel.invokeMethod<String>('open', {
-        'html': html,
-        'options': jsonEncode(_options),
-      });
-      if (!mounted) return;
-      if (raw == null || raw.isEmpty) {
-        Navigator.pop(context);
-        return;
-      }
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map) {
-        Navigator.pop(context);
-        return;
-      }
-      final type = decoded['type']?.toString();
-      if (type == 'success') {
-        Navigator.pop(context, {
-          'orderId': decoded['razorpay_order_id']?.toString() ?? '',
-          'paymentId': decoded['razorpay_payment_id']?.toString() ?? '',
-          'signature': decoded['razorpay_signature']?.toString() ?? '',
-        });
-      } else if (type == 'failed') {
-        setState(() {
-          _launching = false;
-          _error = decoded['message']?.toString() ?? 'Payment failed.';
-        });
-      } else {
-        Navigator.pop(context);
-      }
+      _sdk!.open(Map<String, dynamic>.from(_options));
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _launching = false;
+        _busy = false;
         _error = e.toString();
       });
     }
+  }
+
+  void _onSdkSuccess(PaymentSuccessResponse response) {
+    if (!mounted) return;
+    Navigator.pop(context, {
+      'orderId': response.orderId ?? widget.order.orderId,
+      'paymentId': response.paymentId ?? '',
+      'signature': response.signature ?? '',
+    });
+  }
+
+  void _onSdkError(PaymentFailureResponse response) {
+    if (!mounted) return;
+    final msg = response.message ?? 'Payment failed.';
+    if (msg.toLowerCase().contains('cancel') ||
+        msg.toLowerCase().contains('dismiss') ||
+        msg.toLowerCase().contains('back pressed')) {
+      Navigator.pop(context);
+      return;
+    }
+    setState(() {
+      _busy = false;
+      _error = msg;
+    });
+  }
+
+  void _onSdkWallet(ExternalWalletResponse response) {
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _error = 'Use Razorpay UPI or card — same as evuddy.com. Wallet ${response.walletName ?? ""} is not enabled.';
+    });
   }
 
   Future<void> _initFlutterWeb() async {
@@ -167,7 +165,10 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
         } else if (type == 'dismiss' && mounted) {
           Navigator.pop(context);
         } else if (type == 'failed') {
-          setState(() => _error = raw['message']?.toString() ?? 'Payment failed.');
+          setState(() {
+            _busy = false;
+            _error = raw['message']?.toString() ?? 'Payment failed.';
+          });
         }
       },
     );
@@ -178,7 +179,10 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     final html = await rootBundle.loadString('assets/pay/checkout.html');
     await web.loadHtmlString(html, baseUrl: EvuddyApi.origin);
     if (!mounted) return;
-    setState(() => _web = web);
+    setState(() {
+      _web = web;
+      _busy = false;
+    });
   }
 
   @override
@@ -209,23 +213,33 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    if (_androidNative)
-                      FilledButton(
-                        onPressed: () {
-                          setState(() {
-                            _error = null;
-                            _launching = false;
-                          });
-                          _openAndroid();
-                        },
-                        child: const Text('Retry Razorpay'),
-                      ),
+                    FilledButton(
+                      onPressed: () {
+                        setState(() {
+                          _error = null;
+                          _busy = true;
+                        });
+                        if (_useSdk) {
+                          _openSdk();
+                        } else {
+                          _initFlutterWeb();
+                        }
+                      },
+                      child: const Text('Retry Razorpay'),
+                    ),
                   ],
                 ),
               ),
             )
-          : _androidNative
-              ? const Center(child: CircularProgressIndicator())
+          : _useSdk
+              ? Center(
+                  child: _busy
+                      ? const CircularProgressIndicator()
+                      : Text(
+                          'Complete payment in the Razorpay sheet.',
+                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+                        ),
+                )
               : (_web == null
                   ? const Center(child: CircularProgressIndicator())
                   : WebViewWidget(controller: _web!)),
