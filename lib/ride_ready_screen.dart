@@ -18,6 +18,7 @@ class RideReadyScreen extends StatefulWidget {
 
 class _RideReadyScreenState extends State<RideReadyScreen> {
   String duration = registrationDraft.chosenDuration ?? 'Daily';
+  int wizard = 2;
   List<EvuddyVehicle> vehicles = [];
   EvuddyHub? hub;
   EvuddyVehicle? selected;
@@ -80,6 +81,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   void initState() {
     super.initState();
     booking = registrationDraft.activeBooking;
+    if (booking != null && booking!.bookingId.isNotEmpty) wizard = 4;
     _load();
   }
 
@@ -214,6 +216,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       setState(() {
         booking = created;
         busy = false;
+        wizard = 4;
         note = created.message.isEmpty
             ? (rental
                 ? 'Scooter reserved. Pay from ₹1 to get pickup OTP.'
@@ -404,13 +407,29 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     final d = registrationDraft;
     final b = booking;
     return AuthScreen(
-      kicker: rental ? 'Flexible rental' : 'Rent to Own',
+      kicker: b != null && b.bookingId.isNotEmpty
+          ? 'SECURE PAYMENT'
+          : (wizard == 3 ? 'BOOKING REVIEW' : (rental ? 'CHOOSE SCOOTER' : 'RENT TO OWN')),
       title: b != null && b.bookingId.isNotEmpty
-          ? 'Booking ${b.bookingId}'
-          : (rental ? 'Choose a duration' : '${CatalogRates.rtoMonths}-month ownership'),
-      subtitle: rental
-          ? 'Same as evuddy.com: reserve → Razorpay UPI QR → pickup OTP after ₹1 → remaining due → ride-end OTP. GST included. Hourly ₹60 · Daily ₹250.'
-          : '${CatalogRates.inr(CatalogRates.rtoDaily)}/day · ${CatalogRates.rtoMonths} months · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold, refunded when the scooter is back.',
+          ? (remainingPay
+              ? 'Pay the remaining amount'
+              : (b.due <= 0.009 && b.hasPickupOtp
+                  ? "You're booked"
+                  : 'Complete your payment'))
+          : (wizard == 3
+              ? 'Review your booking'
+              : (rental ? 'Pick duration and scooter' : '${CatalogRates.rtoMonths}-month ownership')),
+      subtitle: b != null && b.bookingId.isNotEmpty
+          ? (remainingPay
+              ? 'Pickup OTP is already issued. Razorpay will charge only the remaining due.'
+              : (b.due <= 0.009
+                  ? 'Payment is complete. Use the OTP at the yard.'
+                  : 'Scooter reserved. Pay any amount from ₹1 for pickup OTP. Remaining can be paid during the ride.'))
+          : (wizard == 3
+              ? 'Verify details, then reserve — same as evuddy.com/book-bike.'
+              : (rental
+                  ? 'Hourly ₹60 · Daily ₹250 GST included. Same catalog as the website.'
+                  : '${CatalogRates.inr(CatalogRates.rtoDaily)}/day · ${CatalogRates.rtoMonths} months · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold.')),
       error: error,
       footer: _footer(b),
       children: [
@@ -439,66 +458,131 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             ),
           ),
         const SizedBox(height: 16),
-        if (rental && b == null)
-          ChoicePills(
-            options: const ['Hourly', 'Daily', 'Weekly', 'Monthly'],
-            value: duration,
-            onChanged: (v) => setState(() => duration = v),
-          ),
-        const SizedBox(height: 16),
-        if (b == null) ...[
+        if (b == null && wizard == 2) ...[
+          if (rental)
+            ChoicePills(
+              options: const ['Hourly', 'Daily', 'Weekly', 'Monthly'],
+              value: duration,
+              onChanged: (v) => setState(() => duration = v),
+            ),
+          if (rental) const SizedBox(height: 16),
           Text('SCOOTER', style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: 10),
           if (!loading && vehicles.isEmpty)
             const InfoNote(
               text:
-                  'No live scooter at this hub (same as evuddy.com). You can still open website Book EV, or wait for the yard to stock one.',
+                  'No scooters are marked Available right now. Ask the yard to set bikes to Available — same as evuddy.com.',
             ),
           for (final v in vehicles)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: 10),
               child: InkWell(
                 onTap: () => setState(() => selected = v),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(22),
                 child: SurfaceCard(
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        selected?.vehicleId == v.vehicleId
-                            ? Icons.radio_button_checked_rounded
-                            : Icons.radio_button_off_rounded,
-                        color: selected?.vehicleId == v.vehicleId
-                            ? Evuddy.green
-                            : Evuddy.muted,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              v.vehicleId.isEmpty
+                                  ? (v.registrationNumber.isEmpty
+                                      ? v.vehicleModel
+                                      : v.registrationNumber)
+                                  : v.vehicleId,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 22,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            selected?.vehicleId == v.vehicleId
+                                ? Icons.check_circle_rounded
+                                : Icons.radio_button_off_rounded,
+                            color: selected?.vehicleId == v.vehicleId
+                                ? Evuddy.green
+                                : Evuddy.muted,
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              v.registrationNumber.isEmpty
-                                  ? v.vehicleModel
-                                  : v.registrationNumber,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontWeight: FontWeight.w700,
-                              ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${v.vehicleModel} · ${v.registrationNumber}',
+                        style: GoogleFonts.plusJakartaSans(color: Evuddy.muted),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Text(
+                            'Battery ${v.batteryPercentage.round()}%',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w800,
+                              color: Evuddy.greenDeep,
                             ),
-                            Text(
-                              '${v.vehicleModel} · battery ${v.batteryPercentage.round()}%',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: Evuddy.muted,
-                                fontSize: 13,
-                              ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${CatalogRates.inr(CatalogRates.amountForDuration(rental ? duration : 'Rent to Own'))} GST included',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              color: Evuddy.greenDeep,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
               ),
             ),
+        ],
+        if (b == null && wizard == 3) ...[
+          SurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('TOTAL PAYABLE', style: Theme.of(context).textTheme.labelSmall),
+                const SizedBox(height: 8),
+                Text(
+                  CatalogRates.inr(CatalogRates.amountForDuration(rental ? duration : 'Rent to Own')),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w800,
+                    color: Evuddy.greenDeep,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  rental
+                      ? 'GST included in the fare. Security deposit is not charged on flexible rental.'
+                      : 'GST included fare plus ${CatalogRates.inr(CatalogRates.securityDeposit)} refundable hold.',
+                  style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, height: 1.4),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SurfaceCard(
+            child: Column(
+              children: [
+                _ReviewRow('Rider', d.fullName.isEmpty ? 'Rider' : d.fullName),
+                _ReviewRow('Rider ID', d.riderId ?? '—'),
+                _ReviewRow('Vehicle', selected?.vehicleId ?? selected?.registrationNumber ?? '—'),
+                _ReviewRow('Model', selected?.vehicleModel ?? '—'),
+                _ReviewRow('City', hub?.city ?? d.chosenCity ?? '—'),
+                _ReviewRow('Hub', hub == null ? '—' : '${hub!.name} (${hub!.code})'),
+                _ReviewRow('Mode', rentalMode),
+                _ReviewRow(
+                  'Rental (GST included)',
+                  CatalogRates.inr(CatalogRates.amountForDuration(rental ? duration : 'Rent to Own')),
+                ),
+              ],
+            ),
+          ),
         ],
         if (b != null) ...[
           SurfaceCard(
@@ -618,29 +702,33 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       return const EvuddyButton(label: 'Working…', onPressed: null, busy: true);
     }
     if (b == null) {
-      if (vehicles.isEmpty) {
+      if (wizard == 3) {
         return Column(
           children: [
-            EvuddyButton(
-              label: 'Open Book EV on evuddy.com',
-              onPressed: () => openEvuddyPath(
-                rental ? '/book-bike?flow=rental' : '/rent-to-own',
-              ),
-            ),
+            EvuddyButton(label: 'Reserve scooter', onPressed: _reserve),
             const SizedBox(height: 8),
-            EvuddyGhostButton(label: 'Refresh scooters', onPressed: _load),
+            EvuddyGhostButton(
+              label: 'Back',
+              onPressed: () => setState(() => wizard = 2),
+            ),
           ],
         );
       }
-      return EvuddyButton(label: 'Reserve scooter', onPressed: _reserve);
+      if (vehicles.isEmpty) {
+        return EvuddyGhostButton(label: 'Refresh scooters', onPressed: _load);
+      }
+      return EvuddyButton(
+        label: 'Continue',
+        onPressed: selected == null
+            ? null
+            : () => setState(() => wizard = 3),
+      );
     }
     if (b.due > 0.009 || remainingPay || needsDepositHold) {
       return EvuddyButton(
         label: remainingPay
             ? 'Pay remaining ${CatalogRates.inr(_remainingCharge(b))} with Razorpay'
-            : (needsDepositHold && b.due < 0.01
-                ? 'Hold deposit on Razorpay'
-                : 'Pay with Razorpay'),
+            : 'Pay Securely with Razorpay',
         onPressed: _pay,
       );
     }
@@ -661,6 +749,40 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     return EvuddyButton(
       label: 'Refresh booking',
       onPressed: _load,
+    );
+  }
+}
+
+class _ReviewRow extends StatelessWidget {
+  const _ReviewRow(this.label, this.value);
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                color: Evuddy.muted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

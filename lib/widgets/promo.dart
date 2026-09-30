@@ -11,7 +11,7 @@ class TrustStrip extends StatelessWidget {
     const items = [
       (Icons.gps_fixed_rounded, 'GPS'),
       (Icons.lock_outline_rounded, 'Hub OTP'),
-      (Icons.qr_code_2_rounded, 'UPI QR'),
+      (Icons.credit_card_rounded, 'Razorpay'),
       (Icons.headset_mic_outlined, '24×7'),
     ];
     return Container(
