@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../api/partner_pdf.dart';
 import '../fleet_calculator_screen.dart';
-import '../open_link.dart';
 import '../theme/evuddy.dart';
 import 'chrome.dart';
 
@@ -101,49 +100,44 @@ class OfferAd {
     required this.title,
     required this.body,
     required this.cta,
-    required this.asset,
-    this.invest = false,
-    this.path,
-    this.book = false,
-    this.pdf = false,
+    required this.colors,
+    this.darkText = false,
+    this.pdf = true,
+    this.highSpeed = false,
   });
   final String kicker;
   final String title;
   final String body;
   final String cta;
-  final String asset;
-  final bool invest;
-  final String? path;
-  final bool book;
+  final List<Color> colors;
+  final bool darkText;
   final bool pdf;
+  final bool highSpeed;
 }
 
 const offerAds = [
   OfferAd(
     kicker: 'FLEET PARTNER',
-    title: '₹3,00,000  ·  ₹15,000 / month',
-    body: '5 low-speed EVs. Open the fleet calculator.',
-    cta: 'Fleet calculator',
-    asset: Evuddy.investPosterAsset,
-    invest: true,
-    pdf: true,
+    title: 'Own the fleet.\nWe operate everything.',
+    body: 'FOCO · you own the EVs · EVUDDY runs riders, GPS and hub OTP',
+    cta: 'See the program',
+    colors: [Color(0xFFFFCC00), Color(0xFFFFE566)],
+    darkText: true,
   ),
   OfferAd(
-    kicker: 'HIGH-SPEED',
-    title: '₹4,50,000  ·  ₹18,000 / month',
-    body: '5 high-speed scooters. Enter scooters or rupees.',
-    cta: 'High-speed calculator',
-    asset: Evuddy.investPosterAsset,
-    invest: true,
-    pdf: true,
+    kicker: 'LOW-SPEED  ·  5 SCOOTERS',
+    title: '₹3,00,000',
+    body: '₹15,000 / month  ·  ₹60,000 per scooter',
+    cta: 'Open plan PDF',
+    colors: [Color(0xFF14532D), Color(0xFF22C55E)],
   ),
   OfferAd(
-    kicker: 'DAILY RIDE',
-    title: '₹250 / day GST included',
-    body: 'Hub OTP after Razorpay · live GPS on every scooter.',
-    cta: 'Book an EV',
-    asset: Evuddy.riderCityAsset,
-    book: true,
+    kicker: 'HIGH-SPEED  ·  5 SCOOTERS',
+    title: '₹4,50,000',
+    body: '₹18,000 / month  ·  ₹90,000 per scooter',
+    cta: 'Open plan PDF',
+    colors: [Color(0xFF9D174D), Color(0xFFE11D8F)],
+    highSpeed: true,
   ),
 ];
 
@@ -155,17 +149,14 @@ class OfferAdCarousel extends StatefulWidget {
   State<OfferAdCarousel> createState() => _OfferAdCarouselState();
 }
 
-class _OfferAdCarouselState extends State<OfferAdCarousel> with SingleTickerProviderStateMixin {
+class _OfferAdCarouselState extends State<OfferAdCarousel> {
   final page = PageController(viewportFraction: 0.92);
   int index = 0;
   Timer? timer;
-  late final AnimationController shine;
 
   @override
   void initState() {
     super.initState();
-    shine = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))
-      ..repeat();
     timer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!page.hasClients) return;
       page.animateToPage(
@@ -179,28 +170,14 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> with SingleTickerProv
   @override
   void dispose() {
     timer?.cancel();
-    shine.dispose();
     page.dispose();
     super.dispose();
   }
 
-  void _open(OfferAd ad) {
-    if (ad.book) {
-      widget.onBook?.call();
-      return;
-    }
-    final path = ad.path;
-    if (path != null && path.isNotEmpty) {
-      openEvuddyPath(path);
-      return;
-    }
+  void _openCalculator(OfferAd ad) {
     Navigator.push(
       context,
-      evuddyRoute(
-        FleetCalculatorScreen(
-          highSpeed: ad.kicker.contains('HIGH'),
-        ),
-      ),
+      evuddyRoute(FleetCalculatorScreen(highSpeed: ad.highSpeed)),
     );
   }
 
@@ -209,106 +186,133 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> with SingleTickerProv
     return Column(
       children: [
         SizedBox(
-          height: 292,
+          height: 188,
           child: PageView.builder(
             controller: page,
             onPageChanged: (i) => setState(() => index = i),
             itemCount: offerAds.length,
             itemBuilder: (context, i) {
               final ad = offerAds[i];
+              final ink = ad.darkText ? const Color(0xFF1C1917) : Colors.white;
               return Padding(
                 padding: const EdgeInsets.only(right: 10),
                 child: GestureDetector(
-                  onTap: () => _open(ad),
+                  onTap: () => _openCalculator(ad),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(22),
-                    child: ColoredBox(
-                      color: Colors.white,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: ColoredBox(
-                              color: const Color(0xFFF3EFE6),
-                              child: Image.asset(
-                                ad.asset,
-                                fit: ad.invest ? BoxFit.contain : BoxFit.cover,
-                                alignment: Alignment.center,
-                                filterQuality: FilterQuality.high,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            color: const Color(0xFFF7F8F5),
-                            padding: const EdgeInsets.fromLTRB(14, 10, 12, 12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  ad.kicker,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: Evuddy.greenDeep,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 11,
-                                    letterSpacing: 1.1,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: ad.colors,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: ink.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(99),
+                                    ),
+                                    child: Text(
+                                      ad.kicker,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        color: ink,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 10,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  ad.title,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: const Color(0xFF0C0A09),
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 17,
-                                    height: 1.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  ad.body,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: const Color(0xFF292524),
-                                    fontSize: 13,
-                                    height: 1.3,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Expanded(
+                                  const SizedBox(height: 10),
+                                  Expanded(
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
                                       child: Text(
-                                        '${ad.cta}  →',
+                                        ad.title,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.plusJakartaSans(
-                                          color: Evuddy.greenDeep,
+                                          color: ink,
                                           fontWeight: FontWeight.w800,
-                                          fontSize: 13,
+                                          fontSize: 20,
+                                          height: 1.12,
+                                          letterSpacing: -0.5,
                                         ),
                                       ),
                                     ),
-                                    if (ad.pdf)
-                                      TextButton.icon(
-                                        onPressed: shareFleetPartnerPdf,
-                                        style: TextButton.styleFrom(
-                                          foregroundColor: Evuddy.greenDeep,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                        icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
-                                        label: Text(
-                                          'PDF',
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontWeight: FontWeight.w800,
-                                          ),
+                                  ),
+                                  Text(
+                                    ad.body,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: ink.withValues(alpha: 0.86),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (ad.pdf) {
+                                        shareFleetPartnerPdf();
+                                      } else {
+                                        _openCalculator(ad);
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                      decoration: BoxDecoration(
+                                        color: ad.darkText ? Colors.black : Colors.white,
+                                        borderRadius: BorderRadius.circular(99),
+                                      ),
+                                      child: Text(
+                                        ad.cta,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          color: ad.darkText ? Colors.white : Evuddy.greenDeep,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 12,
                                         ),
                                       ),
-                                  ],
-                                ),
-                              ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 10),
+                            SizedBox(
+                              width: 118,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: ad.darkText ? 0.55 : 0.18),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Image.asset(
+                                    Evuddy.yellowScooterAsset,
+                                    fit: BoxFit.contain,
+                                    alignment: Alignment.center,
+                                    filterQuality: FilterQuality.high,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -324,7 +328,7 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> with SingleTickerProv
             final on = i == index;
             return AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              width: on ? 8 : 6,
+              width: on ? 16 : 6,
               height: 6,
               margin: const EdgeInsets.symmetric(horizontal: 3),
               decoration: BoxDecoration(
