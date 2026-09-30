@@ -5,12 +5,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../theme/evuddy.dart';
 import 'evuddy_api.dart';
+
+const _desktopUa =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 class RazorpayCheckoutPage extends StatefulWidget {
   const RazorpayCheckoutPage({
@@ -38,14 +40,12 @@ class RazorpayCheckoutPage extends StatefulWidget {
 
 class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   static const _channel = MethodChannel('evuddy/razorpay');
-  Razorpay? _sdk;
   WebViewController? _web;
   String? _error;
   bool _opened = false;
   bool _busy = true;
 
-  bool get _androidWeb => !kIsWeb && Platform.isAndroid;
-  bool get _useSdk => !kIsWeb && Platform.isIOS;
+  bool get _androidNative => !kIsWeb && Platform.isAndroid;
 
   String get _contact10 {
     final digits = widget.contact.replaceAll(RegExp(r'\D'), '');
@@ -53,7 +53,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     return digits;
   }
 
-  /// Same payload as evuddy.com `new window.Razorpay({...})`.
+  /// Same payload as evuddy.com `new window.Razorpay({...})`, forced to desktop UPI QR.
   Map<String, dynamic> get _options {
     final image = (widget.order.image != null && widget.order.image!.isNotEmpty)
         ? widget.order.image
@@ -78,11 +78,16 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       },
       'theme': {'color': '#18B368'},
       'image': image,
+      'one_click_checkout': false,
+      'remember_customer': false,
+      'upi': {'flow': 'qr'},
       'method': {
-        'netbanking': '1',
-        'card': '1',
-        'upi': '1',
-        'wallet': '0',
+        'netbanking': true,
+        'card': true,
+        'upi': true,
+        'wallet': false,
+        'emi': false,
+        'paylater': false,
       },
       'config': {
         'display': {
@@ -91,6 +96,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
             {'method': 'paylater'},
             {'method': 'emi'},
           ],
+          'preferences': {'show_default_blocks': true},
         },
       },
     };
@@ -99,23 +105,11 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   @override
   void initState() {
     super.initState();
-    if (_androidWeb) {
+    if (_androidNative) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _openAndroidWeb());
-    } else if (_useSdk) {
-      _sdk = Razorpay();
-      _sdk!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSdkSuccess);
-      _sdk!.on(Razorpay.EVENT_PAYMENT_ERROR, _onSdkError);
-      _sdk!.on(Razorpay.EVENT_EXTERNAL_WALLET, _onSdkWallet);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _openSdk());
     } else {
       _initFlutterWeb();
     }
-  }
-
-  @override
-  void dispose() {
-    _sdk?.clear();
-    super.dispose();
   }
 
   Future<void> _openAndroidWeb() async {
@@ -161,55 +155,11 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     }
   }
 
-  void _openSdk() {
-    try {
-      _sdk!.open(Map<String, dynamic>.from(_options));
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _busy = false;
-        _error = e.toString();
-      });
-    }
-  }
-
-  void _onSdkSuccess(PaymentSuccessResponse response) {
-    if (!mounted) return;
-    Navigator.pop(context, {
-      'orderId': response.orderId ?? widget.order.orderId,
-      'paymentId': response.paymentId ?? '',
-      'signature': response.signature ?? '',
-    });
-  }
-
-  void _onSdkError(PaymentFailureResponse response) {
-    if (!mounted) return;
-    final msg = response.message ?? 'Payment failed.';
-    if (msg.toLowerCase().contains('cancel') ||
-        msg.toLowerCase().contains('dismiss') ||
-        msg.toLowerCase().contains('back pressed')) {
-      Navigator.pop(context);
-      return;
-    }
-    setState(() {
-      _busy = false;
-      _error = msg;
-    });
-  }
-
-  void _onSdkWallet(ExternalWalletResponse response) {
-    if (!mounted) return;
-    setState(() {
-      _busy = false;
-      _error =
-          'Use Razorpay UPI or card — same as evuddy.com. Wallet ${response.walletName ?? ""} is not enabled.';
-    });
-  }
-
   Future<void> _initFlutterWeb() async {
     final web = WebViewController();
     web.setJavaScriptMode(JavaScriptMode.unrestricted);
     web.setBackgroundColor(const Color(0xFFF6FFF9));
+    await web.setUserAgent(_desktopUa);
     web.addJavaScriptChannel(
       'PayBridge',
       onMessageReceived: (m) {
@@ -254,10 +204,8 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       _busy = true;
       _opened = false;
     });
-    if (_androidWeb) {
+    if (_androidNative) {
       _openAndroidWeb();
-    } else if (_useSdk) {
-      _openSdk();
     } else {
       _initFlutterWeb();
     }
@@ -271,7 +219,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
         backgroundColor: const Color(0xFF18B368),
         foregroundColor: Colors.white,
         title: Text(
-          'Pay securely',
+          'Pay with UPI QR',
           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
         ),
       ),
@@ -299,12 +247,12 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
                 ),
               ),
             )
-          : (_androidWeb || _useSdk)
+          : _androidNative
               ? Center(
                   child: _busy
                       ? const CircularProgressIndicator()
                       : Text(
-                          'Complete payment in the Razorpay sheet.',
+                          'Scan the Razorpay QR — same as evuddy.com.',
                           style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
                         ),
                 )

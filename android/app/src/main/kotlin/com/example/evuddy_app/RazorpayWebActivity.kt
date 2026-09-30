@@ -16,8 +16,8 @@ import android.widget.FrameLayout
 import org.json.JSONObject
 
 /**
- * Hosts checkout.js the same way evuddy.com Book EV does in a real browser.
- * Continue / 3DS / UPI intents are allowed. Does not replace Razorpay with PhonePe merchant checkout.
+ * Hosts checkout.js the same way evuddy.com Book EV does on a laptop:
+ * Standard Checkout with UPI QR (Shubhrax Mobility Limited). No PhonePe intent.
  */
 class RazorpayWebActivity : Activity() {
     private lateinit var container: FrameLayout
@@ -123,6 +123,10 @@ class RazorpayWebActivity : Activity() {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
         web.setBackgroundColor(Color.parseColor("#F6FFF9"))
+        val widthPx = resources.displayMetrics.widthPixels
+        if (widthPx > 0) {
+            web.setInitialScale((widthPx * 100) / 1280)
+        }
         return web
     }
 
