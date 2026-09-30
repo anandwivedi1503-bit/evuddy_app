@@ -165,7 +165,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
       kicker: 'Book EV',
       title: 'How do you want to ride?',
       subtitle:
-          'Pick rental or Rent to Own. Pay on Razorpay. Pickup OTP is issued after payment.',
+          'Pick rental or Rent to Own. Then city, hub, scooter, reserve, Razorpay — same as evuddy.com/book-bike.',
       error: error,
       footer: EvuddyButton(
         label: !canBook
@@ -174,6 +174,30 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
         onPressed: _continue,
       ),
       children: [
+        if (canBook) ...[
+          SurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  registrationDraft.fullName.isEmpty ? 'Rider' : registrationDraft.fullName,
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${registrationDraft.phoneDisplay} · ${registrationDraft.riderId ?? ""}',
+                  style: GoogleFonts.plusJakartaSans(color: Evuddy.muted),
+                ),
+                if (registrationDraft.email.isNotEmpty)
+                  Text(
+                    registrationDraft.email,
+                    style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         const ScenePhoto(asset: Evuddy.yellowScooterAsset, height: 210),
         const SizedBox(height: 16),
         if (loading) const InfoNote(text: 'Loading live cities…'),

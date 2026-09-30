@@ -119,7 +119,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Ride electric today',
+                      d.canBook
+                          ? (d.fullName.isEmpty
+                              ? 'Welcome back'
+                              : 'Hi, ${d.fullName.split(' ').first}')
+                          : d.isPendingKyc
+                              ? 'KYC with admin'
+                              : 'Ride electric today',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 28,
                         height: 1.1,
@@ -130,7 +136,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Hub pickup  ·  Live GPS  ·  GST included',
+                      d.canBook
+                          ? 'Approved rider · same Book EV as evuddy.com'
+                          : d.isPendingKyc
+                              ? 'Admin will unlock Normal booking and Rent to Own after Approve.'
+                              : d.phoneVerified
+                                  ? 'Finish KYC, then book like the website.'
+                                  : 'New here? Confirm mobile. Already on evuddy.com? Use that number.',
                       style: GoogleFonts.plusJakartaSans(
                         color: Evuddy.muted,
                         fontWeight: FontWeight.w600,
@@ -147,10 +159,42 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                     const SizedBox(height: 18),
-                    const RideTodayHero(),
-                    const SizedBox(height: 18),
-                    OfferAdCarousel(onBook: () => _book()),
-                    const SizedBox(height: 22),
+                    if (!d.canBook) ...[
+                      const RideTodayHero(),
+                      const SizedBox(height: 18),
+                      OfferAdCarousel(onBook: () => _book()),
+                      const SizedBox(height: 22),
+                    ] else ...[
+                      SurfaceCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'BOOK EV',
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '1 City & hub  ·  2 Scooter  ·  3 Reserve  ·  4 Razorpay',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                color: Evuddy.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Same steps as evuddy.com/book-bike. Pickup OTP after first pay. Ride-end OTP after remaining is ₹0.',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: Evuddy.muted,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                    ],
                     Text('RIDE', style: Theme.of(context).textTheme.labelSmall),
                     const SizedBox(height: 10),
                     FareGrid(onPick: (fare) => _book(fare: fare)),
@@ -158,11 +202,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     const RideSteps(),
                     const SizedBox(height: 18),
                     QuickActions(
-                      registerLabel: d.phoneVerified
-                          ? (d.canBook ? 'Account' : 'KYC')
-                          : 'Register',
+                      registerLabel: d.canBook
+                          ? 'Account'
+                          : (d.isPendingKyc
+                              ? 'KYC'
+                              : (d.phoneVerified ? 'Finish KYC' : 'Register')),
                       onBook: () => _book(),
                       onRegister: () {
+                        if (d.canBook) {
+                          registrationDraft.jumpToTab(2);
+                          return;
+                        }
                         if (d.isPendingKyc) {
                           Navigator.push(context, evuddyRoute(const SubmittedScreen()));
                           return;

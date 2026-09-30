@@ -221,11 +221,14 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> with SingleTickerProv
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Expanded(
-                            child: Image.asset(
-                              ad.asset,
-                              fit: BoxFit.cover,
-                              alignment: Alignment.center,
-                              filterQuality: FilterQuality.high,
+                            child: ColoredBox(
+                              color: const Color(0xFFF3EFE6),
+                              child: Image.asset(
+                                ad.asset,
+                                fit: ad.invest ? BoxFit.contain : BoxFit.cover,
+                                alignment: Alignment.center,
+                                filterQuality: FilterQuality.high,
+                              ),
                             ),
                           ),
                           Container(
@@ -336,8 +339,8 @@ class RideSteps extends StatelessWidget {
   Widget build(BuildContext context) {
     const steps = [
       (Icons.gps_fixed_rounded, 'Live GPS', 'Every scooter tracked'),
-      (Icons.lock_rounded, 'Hub OTP', 'Pickup after Razorpay'),
-      (Icons.bolt_rounded, 'UPI / QR', 'Same checkout as web'),
+      (Icons.lock_rounded, 'Hub OTP', 'Pickup after first pay'),
+      (Icons.credit_card_rounded, 'Razorpay', 'Same checkout as web'),
     ];
     return Row(
       children: [

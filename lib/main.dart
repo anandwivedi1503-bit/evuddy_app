@@ -61,7 +61,7 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
     _bg = ColorTween(begin: Evuddy.rapidoYellow, end: Colors.white).animate(
       CurvedAnimation(parent: _toWhite, curve: Curves.easeInOutCubic),
     );
-    _logoScale = Tween<double>(begin: 0.86, end: 1).animate(
+    _logoScale = Tween<double>(begin: 1, end: 1.08).animate(
       CurvedAnimation(parent: _pulse, curve: Curves.easeInOutCubic),
     );
     EvuddyApi.health();
