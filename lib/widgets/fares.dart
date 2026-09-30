@@ -15,6 +15,8 @@ class FareOffer {
     this.plan = 'rental',
     this.featured = false,
     this.asset = Evuddy.yellowScooterAsset,
+    this.fit = BoxFit.contain,
+    this.photoHeight = 104,
   });
 
   final String id;
@@ -25,6 +27,8 @@ class FareOffer {
   final String plan;
   final bool featured;
   final String asset;
+  final BoxFit fit;
+  final double photoHeight;
 }
 
 final fareOffers = <FareOffer>[
@@ -36,6 +40,7 @@ final fareOffers = <FareOffer>[
     hint: 'GST included',
     featured: true,
     asset: Evuddy.yellowScooterAsset,
+    fit: BoxFit.contain,
   ),
   FareOffer(
     id: 'Daily',
@@ -44,6 +49,7 @@ final fareOffers = <FareOffer>[
     unit: 'per day',
     hint: 'GST included',
     asset: Evuddy.riderCityAsset,
+    fit: BoxFit.cover,
   ),
   FareOffer(
     id: 'Weekly',
@@ -52,6 +58,7 @@ final fareOffers = <FareOffer>[
     unit: 'per week',
     hint: 'GST included',
     asset: Evuddy.riderEveningAsset,
+    fit: BoxFit.cover,
   ),
   FareOffer(
     id: 'Monthly',
@@ -59,7 +66,8 @@ final fareOffers = <FareOffer>[
     price: CatalogRates.inr(CatalogRates.monthly),
     unit: 'per month',
     hint: 'GST included',
-    asset: Evuddy.hubAsset,
+    asset: Evuddy.sceneFilmAsset,
+    fit: BoxFit.cover,
   ),
   FareOffer(
     id: 'Rent to Own',
@@ -68,7 +76,9 @@ final fareOffers = <FareOffer>[
     unit: 'per day',
     hint: '${CatalogRates.rtoMonths} months · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold',
     plan: 'rto',
-    asset: Evuddy.sceneHomeAsset,
+    asset: Evuddy.yellowScooterAsset,
+    fit: BoxFit.contain,
+    photoHeight: 168,
   ),
 ];
 
@@ -80,20 +90,13 @@ class FareGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _RateBanner(
-          offer: fareOffers[0],
-          kicker: 'HOURLY  ·  GST INCLUDED',
-          detail: '₹60 per hour  ·  hub OTP after Razorpay',
-          colors: const [Color(0xFF0F766E), Color(0xFF14B8A6)],
-          onTap: onPick,
-        ),
-        const SizedBox(height: 10),
-        _RateBanner(
-          offer: fareOffers[1],
-          kicker: 'DAILY  ·  GST INCLUDED',
-          detail: '₹250 per day  ·  hub OTP after Razorpay',
-          colors: const [Color(0xFF14532D), Color(0xFF16A34A)],
-          onTap: onPick,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: FareCard(offer: fareOffers[0], onTap: onPick)),
+            const SizedBox(width: 10),
+            Expanded(child: FareCard(offer: fareOffers[1], onTap: onPick)),
+          ],
         ),
         const SizedBox(height: 10),
         Row(
@@ -107,84 +110,6 @@ class FareGrid extends StatelessWidget {
         const SizedBox(height: 10),
         FareCard(offer: fareOffers[4], onTap: onPick),
       ],
-    );
-  }
-}
-
-class _RateBanner extends StatelessWidget {
-  const _RateBanner({
-    required this.offer,
-    required this.kicker,
-    required this.detail,
-    required this.colors,
-    this.onTap,
-  });
-  final FareOffer offer;
-  final String kicker;
-  final String detail;
-  final List<Color> colors;
-  final ValueChanged<FareOffer>? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap == null
-            ? null
-            : () {
-                HapticFeedback.selectionClick();
-                onTap!(offer);
-              },
-        borderRadius: BorderRadius.circular(22),
-        child: Ink(
-          padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            gradient: LinearGradient(colors: colors),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      kicker,
-                      style: GoogleFonts.plusJakartaSans(
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      offer.price,
-                      style: GoogleFonts.plusJakartaSans(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 32,
-                        height: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      detail,
-                      style: GoogleFonts.plusJakartaSans(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.arrow_forward_rounded, color: Colors.white),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -222,19 +147,24 @@ class FareCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                height: 88,
+                height: offer.photoHeight,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: featured ? const Color(0xFFECFDF3) : const Color(0xFFF7F8F5),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-                  child: Image.asset(
-                    offer.asset,
-                    fit: BoxFit.cover,
-                    alignment: Alignment.center,
-                    filterQuality: FilterQuality.high,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
+                  child: Padding(
+                    padding: offer.fit == BoxFit.contain
+                        ? const EdgeInsets.all(8)
+                        : EdgeInsets.zero,
+                    child: Image.asset(
+                      offer.asset,
+                      fit: offer.fit,
+                      alignment: Alignment.center,
+                      filterQuality: FilterQuality.high,
+                    ),
                   ),
                 ),
               ),

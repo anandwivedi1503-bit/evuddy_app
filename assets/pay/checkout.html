@@ -10,7 +10,7 @@
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
-  <p>Opening EVUDDY checkout…</p>
+  <p>Opening EVUDDY Razorpay checkout…</p>
   <script>
     function post(obj) {
       var msg = JSON.stringify(obj);
@@ -24,7 +24,8 @@
         post({ type: "failed", message: "Razorpay checkout.js did not load. Check network." });
         return;
       }
-      // Same options evuddy.com/book-bike passes to new window.Razorpay({...}).
+      // Standard Razorpay Checkout only (same as evuddy.com/book-bike).
+      // Magic Checkout / PhonePe / other app pickers stay off.
       var options = {
         key: n.key,
         amount: n.amount,
@@ -36,6 +37,18 @@
         prefill: n.prefill || {},
         notes: n.notes || {},
         theme: { color: "#18B368" },
+        one_click_checkout: false,
+        remember_customer: false,
+        retry: { enabled: true },
+        config: n.config || {
+          display: {
+            hide: [
+              { method: "wallet" },
+              { method: "paylater" },
+              { method: "emi" }
+            ]
+          }
+        },
         handler: function (response) {
           post({
             type: "success",

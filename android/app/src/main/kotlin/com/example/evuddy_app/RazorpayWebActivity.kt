@@ -16,8 +16,8 @@ import android.widget.FrameLayout
 import org.json.JSONObject
 
 /**
- * Hosts the same checkout.js the website uses so Razorpay shows the
- * Shubhrax Mobility Limited merchant UPI QR (not native Magic Checkout).
+ * Hosts checkout.js like evuddy.com Book EV.
+ * Standard Razorpay only (UPI QR / cards in the sheet). Does not open PhonePe.
  */
 class RazorpayWebActivity : Activity() {
     private lateinit var container: FrameLayout
@@ -44,7 +44,7 @@ class RazorpayWebActivity : Activity() {
             override fun shouldOverrideUrlLoading(
                 view: WebView,
                 request: WebResourceRequest,
-            ): Boolean = false
+            ): Boolean = stayOnRazorpay(request.url.toString())
         }
         container.addView(
             main,
@@ -76,7 +76,7 @@ class RazorpayWebActivity : Activity() {
                     override fun shouldOverrideUrlLoading(
                         view: WebView,
                         request: WebResourceRequest,
-                    ): Boolean = false
+                    ): Boolean = stayOnRazorpay(request.url.toString())
                 }
                 dropPopup()
                 popup = extra
@@ -114,10 +114,24 @@ class RazorpayWebActivity : Activity() {
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         settings.cacheMode = WebSettings.LOAD_DEFAULT
         settings.userAgentString =
-            "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
         web.setBackgroundColor(Color.parseColor("#F6FFF9"))
         return web
+    }
+
+    /** Keep checkout.js in the WebView. Do not hand off to PhonePe / GPay / Paytm. */
+    private fun stayOnRazorpay(url: String): Boolean {
+        val lower = url.lowercase()
+        if (
+            lower.startsWith("http://") ||
+            lower.startsWith("https://") ||
+            lower.startsWith("about:") ||
+            lower.startsWith("javascript:")
+        ) {
+            return false
+        }
+        return true
     }
 
     private fun dropPopup() {

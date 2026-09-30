@@ -68,6 +68,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       'prefill': {
         'name': widget.customerName.isEmpty ? 'Rider' : widget.customerName,
         'contact': _contact10,
+        if (widget.email.contains('@')) 'email': widget.email,
       },
       'notes': {
         'bookingId': widget.bookingId,
@@ -76,6 +77,18 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       },
       'theme': {'color': '#18B368'},
       'image': image,
+      'one_click_checkout': false,
+      'remember_customer': false,
+      'retry': {'enabled': true},
+      'config': {
+        'display': {
+          'hide': [
+            {'method': 'wallet'},
+            {'method': 'paylater'},
+            {'method': 'emi'},
+          ],
+        },
+      },
     };
   }
 
