@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -40,6 +41,18 @@ class FleetPartner {
 }
 
 Future<void> shareFleetPartnerPdf() async {
+  try {
+    final data = await rootBundle.load('assets/docs/fleet_partner_investment.pdf');
+    await Printing.sharePdf(
+      bytes: data.buffer.asUint8List(),
+      filename: 'EVUDDY-Fleet-Partner-Investment-Program.pdf',
+    );
+    return;
+  } catch (_) {}
+  await _shareGeneratedFleetPartnerPdf();
+}
+
+Future<void> _shareGeneratedFleetPartnerPdf() async {
   final doc = pw.Document();
   final green = PdfColor.fromInt(0xFF16A34A);
   final deep = PdfColor.fromInt(0xFF14532D);
