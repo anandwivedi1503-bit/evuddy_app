@@ -178,7 +178,7 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
     return Column(
       children: [
         SizedBox(
-          height: 196,
+          height: 188,
           child: PageView.builder(
             controller: page,
             onPageChanged: (i) => setState(() => index = i),
@@ -192,95 +192,111 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
                   onTap: () => _open(ad),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(22),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: ad.colors,
-                            ),
-                          ),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: ad.colors,
                         ),
-                        Positioned(
-                          right: -28,
-                          bottom: -28,
-                          height: 200,
-                          width: 200,
-                          child: IgnorePointer(
-                            child: Image.asset(
-                              Evuddy.yellowScooterAsset,
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.high,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: ink.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(99),
+                                    ),
+                                    child: Text(
+                                      ad.kicker,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        color: ink,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 10,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Expanded(
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        ad.title,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          color: ink,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 20,
+                                          height: 1.12,
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    ad.body,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: ink.withValues(alpha: 0.86),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                    decoration: BoxDecoration(
+                                      color: ad.darkText ? Colors.black : Colors.white,
+                                      borderRadius: BorderRadius.circular(99),
+                                    ),
+                                    child: Text(
+                                      ad.cta,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        color: ad.darkText ? Colors.white : Evuddy.greenDeep,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(18, 16, 100, 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            const SizedBox(width: 10),
+                            SizedBox(
+                              width: 118,
+                              child: DecoratedBox(
                                 decoration: BoxDecoration(
-                                  color: ink.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(99),
+                                  color: Colors.white.withValues(alpha: ad.darkText ? 0.55 : 0.18),
+                                  borderRadius: BorderRadius.circular(18),
                                 ),
-                                child: Text(
-                                  ad.kicker,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: ink,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 10,
-                                    letterSpacing: 0.8,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Image.asset(
+                                    Evuddy.yellowScooterAsset,
+                                    fit: BoxFit.contain,
+                                    alignment: Alignment.center,
+                                    filterQuality: FilterQuality.high,
                                   ),
                                 ),
                               ),
-                              const Spacer(),
-                              Text(
-                                ad.title,
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: ink,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 24,
-                                  height: 1.05,
-                                  letterSpacing: -0.6,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                ad.body,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: ink.withValues(alpha: 0.86),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12.5,
-                                  height: 1.3,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                                decoration: BoxDecoration(
-                                  color: ad.darkText ? Colors.black : Colors.white,
-                                  borderRadius: BorderRadius.circular(99),
-                                ),
-                                child: Text(
-                                  ad.cta,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: ad.darkText ? Colors.white : Evuddy.greenDeep,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
