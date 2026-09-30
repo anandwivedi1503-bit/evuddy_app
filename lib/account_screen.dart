@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'api/evuddy_api.dart';
 import 'confirm_mobile_screen.dart';
 import 'deposit_wallet_screen.dart';
+import 'fleet_calculator_screen.dart';
 import 'invest_screen.dart';
 import 'login_screen.dart';
 import 'open_link.dart';
@@ -180,26 +181,18 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
                 if (d.activeBooking!.hasPickupOtp) ...[
                   const SizedBox(height: 10),
-                  Text('PICKUP OTP', style: Theme.of(context).textTheme.labelSmall),
-                  SelectableText(
-                    d.activeBooking!.pickupOtp,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 4,
-                    ),
+                  OtpReveal(
+                    label: 'PICKUP OTP',
+                    code: d.activeBooking!.pickupOtp,
+                    hint: 'Yard enters this to unlock the scooter.',
                   ),
                 ],
                 if (d.activeBooking!.rideEndOtp.isNotEmpty) ...[
                   const SizedBox(height: 10),
-                  Text('RIDE END OTP', style: Theme.of(context).textTheme.labelSmall),
-                  SelectableText(
-                    d.activeBooking!.rideEndOtp,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 4,
-                    ),
+                  OtpReveal(
+                    label: 'RIDE END OTP',
+                    code: d.activeBooking!.rideEndOtp,
+                    hint: 'Yard enters this to complete the ride.',
                   ),
                 ],
               ],
@@ -251,6 +244,11 @@ class _AccountScreenState extends State<AccountScreen> {
         EvuddyButton(
           label: 'Investment plans',
           onPressed: () => Navigator.push(context, evuddyRoute(const InvestScreen())),
+        ),
+        const SizedBox(height: 10),
+        EvuddyGhostButton(
+          label: 'Fleet calculator',
+          onPressed: () => Navigator.push(context, evuddyRoute(const FleetCalculatorScreen())),
         ),
         const SizedBox(height: 10),
         EvuddyGhostButton(

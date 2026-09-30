@@ -1058,6 +1058,66 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
+class OtpReveal extends StatelessWidget {
+  const OtpReveal({
+    super.key,
+    required this.label,
+    required this.code,
+    this.hint,
+  });
+
+  final String label;
+  final String code;
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    return SurfaceCard(
+      child: Column(
+        children: [
+          Text(label, style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 8),
+          SelectableText(
+            code,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 36,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 6,
+            ),
+          ),
+          if (hint != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              hint!,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                color: Evuddy.muted,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: code));
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('$label copied')),
+              );
+            },
+            icon: const Icon(Icons.copy_rounded, size: 18),
+            label: Text(
+              'Copy OTP',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 PageRouteBuilder<T> evuddyRoute<T>(Widget page) {
   return PageRouteBuilder<T>(
     transitionDuration: const Duration(milliseconds: 520),

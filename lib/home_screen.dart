@@ -159,12 +159,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                     const SizedBox(height: 18),
-                    if (!d.canBook) ...[
-                      const RideTodayHero(),
-                      const SizedBox(height: 18),
-                      OfferAdCarousel(onBook: () => _book()),
-                      const SizedBox(height: 22),
-                    ] else ...[
+                    const RideTodayHero(),
+                    const SizedBox(height: 18),
+                    OfferAdCarousel(onBook: () => _book()),
+                    const SizedBox(height: 22),
+                    if (d.canBook) ...[
                       SurfaceCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Same steps as evuddy.com/book-bike. Pickup OTP after first pay. Ride-end OTP after remaining is ₹0.',
+                              'Same steps as evuddy.com/book-bike. Pickup OTP after ₹1. Yard confirms it. Ride-end OTP after remaining is ₹0.',
                               style: GoogleFonts.plusJakartaSans(
                                 color: Evuddy.muted,
                                 height: 1.4,
@@ -446,9 +445,11 @@ class _LiveTripBanner extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    booking.hasPickupOtp
-                        ? 'Pickup OTP ${booking.pickupOtp}'
-                        : booking.bookingId,
+                    booking.rideEndOtp.isNotEmpty
+                        ? 'Ride-end OTP ${booking.rideEndOtp}'
+                        : booking.hasPickupOtp
+                            ? 'Pickup OTP ${booking.pickupOtp}'
+                            : booking.bookingId,
                     style: GoogleFonts.plusJakartaSans(
                       color: Colors.white70,
                       fontSize: 13,

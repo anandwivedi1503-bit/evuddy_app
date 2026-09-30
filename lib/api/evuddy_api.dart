@@ -662,8 +662,21 @@ class RiderBooking {
   bool get isRemainingPayment =>
       receivedAmount >= 1 || hasPickupOtp || pickupOtpVerified;
 
-  bool get inRide =>
-      rideStatus.toLowerCase() == 'in ride' || pickupOtpVerified;
+  /// Yard has accepted pickup OTP. Rider still swipes start (same as evuddy.com).
+  bool get readyForPickup {
+    final s = rideStatus.toLowerCase();
+    return pickupOtpVerified ||
+        s == 'ready for pickup' ||
+        s.contains('ready for pickup');
+  }
+
+  /// Live ride only after rider-start — pickup verified is not In Ride.
+  bool get inRide => rideStatus.toLowerCase() == 'in ride';
+
+  bool get isRentToOwn {
+    final m = rentalMode.toLowerCase();
+    return m.contains('own') || m.contains('rto');
+  }
 
   RiderBooking copy({
     String? rideEndOtp,

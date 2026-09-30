@@ -355,10 +355,46 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     }
   }
 
+  Future<void> _resendOtp() async {
+    final token = await _token();
+    final id = booking?.bookingId;
+    if (token == null || id == null || id.isEmpty) return;
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await EvuddyApi.notifyPickupOtp(idToken: token, bookingId: id);
+      if (!mounted) return;
+      setState(() {
+        busy = false;
+        note = 'OTP SMS requested from evuddy.com.';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        busy = false;
+        error = e.toString();
+      });
+    }
+  }
+
   Future<void> _ride(bool start) async {
     final token = await _token();
     if (token == null) return;
     final current = booking;
+    if (start && current != null && !current.readyForPickup) {
+      setState(() => error = 'Wait for the yard to enter pickup OTP first — same as evuddy.com.');
+      return;
+    }
+    if (!start && current != null && current.isRentToOwn) {
+      setState(() => error = 'Rent to Own has no ride-end OTP. The scooter stays with you.');
+      return;
+    }
+    if (!start && current != null && !current.inRide) {
+      setState(() => error = 'Start the ride after yard pickup OTP, then generate ride-end OTP.');
+      return;
+    }
     if (!start && current != null && _remainingCharge(current) > 0.009) {
       setState(() => error = 'Pay remaining ${CatalogRates.inr(_remainingCharge(current))} on Razorpay before ride-end OTP.');
       return;
@@ -599,42 +635,26 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
               ],
             ),
           ),
-          if (b.hasPickupOtp) ...[
+          if (b.hasPickupOtp && !b.pickupOtpVerified) ...[
             const SizedBox(height: 12),
-            SurfaceCard(
-              child: Column(
-                children: [
-                  Text('PICKUP OTP', style: Theme.of(context).textTheme.labelSmall),
-                  const SizedBox(height: 8),
-                  SelectableText(
-                    b.pickupOtp,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 6,
-                    ),
-                  ),
-                ],
-              ),
+            OtpReveal(
+              label: 'PICKUP OTP',
+              code: b.pickupOtp,
+              hint: 'Show this at the hub. The yard enters it — same as evuddy.com.',
+            ),
+          ],
+          if (b.pickupOtpVerified && !b.inRide) ...[
+            const SizedBox(height: 12),
+            const InfoNote(
+              text: 'Yard accepted pickup OTP. Tap Mark ride started to begin — same as the website swipe.',
             ),
           ],
           if (b.rideEndOtp.isNotEmpty) ...[
             const SizedBox(height: 12),
-            SurfaceCard(
-              child: Column(
-                children: [
-                  Text('RIDE END OTP', style: Theme.of(context).textTheme.labelSmall),
-                  const SizedBox(height: 8),
-                  SelectableText(
-                    b.rideEndOtp,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 6,
-                    ),
-                  ),
-                ],
-              ),
+            OtpReveal(
+              label: 'RIDE END OTP',
+              code: b.rideEndOtp,
+              hint: 'Tell this to the yard to return the scooter. Valid for 7 days on the website.',
             ),
           ],
           if (b.due > 0.009 || remainingPay || needsDepositHold) ...[
@@ -725,22 +745,45 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       );
     }
     if (b.due > 0.009 || remainingPay || needsDepositHold) {
-      return EvuddyButton(
-        label: remainingPay
-            ? 'Pay remaining ${CatalogRates.inr(_remainingCharge(b))} with Razorpay'
-            : 'Pay Securely with Razorpay',
-        onPressed: _pay,
+      return Column(
+        children: [
+          EvuddyButton(
+            label: remainingPay
+                ? 'Pay remaining ${CatalogRates.inr(_remainingCharge(b))} with Razorpay'
+                : 'Pay Securely with Razorpay',
+            onPressed: _pay,
+          ),
+          if (b.readyForPickup && !b.inRide) ...[
+            const SizedBox(height: 8),
+            EvuddyGhostButton(
+              label: 'Mark ride started',
+              onPressed: () => _ride(true),
+            ),
+          ] else if (b.hasPickupOtp && !b.pickupOtpVerified) ...[
+            const SizedBox(height: 8),
+            EvuddyGhostButton(label: 'Resend pickup OTP SMS', onPressed: _resendOtp),
+            const SizedBox(height: 8),
+            EvuddyGhostButton(label: 'Refresh after yard confirms OTP', onPressed: _load),
+          ],
+        ],
       );
     }
-    if (!b.pickupOtpVerified && b.hasPickupOtp && b.rideStatus != 'In Ride') {
+    if (!b.pickupOtpVerified && b.hasPickupOtp && !b.inRide) {
+      return Column(
+        children: [
+          EvuddyButton(label: 'Refresh after yard confirms OTP', onPressed: _load),
+          const SizedBox(height: 8),
+          EvuddyGhostButton(label: 'Resend pickup OTP SMS', onPressed: _resendOtp),
+        ],
+      );
+    }
+    if (b.readyForPickup && !b.inRide) {
       return EvuddyButton(
         label: 'Mark ride started',
         onPressed: () => _ride(true),
       );
     }
-    if ((b.inRide || b.rideStatus.toLowerCase() == 'in ride') &&
-        b.due <= 0.009 &&
-        b.rideEndOtp.isEmpty) {
+    if (b.inRide && b.due <= 0.009 && b.rideEndOtp.isEmpty && !b.isRentToOwn) {
       return EvuddyButton(
         label: 'Generate ride-end OTP',
         onPressed: () => _ride(false),

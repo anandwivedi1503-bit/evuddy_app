@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../api/partner_pdf.dart';
-import '../invest_screen.dart';
+import '../fleet_calculator_screen.dart';
 import '../open_link.dart';
 import '../theme/evuddy.dart';
 import 'chrome.dart';
@@ -122,8 +122,8 @@ const offerAds = [
   OfferAd(
     kicker: 'FLEET PARTNER',
     title: '₹3,00,000  ·  ₹15,000 / month',
-    body: '5 low-speed EVs. EVUDDY operates FOCO.',
-    cta: 'Open FOCO plans',
+    body: '5 low-speed EVs. Open the fleet calculator.',
+    cta: 'Fleet calculator',
     asset: Evuddy.investPosterAsset,
     invest: true,
     pdf: true,
@@ -131,8 +131,8 @@ const offerAds = [
   OfferAd(
     kicker: 'HIGH-SPEED',
     title: '₹4,50,000  ·  ₹18,000 / month',
-    body: '5 high-speed scooters. EVUDDY runs operations.',
-    cta: 'See high-speed',
+    body: '5 high-speed scooters. Enter scooters or rupees.',
+    cta: 'High-speed calculator',
     asset: Evuddy.investPosterAsset,
     invest: true,
     pdf: true,
@@ -194,7 +194,14 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> with SingleTickerProv
       openEvuddyPath(path);
       return;
     }
-    Navigator.push(context, evuddyRoute(const InvestScreen()));
+    Navigator.push(
+      context,
+      evuddyRoute(
+        FleetCalculatorScreen(
+          highSpeed: ad.kicker.contains('HIGH'),
+        ),
+      ),
+    );
   }
 
   @override

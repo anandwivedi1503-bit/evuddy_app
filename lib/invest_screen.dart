@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
 import 'api/partner_pdf.dart';
+import 'fleet_calculator_screen.dart';
 import 'open_link.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
@@ -20,8 +21,15 @@ class InvestScreen extends StatelessWidget {
       footer: Column(
         children: [
           EvuddyButton(
+            label: 'Open fleet calculator',
+            onPressed: () => Navigator.push(
+              context,
+              evuddyRoute(const FleetCalculatorScreen()),
+            ),
+          ),
+          const SizedBox(height: 10),
+          EvuddyGhostButton(
             label: 'Download investment PDF',
-            icon: Icons.picture_as_pdf_outlined,
             onPressed: shareFleetPartnerPdf,
           ),
           const SizedBox(height: 10),
@@ -53,7 +61,7 @@ class InvestScreen extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         Text(
-          'Scale tables (10–100 scooters) are in the PDF. Final terms: Fleet Partner Agreement with EVUDDY / Shubhrax Mobility Ltd.',
+          'Use the calculator for any fleet size or rupee amount. Investors see monthly return. Business planner sees annual, 48-month and FOCO ops. Final terms: Fleet Partner Agreement with EVUDDY / Shubhrax Mobility Ltd.',
           style: GoogleFonts.plusJakartaSans(
             color: const Color(0xFF44403C),
             fontSize: 13,

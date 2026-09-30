@@ -111,6 +111,34 @@ void main() {
     expect(merged.receivedAmount, 250);
     expect(merged.due, 0);
     expect(merged.rideEndOtp, '9999');
+    expect(
+      RiderBooking.fromJson({
+        'pickupOTPVerified': true,
+        'rideStatus': 'Ready For Pickup',
+        'rentalMode': 'Daily',
+      }).inRide,
+      isFalse,
+    );
+    expect(
+      RiderBooking.fromJson({
+        'pickupOTPVerified': true,
+        'rideStatus': 'Ready For Pickup',
+      }).readyForPickup,
+      isTrue,
+    );
+    expect(
+      RiderBooking.fromJson({
+        'rideStatus': 'In Ride',
+        'rentalMode': 'Rent To Own',
+      }).isRentToOwn,
+      isTrue,
+    );
+    expect(
+      RiderBooking.fromJson({
+        'rideStatus': 'In Ride',
+      }).inRide,
+      isTrue,
+    );
   });
 
   test('sniffs jpeg/png/webp and rejects mismatch names', () {
