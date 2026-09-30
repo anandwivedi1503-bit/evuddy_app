@@ -3,7 +3,6 @@ package com.example.evuddy_app
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
-import android.net.Uri
 import android.os.Bundle
 import android.os.Message
 import android.webkit.CookieManager
@@ -121,13 +120,13 @@ class RazorpayWebActivity : Activity() {
         settings.cacheMode = WebSettings.LOAD_DEFAULT
         settings.mediaPlaybackRequiresUserGesture = false
         settings.userAgentString =
-            "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
         web.setBackgroundColor(Color.parseColor("#F6FFF9"))
         return web
     }
 
-    /** Keep https checkout in the WebView. Hand UPI / intent URLs to the OS like Chrome. */
+    /** Keep checkout.js in the WebView like desktop evuddy.com. Do not open PhonePe / GPay / Paytm. */
     private fun handleUrl(_view: WebView, url: String): Boolean {
         val lower = url.lowercase()
         if (
@@ -138,24 +137,7 @@ class RazorpayWebActivity : Activity() {
         ) {
             return false
         }
-        return launchExternal(url)
-    }
-
-    private fun launchExternal(url: String): Boolean {
-        return try {
-            val intent =
-                if (url.lowercase().startsWith("intent:")) {
-                    Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
-                } else {
-                    Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                }
-            intent.addCategory(Intent.CATEGORY_BROWSABLE)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(intent)
-            true
-        } catch (_: Exception) {
-            true
-        }
+        return true
     }
 
     private fun dropPopup() {

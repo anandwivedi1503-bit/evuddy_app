@@ -36,6 +36,16 @@
         prefill: n.prefill || {},
         notes: n.notes || {},
         theme: { color: "#18B368" },
+        method: { netbanking: true, card: true, upi: true, wallet: false },
+        config: {
+          display: {
+            hide: [
+              { method: "wallet" },
+              { method: "paylater" },
+              { method: "emi" }
+            ]
+          }
+        },
         handler: function (response) {
           post({
             type: "success",

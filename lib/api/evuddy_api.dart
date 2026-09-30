@@ -270,6 +270,31 @@ class EvuddyApi {
     return order;
   }
 
+  /// EVUDDY credit wallet on evuddy.com — not PhonePe / UPI apps.
+  static Future<RiderBooking> payWithWallet({
+    required String idToken,
+    required String bookingMongoId,
+    required double amountRupees,
+  }) async {
+    final r = await http
+        .post(
+          _u('/api/razorpay/create-order'),
+          headers: _auth(idToken),
+          body: jsonEncode({
+            'bookingMongoId': bookingMongoId,
+            'amount': amountRupees,
+            'useWallet': true,
+            'firebaseIdToken': idToken,
+          }),
+        )
+        .timeout(const Duration(seconds: 20));
+    final j = _json(r);
+    if (j['success'] != true) {
+      throw ApiException(_message(j, 'Wallet payment failed.'));
+    }
+    return RiderBooking.fromJson(j);
+  }
+
   static Future<Map<String, dynamic>> _postVerifyPayment({
     required String idToken,
     required String bookingMongoId,
@@ -703,8 +728,11 @@ class RiderBooking {
 
   bool get hasPickupOtp => pickupOtp.isNotEmpty;
 
-  bool get isRemainingPayment =>
-      receivedAmount >= 1 || hasPickupOtp || pickupOtpVerified;
+  bool get isRemainingPayment => remainingPayLocked;
+
+  /// Website: `remainingPayLocked = bookingDone && (paidAmount > 0 || isRentToOwn)`.
+  bool get remainingPayLocked =>
+      receivedAmount > 0.009 || hasPickupOtp || pickupOtpVerified || isRentToOwn;
 
   /// Yard has accepted pickup OTP. Rider still swipes start (same as evuddy.com).
   bool get readyForPickup {
@@ -749,6 +777,27 @@ class RiderBooking {
       message: message ?? this.message,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        '_id': mongoId,
+        'bookingId': bookingId,
+        'rentalMode': rentalMode,
+        'paymentStatus': paymentStatus,
+        'rideStatus': rideStatus,
+        'pendingAmount': pendingAmount,
+        'receivedAmount': receivedAmount,
+        'paymentDue': paymentDue,
+        'pickupOTP': pickupOtp,
+        'rideEndOTP': rideEndOtp,
+        'pickupOTPVerified': pickupOtpVerified,
+        'vehicleId': vehicleId,
+        'vehicleModel': vehicleModel,
+        'vehicleNumber': vehicleNumber,
+        'startHub': startHub,
+        'pickupHubName': pickupHubName,
+        'city': city,
+        'message': message,
+      };
 
   RiderBooking mergedWith(RiderBooking live) {
     final preferLive = live.receivedAmount + 0.009 >= receivedAmount;
@@ -926,6 +975,8 @@ class RiderLookup {
     this.fullName,
     this.email,
     this.message,
+    this.walletAvailable = 0,
+    this.walletStatus = '',
   });
   const RiderLookup.missing() : this(found: false);
 
@@ -950,6 +1001,8 @@ class RiderLookup {
       fullName: (d['fullName'] ?? d['name'])?.toString(),
       email: d['email']?.toString(),
       message: message,
+      walletAvailable: _asDouble(d['walletAvailable'] ?? d['walletBalance']) ?? 0,
+      walletStatus: d['walletStatus']?.toString() ?? '',
     );
   }
 
@@ -992,6 +1045,8 @@ class RiderLookup {
   final String? fullName;
   final String? email;
   final String? message;
+  final double walletAvailable;
+  final String walletStatus;
 }
 
 class RegisterResult {

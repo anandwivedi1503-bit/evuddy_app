@@ -68,6 +68,12 @@ class _HomeScreenState extends State<HomeScreen> {
       registrationDraft.chosenPlan = fare.plan;
       registrationDraft.chosenDuration = fare.plan == 'rto' ? 'Rent to Own' : fare.id;
     }
+    if (registrationDraft.phoneVerified &&
+        registrationDraft.activeBooking != null &&
+        registrationDraft.activeBooking!.bookingId.isNotEmpty) {
+      Navigator.push(context, evuddyRoute(const RideReadyScreen()));
+      return;
+    }
     if (registrationDraft.phoneVerified && registrationDraft.canBook) {
       Navigator.push(context, evuddyRoute(const BookEvScreen()));
       return;
@@ -98,6 +104,13 @@ class _HomeScreenState extends State<HomeScreen> {
               centerTitle: true,
               automaticallyImplyLeading: false,
               actions: [
+                if (d.phoneVerified)
+                  LogoutTextButton(
+                    onPressed: () async {
+                      if (!await confirmEvuddyLogout(context)) return;
+                      await registrationDraft.logout();
+                    },
+                  ),
                 IconButton(
                   tooltip: 'Call helpdesk',
                   onPressed: dialHelpdesk,

@@ -4,6 +4,7 @@ import 'account_screen.dart';
 import 'book_ev_screen.dart';
 import 'confirm_mobile_screen.dart';
 import 'home_screen.dart';
+import 'ride_ready_screen.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 
@@ -69,7 +70,10 @@ class _RiderShellState extends State<RiderShell> with WidgetsBindingObserver {
         children: [
           const HomeScreen(),
           registrationDraft.phoneVerified
-              ? const BookEvScreen(showBack: false)
+              ? ((registrationDraft.activeBooking != null &&
+                      registrationDraft.activeBooking!.bookingId.isNotEmpty)
+                  ? const RideReadyScreen(showBack: false)
+                  : const BookEvScreen(showBack: false))
               : const ConfirmMobileScreen(),
           AccountScreen(onLoggedOut: () => setState(() => index = 0)),
         ],

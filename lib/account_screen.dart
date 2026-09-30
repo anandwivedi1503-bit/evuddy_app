@@ -61,30 +61,8 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Future<void> _logout() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'Log out',
-          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
-        ),
-        content: Text(
-          'This signs you out on this phone. Bookings stay on evuddy.com. You can log in again with the same number.',
-          style: GoogleFonts.plusJakartaSans(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Stay signed in'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Log out'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
+    if (!await confirmEvuddyLogout(context)) return;
+    if (!mounted) return;
     await registrationDraft.logout();
     widget.onLoggedOut?.call();
   }
@@ -135,6 +113,9 @@ class _AccountScreenState extends State<AccountScreen> {
       kicker: 'Account',
       title: d.fullName.isEmpty ? 'Your EVUDDY' : d.fullName,
       subtitle: status,
+      headerTrailing: d.phoneVerified
+          ? LogoutTextButton(onPressed: _logout)
+          : null,
       footer: Column(
         children: [
           _footer(d),
@@ -172,6 +153,13 @@ class _AccountScreenState extends State<AccountScreen> {
         ],
       ),
       children: [
+        if (d.phoneVerified) ...[
+          Align(
+            alignment: Alignment.centerRight,
+            child: LogoutTextButton(onPressed: _logout),
+          ),
+          const SizedBox(height: 8),
+        ],
         if (d.phoneVerified)
           Padding(
             padding: const EdgeInsets.only(bottom: 14),

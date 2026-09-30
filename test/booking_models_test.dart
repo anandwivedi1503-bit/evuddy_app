@@ -96,6 +96,26 @@ void main() {
       }).isRemainingPayment,
       isTrue,
     );
+    expect(
+      RiderBooking.fromJson({'rentalMode': 'Rent To Own'}).remainingPayLocked,
+      isTrue,
+    );
+    expect(
+      RiderBooking.fromJson({'receivedAmount': 0, 'rentalMode': 'Daily'}).remainingPayLocked,
+      isFalse,
+    );
+    final roundtrip = RiderBooking.fromJson(
+      RiderBooking.fromJson({
+        '_id': 'm1',
+        'bookingId': 'BK-1',
+        'pendingAmount': 249,
+        'receivedAmount': 1,
+        'pickupOTP': '1234',
+      }).toJson(),
+    );
+    expect(roundtrip.bookingId, 'BK-1');
+    expect(roundtrip.due, 249);
+    expect(roundtrip.pickupOtp, '1234');
     final verified = RiderBooking.fromJson({
       'receivedAmount': 250,
       'pendingAmount': 0,
