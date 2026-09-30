@@ -121,8 +121,8 @@ class OfferAd {
 const offerAds = [
   OfferAd(
     kicker: 'FLEET PARTNER',
-    title: '₹3,00,000  ·  ₹15,000 / month',
-    body: '5 low-speed EVs. EVUDDY operates FOCO.',
+    title: 'Own the fleet. We operate.',
+    body: '5 low-speed EVs · ₹3,00,000 · ₹15,000 / month',
     cta: 'Open FOCO plans',
     asset: Evuddy.investPosterAsset,
     invest: true,
@@ -130,7 +130,7 @@ const offerAds = [
   ),
   OfferAd(
     kicker: 'HIGH-SPEED',
-    title: '₹4,50,000  ·  ₹18,000 / month',
+    title: '₹4,50,000 · ₹18,000 / month',
     body: '5 high-speed scooters. EVUDDY runs operations.',
     cta: 'See high-speed',
     asset: Evuddy.investPosterAsset,

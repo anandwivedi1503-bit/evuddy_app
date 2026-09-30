@@ -159,42 +159,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                     const SizedBox(height: 18),
-                    if (!d.canBook) ...[
-                      const RideTodayHero(),
-                      const SizedBox(height: 18),
-                      OfferAdCarousel(onBook: () => _book()),
-                      const SizedBox(height: 22),
-                    ] else ...[
-                      SurfaceCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'BOOK EV',
-                              style: Theme.of(context).textTheme.labelSmall,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '1 City & hub  ·  2 Scooter  ·  3 Reserve  ·  4 Razorpay',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                color: Evuddy.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Same steps as evuddy.com/book-bike. Pickup OTP after first pay. Ride-end OTP after remaining is ₹0.',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: Evuddy.muted,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-                    ],
+                    const RideTodayHero(),
+                    const SizedBox(height: 18),
+                    OfferAdCarousel(onBook: () => _book()),
+                    const SizedBox(height: 22),
                     Text('RIDE', style: Theme.of(context).textTheme.labelSmall),
                     const SizedBox(height: 10),
                     FareGrid(onPick: (fare) => _book(fare: fare)),
