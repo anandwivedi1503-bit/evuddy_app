@@ -226,4 +226,20 @@ void main() {
       'Shubhrax Mobility Limited',
     );
   });
+
+  test('parses support tickets from website payloads', () {
+    final ticket = SupportTicket.fromJson({
+      'ticketId': 'BK-1',
+      'bookingId': 'EVB-9',
+      'category': 'UNLOCK_ISSUE',
+      'status': 'OPEN',
+      'description': 'Pickup OTP not working at the yard.',
+      'adminRemarks': 'Hub called the rider',
+    });
+    expect(ticket.ticketId, 'BK-1');
+    expect(ticket.bookingId, 'EVB-9');
+    expect(ticket.category, 'UNLOCK_ISSUE');
+    expect(ticket.status, 'OPEN');
+    expect(ticket.adminRemarks, contains('Hub'));
+  });
 }

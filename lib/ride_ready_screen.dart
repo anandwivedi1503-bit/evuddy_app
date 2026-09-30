@@ -8,6 +8,7 @@ import 'open_link.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
+import 'widgets/support_tickets.dart';
 
 class RideReadyScreen extends StatefulWidget {
   const RideReadyScreen({super.key});
@@ -707,6 +708,14 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         if (note != null) ...[
           const SizedBox(height: 12),
           InfoNote(text: note!),
+        ],
+        if (b != null && b.bookingId.isNotEmpty && b.receivedAmount >= 1) ...[
+          const SizedBox(height: 14),
+          SupportTicketsCard(
+            bookingId: b.bookingId,
+            rideStatus: b.rideStatus,
+            requireBooking: true,
+          ),
         ],
         const SizedBox(height: 8),
         Text(

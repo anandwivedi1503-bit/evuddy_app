@@ -37,13 +37,15 @@ class RazorpayCheckoutPage extends StatefulWidget {
 }
 
 class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
+  static const _channel = MethodChannel('evuddy/razorpay');
   Razorpay? _sdk;
   WebViewController? _web;
   String? _error;
   bool _opened = false;
   bool _busy = true;
 
-  bool get _useSdk => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+  bool get _androidWeb => !kIsWeb && Platform.isAndroid;
+  bool get _useSdk => !kIsWeb && Platform.isIOS;
 
   String get _contact10 {
     final digits = widget.contact.replaceAll(RegExp(r'\D'), '');
@@ -82,7 +84,9 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   @override
   void initState() {
     super.initState();
-    if (_useSdk) {
+    if (_androidWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openAndroidWeb());
+    } else if (_useSdk) {
       _sdk = Razorpay();
       _sdk!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSdkSuccess);
       _sdk!.on(Razorpay.EVENT_PAYMENT_ERROR, _onSdkError);
@@ -97,6 +101,49 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   void dispose() {
     _sdk?.clear();
     super.dispose();
+  }
+
+  Future<void> _openAndroidWeb() async {
+    try {
+      final html = await rootBundle.loadString('assets/pay/checkout.html');
+      final raw = await _channel.invokeMethod<String>('open', {
+        'html': html,
+        'options': jsonEncode(_options),
+      });
+      if (!mounted) return;
+      if (raw == null || raw.isEmpty) {
+        Navigator.pop(context);
+        return;
+      }
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) {
+        Navigator.pop(context);
+        return;
+      }
+      final type = decoded['type']?.toString();
+      if (type == 'success') {
+        Navigator.pop(context, {
+          'orderId': decoded['razorpay_order_id']?.toString() ?? '',
+          'paymentId': decoded['razorpay_payment_id']?.toString() ?? '',
+          'signature': decoded['razorpay_signature']?.toString() ?? '',
+        });
+        return;
+      }
+      if (type == 'dismiss') {
+        Navigator.pop(context);
+        return;
+      }
+      setState(() {
+        _busy = false;
+        _error = decoded['message']?.toString() ?? 'Payment failed.';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = e.toString();
+      });
+    }
   }
 
   void _openSdk() {
@@ -139,7 +186,8 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     if (!mounted) return;
     setState(() {
       _busy = false;
-      _error = 'Use Razorpay UPI or card — same as evuddy.com. Wallet ${response.walletName ?? ""} is not enabled.';
+      _error =
+          'Use Razorpay UPI or card — same as evuddy.com. Wallet ${response.walletName ?? ""} is not enabled.';
     });
   }
 
@@ -185,6 +233,21 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     });
   }
 
+  void _retry() {
+    setState(() {
+      _error = null;
+      _busy = true;
+      _opened = false;
+    });
+    if (_androidWeb) {
+      _openAndroidWeb();
+    } else if (_useSdk) {
+      _openSdk();
+    } else {
+      _initFlutterWeb();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -214,24 +277,14 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
                     ),
                     const SizedBox(height: 16),
                     FilledButton(
-                      onPressed: () {
-                        setState(() {
-                          _error = null;
-                          _busy = true;
-                        });
-                        if (_useSdk) {
-                          _openSdk();
-                        } else {
-                          _initFlutterWeb();
-                        }
-                      },
+                      onPressed: _retry,
                       child: const Text('Retry Razorpay'),
                     ),
                   ],
                 ),
               ),
             )
-          : _useSdk
+          : (_androidWeb || _useSdk)
               ? Center(
                   child: _busy
                       ? const CircularProgressIndicator()

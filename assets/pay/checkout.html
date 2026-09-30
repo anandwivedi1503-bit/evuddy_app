@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <style>
     html, body { margin: 0; padding: 24px; background: #F6FFF9; font-family: sans-serif; color: #0F172A; }
     p { color: #64748B; }
@@ -24,8 +24,7 @@
         post({ type: "failed", message: "Razorpay checkout.js did not load. Check network." });
         return;
       }
-      // Standard Razorpay Checkout only (same as evuddy.com/book-bike).
-      // Magic Checkout / PhonePe / other app pickers stay off.
+      // Exact Standard Checkout options as evuddy.com BikeBooking payWithRazorpay.
       var options = {
         key: n.key,
         amount: n.amount,
@@ -37,18 +36,6 @@
         prefill: n.prefill || {},
         notes: n.notes || {},
         theme: { color: "#18B368" },
-        one_click_checkout: false,
-        remember_customer: false,
-        retry: { enabled: true },
-        config: n.config || {
-          display: {
-            hide: [
-              { method: "wallet" },
-              { method: "paylater" },
-              { method: "emi" }
-            ]
-          }
-        },
         handler: function (response) {
           post({
             type: "success",

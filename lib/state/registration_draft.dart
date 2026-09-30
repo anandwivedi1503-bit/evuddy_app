@@ -172,6 +172,32 @@ class RegistrationDraft {
     riderSessionTick.value++;
   }
 
+  Future<void> logout() async {
+    await EvuddyFirebase.signOut();
+    phone = '';
+    fullName = '';
+    email = '';
+    comingThrough = 'Direct / EVUDDY';
+    aadhaar = '';
+    drivingLicense = '';
+    instagramId = '';
+    facebookId = '';
+    reference1Name = '';
+    reference1Phone = '';
+    reference2Name = '';
+    reference2Phone = '';
+    aadhaarFrontPath = null;
+    aadhaarBackPath = null;
+    licenseFrontPath = null;
+    licenseBackPath = null;
+    profilePhotoPath = null;
+    chosenCity = null;
+    chosenHubId = null;
+    otpGate = 'register';
+    shellTab = 0;
+    clearSession();
+  }
+
   Future<void> restore() async {
     try {
       final p = await SharedPreferences.getInstance();

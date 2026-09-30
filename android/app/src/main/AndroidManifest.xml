@@ -81,6 +81,14 @@
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="tez"/>
         </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="intent"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="razorpay"/>
+        </intent>
         <package android:name="com.google.android.googlequicksearchbox"/>
         <package android:name="com.google.android.tts"/>
         <package android:name="com.google.android.apps.nbu.paisa.user"/>

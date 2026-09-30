@@ -378,6 +378,50 @@ class EvuddyApi {
     );
   }
 
+  static Future<SupportTicket> createTicket({
+    required String idToken,
+    required String ticketId,
+    required String userId,
+    required String category,
+    required String description,
+    String? bookingId,
+  }) async {
+    final r = await http
+        .post(
+          _u('/api/tickets'),
+          headers: _auth(idToken),
+          body: jsonEncode({
+            'ticketId': ticketId,
+            'userId': userId,
+            'category': category,
+            'description': description,
+            'firebaseIdToken': idToken,
+            if (bookingId != null && bookingId.isNotEmpty) 'bookingId': bookingId,
+            'ticketSource': 'Mobile App',
+          }),
+        )
+        .timeout(const Duration(seconds: 20));
+    final j = _json(r);
+    if (j['success'] != true) {
+      throw ApiException(_message(j, 'Could not send ticket.'));
+    }
+    if (j['data'] is Map) return SupportTicket.fromJson(j['data'] as Map);
+    return SupportTicket.fromJson(j);
+  }
+
+  static Future<List<SupportTicket>> myTickets(String idToken) async {
+    final r = await http
+        .get(_u('/api/tickets/mine'), headers: _auth(idToken))
+        .timeout(const Duration(seconds: 15));
+    final j = _json(r);
+    if (j['success'] != true) {
+      throw ApiException(_message(j, 'Unable to load your tickets.'));
+    }
+    final data = j['data'];
+    if (data is! List) return [];
+    return data.whereType<Map>().map(SupportTicket.fromJson).toList();
+  }
+
   static String _message(Map<String, dynamic> j, String fallback) {
     final errors = j['errors'];
     if (errors is List && errors.isNotEmpty) {
@@ -830,6 +874,35 @@ class ApiException implements Exception {
   final String message;
   @override
   String toString() => message;
+}
+
+class SupportTicket {
+  const SupportTicket({
+    this.ticketId = '',
+    this.bookingId = '',
+    this.category = '',
+    this.status = '',
+    this.description = '',
+    this.adminRemarks = '',
+  });
+
+  factory SupportTicket.fromJson(Map e) {
+    return SupportTicket(
+      ticketId: e['ticketId']?.toString() ?? '',
+      bookingId: e['bookingId']?.toString() ?? '',
+      category: e['category']?.toString() ?? '',
+      status: e['status']?.toString() ?? '',
+      description: e['description']?.toString() ?? '',
+      adminRemarks: e['adminRemarks']?.toString() ?? '',
+    );
+  }
+
+  final String ticketId;
+  final String bookingId;
+  final String category;
+  final String status;
+  final String description;
+  final String adminRemarks;
 }
 
 class RideActionResult {

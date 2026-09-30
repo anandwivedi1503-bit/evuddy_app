@@ -15,6 +15,7 @@ import 'submitted_screen.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 import 'widgets/promo.dart';
+import 'widgets/support_tickets.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key, this.onLoggedOut});
@@ -57,6 +58,35 @@ class _AccountScreenState extends State<AccountScreen> {
     registrationDraft.clearSession();
     widget.onLoggedOut?.call();
     Navigator.push(context, evuddyRoute(const ConfirmMobileScreen()));
+  }
+
+  Future<void> _logout() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Log out',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+        ),
+        content: Text(
+          'This signs you out on this phone. Bookings stay on evuddy.com. You can log in again with the same number.',
+          style: GoogleFonts.plusJakartaSans(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Stay signed in'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Log out'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await registrationDraft.logout();
+    widget.onLoggedOut?.call();
   }
 
   Widget _footer(RegistrationDraft d) {
@@ -109,7 +139,25 @@ class _AccountScreenState extends State<AccountScreen> {
         children: [
           _footer(d),
           if (d.phoneVerified) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 56,
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _logout,
+                icon: const Icon(Icons.logout_rounded),
+                label: Text(
+                  'Log out',
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Evuddy.danger,
+                  side: const BorderSide(color: Color(0xFFFECACA)),
+                  backgroundColor: const Color(0xFFFEF3F2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                ),
+              ),
+            ),
             TextButton(
               onPressed: _switchNumber,
               child: Text(
@@ -269,6 +317,13 @@ class _AccountScreenState extends State<AccountScreen> {
           label: 'Call helpdesk 24×7',
           onPressed: dialHelpdesk,
         ),
+        if (d.phoneVerified) ...[
+          const SizedBox(height: 14),
+          SupportTicketsCard(
+            bookingId: d.activeBooking?.bookingId,
+            rideStatus: d.activeBooking?.rideStatus ?? '',
+          ),
+        ],
         const SizedBox(height: 14),
         const InfoNote(
           text:
