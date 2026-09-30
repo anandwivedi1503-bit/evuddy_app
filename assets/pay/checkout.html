@@ -24,7 +24,7 @@
         post({ type: "failed", message: "Razorpay checkout.js did not load. Check network." });
         return;
       }
-      // Same options evuddy.com/book-bike passes to new window.Razorpay({...}).
+      // Exact BikeBooking.tsx fields, plus Magic Checkout off so Continue is not a dead screen.
       var options = {
         key: n.key,
         amount: n.amount,
@@ -36,6 +36,9 @@
         prefill: n.prefill || {},
         notes: n.notes || {},
         theme: { color: "#18B368" },
+        one_click_checkout: false,
+        remember_customer: false,
+        retry: { enabled: true },
         handler: function (response) {
           post({
             type: "success",
