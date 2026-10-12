@@ -1080,9 +1080,10 @@ class OtpReveal extends StatelessWidget {
           SelectableText(
             code,
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 36,
+              fontSize: 42,
               fontWeight: FontWeight.w800,
-              letterSpacing: 6,
+              letterSpacing: 10,
+              color: Evuddy.greenDeep,
             ),
           ),
           if (hint != null) ...[
@@ -1114,6 +1115,117 @@ class OtpReveal extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class RideSwipeBar extends StatefulWidget {
+  const RideSwipeBar({
+    super.key,
+    required this.label,
+    required this.onConfirm,
+    this.hint,
+    this.busy = false,
+  });
+
+  final String label;
+  final String? hint;
+  final bool busy;
+  final Future<void> Function() onConfirm;
+
+  @override
+  State<RideSwipeBar> createState() => _RideSwipeBarState();
+}
+
+class _RideSwipeBarState extends State<RideSwipeBar> {
+  double _x = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.hint != null) ...[
+          Text(
+            widget.hint!,
+            style: GoogleFonts.plusJakartaSans(
+              color: Evuddy.muted,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        LayoutBuilder(
+          builder: (context, box) {
+            final max = (box.maxWidth - 64).clamp(120.0, 400.0);
+            return Container(
+              height: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF3),
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+              ),
+              child: Stack(
+                alignment: Alignment.centerLeft,
+                children: [
+                  Center(
+                    child: Text(
+                      widget.busy ? 'Please wait…' : widget.label,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        letterSpacing: 0.8,
+                        color: Evuddy.greenDeep,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 6 + _x,
+                    top: 6,
+                    child: GestureDetector(
+                      onHorizontalDragUpdate: widget.busy
+                          ? null
+                          : (d) {
+                              setState(() {
+                                _x = (_x + d.delta.dx).clamp(0, max);
+                              });
+                            },
+                      onHorizontalDragEnd: widget.busy
+                          ? null
+                          : (_) async {
+                              final done = _x >= max * 0.82;
+                              setState(() => _x = 0);
+                              if (done) await widget.onConfirm();
+                            },
+                      child: Container(
+                        width: 52,
+                        height: 52,
+                        decoration: const BoxDecoration(
+                          color: Evuddy.green,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0x3316A34A),
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }

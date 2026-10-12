@@ -16,7 +16,7 @@ class DepositWalletScreen extends StatelessWidget {
       kicker: 'Hold only',
       title: 'Security deposit',
       subtitle:
-          'This is not a recharge wallet. Rent to Own holds ${CatalogRates.inr(CatalogRates.securityDeposit)}. When the scooter is back we release it from Refunds.',
+          'Same as evuddy.com: bookings hold ${CatalogRates.inr(CatalogRates.securityDeposit)} refundable deposit. This is not UPI. EVUDDY wallet credit is separate and can pay Book EV when the balance covers the amount.',
       footer: EvuddyButton(
         label: 'Open refunds',
         onPressed: () => Navigator.push(context, evuddyRoute(const RefundDashboardScreen())),
@@ -54,10 +54,10 @@ class DepositWalletScreen extends StatelessWidget {
         const SizedBox(height: 14),
         const InfoNote(
           text:
-              'Rental plans do not take a deposit. Rent to Own: ₹300 / day for 20 months plus this one-time hold. No top-ups, no wallet spend.',
+              'GST-included fare plus ₹2,500 deposit on every Book EV, matching the website. Deposit is refunded after return. EVUDDY wallet is credit from refunds/admin — not PhonePe.',
         ),
         const SizedBox(height: 14),
-        _Step(n: '1', t: 'Pay hold', d: 'Razorpay ${CatalogRates.inr(CatalogRates.securityDeposit)} on Rent to Own.'),
+        _Step(n: '1', t: 'Pay hold', d: 'Razorpay ${CatalogRates.inr(CatalogRates.securityDeposit)} deposit with the fare.'),
         _Step(n: '2', t: 'Ride', d: 'Yard keeps the hold while the scooter is with you.'),
         _Step(n: '3', t: 'Return', d: 'Ride-end OTP at the hub starts the refund.'),
       ],

@@ -221,7 +221,7 @@ class _AccountScreenState extends State<AccountScreen> {
                         style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
                       ),
                       Text(
-                        'Hold only · no recharge',
+                        'Wallet ${CatalogRates.inr(d.walletAvailable)} · deposit hold ${CatalogRates.inr(d.depositHeld)}',
                         style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
                       ),
                     ],

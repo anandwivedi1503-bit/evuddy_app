@@ -48,6 +48,8 @@ class RegistrationDraft {
   double depositHeld = 0;
   String depositStatus = 'none'; // none | held | refund_pending | released
   String? depositBookingId;
+  double walletAvailable = 0;
+  String walletStatus = '';
 
   String get depositLabel {
     switch (depositStatus) {
@@ -100,6 +102,8 @@ class RegistrationDraft {
     }
     approvalStatus = lookup.approvalStatus;
     bookingEnabled = lookup.bookingEnabled || RiderLookup.isApprovedStatus(lookup.approvalStatus);
+    walletAvailable = lookup.walletAvailable;
+    walletStatus = lookup.walletStatus;
     persist();
     riderSessionTick.value++;
   }
@@ -168,6 +172,8 @@ class RegistrationDraft {
     depositHeld = 0;
     depositStatus = 'none';
     depositBookingId = null;
+    walletAvailable = 0;
+    walletStatus = '';
     persist();
     riderSessionTick.value++;
   }

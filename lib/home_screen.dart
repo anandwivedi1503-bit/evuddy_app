@@ -184,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '1 City & hub  ·  2 Scooter  ·  3 Reserve  ·  4 Razorpay',
+                              '1 City & hub  ·  2 Scooter  ·  3 Reserve  ·  4 Razorpay / wallet',
                               style: GoogleFonts.plusJakartaSans(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 15,
@@ -193,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Same steps as evuddy.com/book-bike. Pickup OTP after ₹1. Yard confirms it. Ride-end OTP after remaining is ₹0.',
+                              'Same steps as evuddy.com/book-bike. GST-included fare + ₹2,500 deposit. Pickup OTP after ₹1. Yard confirms it. Ride-end OTP after remaining is ₹0.',
                               style: GoogleFonts.plusJakartaSans(
                                 color: Evuddy.muted,
                                 height: 1.4,

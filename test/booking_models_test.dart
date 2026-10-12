@@ -139,6 +139,53 @@ void main() {
       }).inRide,
       isTrue,
     );
+    expect(
+      RiderBooking.fromJson({
+        'rentalMode': 'Rent To Own',
+        'pendingAmount': 2800,
+        'receivedAmount': 0,
+      }).remainingPayLocked,
+      isTrue,
+    );
+    expect(
+      RiderBooking.fromJson({
+        'rentalMode': 'Daily',
+        'receivedAmount': 0,
+        'pendingAmount': 2750,
+      }).remainingPayLocked,
+      isFalse,
+    );
+  });
+
+  test('parses wallet from rider lookup and PaymentStart flags', () {
+    final lookup = RiderLookup.fromData({
+      'riderId': 'R1',
+      'approvalStatus': 'Approved',
+      'walletAvailable': 2500,
+      'walletStatus': 'Active',
+    });
+    expect(lookup.walletAvailable, 2500);
+    expect(lookup.walletBlocked, isFalse);
+    final captured = PaymentStart.settled(
+      booking: RiderBooking.fromJson({
+        'bookingId': 'BK-1',
+        'pickupOTP': '1234',
+        'receivedAmount': 2750,
+        'pendingAmount': 0,
+      }),
+      wallet: true,
+    );
+    expect(captured.needsCheckout, isFalse);
+    expect(captured.wallet, isTrue);
+    expect(captured.booking!.hasPickupOtp, isTrue);
+    final order = PaymentStart.checkout(
+      RazorpayOrder.fromJson({
+        'keyId': 'rzp_live_x',
+        'orderId': 'order_1',
+        'amount': 100,
+      }),
+    );
+    expect(order.needsCheckout, isTrue);
   });
 
   test('sniffs jpeg/png/webp and rejects mismatch names', () {
@@ -177,6 +224,9 @@ void main() {
     expect(FleetPartner.high.invest(5), 450000);
     expect(CatalogRates.amountForDuration('Hourly'), 60);
     expect(CatalogRates.amountForDuration('Daily'), 250);
+    expect(CatalogRates.payableForDuration('Daily'), 2750);
+    expect(CatalogRates.payableForDuration('Rent To Own'), 2800);
+    expect(CatalogRates.gstInclusive(250).total, 250);
     expect(CatalogRates.payload()['hourly'], 60);
     expect(CatalogRates.payload()['daily'], 250);
     expect(RazorpayOrder.fromJson({
