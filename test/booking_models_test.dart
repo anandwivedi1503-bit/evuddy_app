@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:evuddy_app/api/evuddy_api.dart';
+import 'package:evuddy_app/api/firebase_phone.dart';
 import 'package:evuddy_app/api/partner_pdf.dart';
+import 'package:evuddy_app/state/registration_draft.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -139,6 +143,53 @@ void main() {
       }).inRide,
       isTrue,
     );
+    expect(
+      RiderBooking.fromJson({
+        'rentalMode': 'Rent To Own',
+        'pendingAmount': 2800,
+        'receivedAmount': 0,
+      }).remainingPayLocked,
+      isTrue,
+    );
+    expect(
+      RiderBooking.fromJson({
+        'rentalMode': 'Daily',
+        'receivedAmount': 0,
+        'pendingAmount': 2750,
+      }).remainingPayLocked,
+      isFalse,
+    );
+  });
+
+  test('parses wallet from rider lookup and PaymentStart flags', () {
+    final lookup = RiderLookup.fromData({
+      'riderId': 'R1',
+      'approvalStatus': 'Approved',
+      'walletAvailable': 2500,
+      'walletStatus': 'Active',
+    });
+    expect(lookup.walletAvailable, 2500);
+    expect(lookup.walletBlocked, isFalse);
+    final captured = PaymentStart.settled(
+      booking: RiderBooking.fromJson({
+        'bookingId': 'BK-1',
+        'pickupOTP': '1234',
+        'receivedAmount': 2750,
+        'pendingAmount': 0,
+      }),
+      wallet: true,
+    );
+    expect(captured.needsCheckout, isFalse);
+    expect(captured.wallet, isTrue);
+    expect(captured.booking!.hasPickupOtp, isTrue);
+    final order = PaymentStart.checkout(
+      RazorpayOrder.fromJson({
+        'keyId': 'rzp_live_x',
+        'orderId': 'order_1',
+        'amount': 100,
+      }),
+    );
+    expect(order.needsCheckout, isTrue);
   });
 
   test('sniffs jpeg/png/webp and rejects mismatch names', () {
@@ -177,6 +228,9 @@ void main() {
     expect(FleetPartner.high.invest(5), 450000);
     expect(CatalogRates.amountForDuration('Hourly'), 60);
     expect(CatalogRates.amountForDuration('Daily'), 250);
+    expect(CatalogRates.payableForDuration('Daily'), 2750);
+    expect(CatalogRates.payableForDuration('Rent To Own'), 2800);
+    expect(CatalogRates.gstInclusive(250).total, 250);
     expect(CatalogRates.payload()['hourly'], 60);
     expect(CatalogRates.payload()['daily'], 250);
     expect(RazorpayOrder.fromJson({
@@ -224,6 +278,52 @@ void main() {
         'amount': 100,
       }).name,
       'Shubhrax Mobility Limited',
+    );
+  });
+
+  test('jwtExpired matches Firebase hour-long tokens with 90s skew', () {
+    String token({required int exp}) {
+      final header = base64Url
+          .encode(utf8.encode('{"alg":"none","typ":"JWT"}'))
+          .replaceAll('=', '');
+      final payload = base64Url
+          .encode(utf8.encode(jsonEncode({'exp': exp, 'user_id': 'uid'})))
+          .replaceAll('=', '');
+      return '$header.$payload.sig';
+    }
+
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    expect(EvuddyFirebase.jwtExpired(token(exp: now + 3600)), isFalse);
+    expect(EvuddyFirebase.jwtExpired(token(exp: now - 5)), isTrue);
+    expect(EvuddyFirebase.jwtExpired(token(exp: now + 30)), isTrue);
+    expect(EvuddyFirebase.jwtExpired('not-a-jwt'), isTrue);
+    expect(EvuddyFirebase.jwtExpired('a.b'), isTrue);
+  });
+
+  test('pay 401 copy is treated as an auth error', () {
+    expect(
+      registrationDraft.isAuthError(
+        ApiException(
+          'Please sign in again with your registered mobile number to pay.',
+        ),
+      ),
+      isTrue,
+    );
+    expect(registrationDraft.isAuthError(ApiException('Booking not found.')), isFalse);
+  });
+
+  test('completed and cancelled bookings are not live', () {
+    expect(
+      RiderBooking.fromJson({'bookingId': 'BK-1', 'rideStatus': 'Completed'}).completed,
+      isTrue,
+    );
+    expect(
+      RiderBooking.fromJson({
+        'bookingId': 'BK-2',
+        'rideStatus': 'In Ride',
+        'pendingAmount': 100,
+      }).completed,
+      isFalse,
     );
   });
 }

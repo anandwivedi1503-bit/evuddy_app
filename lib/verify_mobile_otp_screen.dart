@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
+import 'api/firebase_phone.dart';
 import 'api/web_otp.dart';
 import 'kyc_details_screen.dart';
 import 'login_screen.dart';
@@ -109,9 +110,11 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
         ..phoneVerified = true
         ..firebaseUid = session.uid
         ..firebaseIdToken = session.token
-        ..firebaseRefreshToken =
-            session.refreshToken.isEmpty ? registrationDraft.firebaseRefreshToken : session.refreshToken;
+        ..firebaseRefreshToken = session.refreshToken.isNotEmpty
+            ? session.refreshToken
+            : (EvuddyFirebase.lastRefreshToken ?? registrationDraft.firebaseRefreshToken);
       await registrationDraft.persist();
+      await registrationDraft.freshToken(force: true);
       await _routeAfterOtp();
     } catch (e) {
       if (!mounted) return;
@@ -125,7 +128,8 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
   }
 
   Future<void> _routeAfterOtp() async {
-    final token = registrationDraft.firebaseIdToken;
+    final token = await registrationDraft.freshToken(force: true) ??
+        registrationDraft.firebaseIdToken;
     if (token == null) return;
     try {
       final lookup = await EvuddyApi.lookupRider(
@@ -142,9 +146,11 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
           });
           return;
         }
-        if (registrationDraft.canBook) {
+        if (registrationDraft.canBook || registrationDraft.otpGate == 'book') {
+          await registrationDraft.refreshFromServer(forceToken: true);
           registrationDraft.jumpToTab(1);
           await registrationDraft.persist();
+          if (!mounted) return;
           Navigator.of(context).popUntil((r) => r.isFirst);
           return;
         }
@@ -160,6 +166,11 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       return;
     }
     if (!mounted) return;
+    if (registrationDraft.otpGate == 'book') {
+      registrationDraft.jumpToTab(1);
+      Navigator.of(context).popUntil((r) => r.isFirst);
+      return;
+    }
     if (registrationDraft.fullName.isNotEmpty && registrationDraft.email.isNotEmpty) {
       Navigator.pushReplacement(context, evuddyRoute(const KycDetailsScreen()));
       return;
