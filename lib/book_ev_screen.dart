@@ -159,13 +159,18 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
+    if (canBook && registrationDraft.hasLiveBooking) {
+      return RideReadyScreen(showBack: widget.showBack);
+    }
     final plan = registrationDraft.chosenPlan;
     return AuthScreen(
       showBack: widget.showBack,
       kicker: 'Book EV',
       title: 'How do you want to ride?',
       subtitle:
-          'Pick rental or Rent to Own. City, hub, scooter, reserve, then Razorpay UPI or card — same as evuddy.com/book-bike.',
+          registrationDraft.chosenPlan != null
+              ? 'Your plan is saved from evuddy.com. Confirm city and hub, then continue.'
+              : 'New booking: pick rental or Rent to Own. Same as evuddy.com/book-bike.',
       error: error,
       footer: EvuddyButton(
         label: !canBook

@@ -20,6 +20,7 @@ class AuthScreen extends StatelessWidget {
     this.titleStyle,
     this.expanded,
     this.expandedInset,
+    this.compact = false,
   });
 
   final String title;
@@ -35,6 +36,7 @@ class AuthScreen extends StatelessWidget {
   /// Fills leftover height (used so Recaptcha image grids are not clipped).
   final Widget? expanded;
   final EdgeInsetsGeometry? expandedInset;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +77,13 @@ class AuthScreen extends StatelessWidget {
                                 Text(
                                   title,
                                   style: titleStyle ??
-                                      Theme.of(context).textTheme.displaySmall,
+                                      (compact
+                                          ? Theme.of(context)
+                                              .textTheme
+                                              .headlineMedium
+                                          : Theme.of(context)
+                                              .textTheme
+                                              .displaySmall),
                                 ),
                                 if (subtitle != null) ...[
                                   const SizedBox(height: 10),
@@ -162,7 +170,7 @@ class EvuddyHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 64,
+      height: 48,
       child: Row(
         children: [
           if (showBack)
@@ -174,13 +182,10 @@ class EvuddyHeader extends StatelessWidget {
                   },
             )
           else
-            const SizedBox(width: 44),
+            const SizedBox(width: 40),
           Expanded(
             child: showLogo
-                ? const FittedBox(
-                    fit: BoxFit.contain,
-                    child: EvuddyLogo(height: 52),
-                  )
+                ? const EvuddyLogo(height: 28)
                 : const SizedBox.shrink(),
           ),
           trailing ?? const SizedBox(width: 40),
@@ -1072,18 +1077,36 @@ class OtpReveal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SurfaceCard(
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFECFDF3),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFBBF7D0)),
+      ),
       child: Column(
         children: [
-          Text(label, style: Theme.of(context).textTheme.labelSmall),
-          const SizedBox(height: 8),
-          SelectableText(
-            code,
+          Text(
+            label,
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 42,
+              fontSize: 11,
+              letterSpacing: 1.6,
               fontWeight: FontWeight.w800,
-              letterSpacing: 10,
               color: Evuddy.greenDeep,
+            ),
+          ),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: SelectableText(
+              code,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 40,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 8,
+                color: Evuddy.greenDeep,
+              ),
             ),
           ),
           if (hint != null) ...[

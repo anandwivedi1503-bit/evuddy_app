@@ -78,6 +78,38 @@ class RegistrationDraft {
 
   bool get canBook => phoneVerified && isApproved;
 
+  /// Website `/api/bookings/mine` — skip plan pick while this booking is live.
+  bool get hasLiveBooking {
+    final b = activeBooking;
+    if (b == null || b.bookingId.isEmpty) return false;
+    if (b.completed) return true;
+    return true;
+  }
+
+  void applyActiveBooking(RiderBooking? mine) {
+    activeBooking = mine;
+    if (mine == null || mine.bookingId.isEmpty) {
+      persist();
+      riderSessionTick.value++;
+      return;
+    }
+    if (mine.isRentToOwn) {
+      chosenPlan = 'rto';
+      chosenDuration = 'Rent To Own';
+    } else {
+      chosenPlan = 'rental';
+      const modes = ['Hourly', 'Daily', 'Weekly', 'Monthly'];
+      if (modes.contains(mine.rentalMode)) {
+        chosenDuration = mine.rentalMode;
+      } else {
+        chosenDuration ??= 'Daily';
+      }
+    }
+    if (mine.city.isNotEmpty) chosenCity = mine.city;
+    persist();
+    riderSessionTick.value++;
+  }
+
   bool get aadhaarFront => aadhaarFrontPath != null;
   bool get aadhaarBack => aadhaarBackPath != null;
   bool get licenseFront => licenseFrontPath != null;
@@ -94,10 +126,10 @@ class RegistrationDraft {
     if (lookup.riderId != null && lookup.riderId!.isNotEmpty) {
       riderId = lookup.riderId;
     }
-    if (lookup.fullName != null && lookup.fullName!.isNotEmpty && fullName.isEmpty) {
+    if (lookup.fullName != null && lookup.fullName!.isNotEmpty) {
       fullName = lookup.fullName!;
     }
-    if (lookup.email != null && lookup.email!.isNotEmpty && email.isEmpty) {
+    if (lookup.email != null && lookup.email!.isNotEmpty) {
       email = lookup.email!;
     }
     approvalStatus = lookup.approvalStatus;
@@ -147,8 +179,7 @@ class RegistrationDraft {
       }
       if (lookup.found) applyLookup(lookup);
       try {
-        final mine = await EvuddyApi.myBooking(token);
-        if (mine != null) activeBooking = mine;
+        applyActiveBooking(await EvuddyApi.myBooking(token));
       } catch (_) {}
       persist();
       return lookup;
@@ -205,6 +236,20 @@ class RegistrationDraft {
           : depositHeld;
       depositStatus = m['depositStatus']?.toString() ?? depositStatus;
       depositBookingId = m['depositBookingId']?.toString();
+      walletAvailable = (m['walletAvailable'] is num)
+          ? (m['walletAvailable'] as num).toDouble()
+          : walletAvailable;
+      walletStatus = m['walletStatus']?.toString() ?? walletStatus;
+      final rawBooking = m['activeBooking'];
+      if (rawBooking is Map) {
+        activeBooking = RiderBooking.fromJson(rawBooking);
+        if (activeBooking!.isRentToOwn) {
+          chosenPlan = 'rto';
+          chosenDuration = 'Rent To Own';
+        } else if (activeBooking!.rentalMode.isNotEmpty) {
+          chosenPlan = 'rental';
+        }
+      }
     } catch (_) {}
   }
 
@@ -232,6 +277,9 @@ class RegistrationDraft {
           'depositHeld': depositHeld,
           'depositStatus': depositStatus,
           'depositBookingId': depositBookingId,
+          'walletAvailable': walletAvailable,
+          'walletStatus': walletStatus,
+          if (activeBooking != null) 'activeBooking': activeBooking!.toJson(),
         }),
       );
     } catch (_) {}

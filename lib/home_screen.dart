@@ -69,6 +69,10 @@ class _HomeScreenState extends State<HomeScreen> {
       registrationDraft.chosenDuration = fare.plan == 'rto' ? 'Rent to Own' : fare.id;
     }
     if (registrationDraft.phoneVerified && registrationDraft.canBook) {
+      if (registrationDraft.hasLiveBooking) {
+        Navigator.push(context, evuddyRoute(const RideReadyScreen()));
+        return;
+      }
       Navigator.push(context, evuddyRoute(const BookEvScreen()));
       return;
     }

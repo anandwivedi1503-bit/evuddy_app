@@ -12,7 +12,8 @@ import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 
 class RideReadyScreen extends StatefulWidget {
-  const RideReadyScreen({super.key});
+  const RideReadyScreen({super.key, this.showBack = true});
+  final bool showBack;
 
   @override
   State<RideReadyScreen> createState() => _RideReadyScreenState();
@@ -156,9 +157,17 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       RiderBooking? mine = booking;
       final token = await _token();
       if (token != null) {
-        mine = await EvuddyApi.myBooking(token) ?? mine;
-        if (mine != null) {
-          registrationDraft.activeBooking = mine;
+        try {
+          final latest = await EvuddyApi.myBooking(token);
+          if (latest != null) {
+            mine = latest;
+            registrationDraft.applyActiveBooking(latest);
+          } else {
+            registrationDraft.applyActiveBooking(null);
+            mine = null;
+          }
+        } catch (_) {
+          if (mine != null) registrationDraft.applyActiveBooking(mine);
         }
         try {
           tickets = await EvuddyApi.myTickets(token);
@@ -248,8 +257,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         referenceBy: d.comingThrough,
       );
       registrationDraft
-        ..activeBooking = created
-        ..chosenDuration = duration;
+        ..chosenDuration = duration
+        ..applyActiveBooking(created);
       await registrationDraft.persist();
       if (!mounted) return;
       setState(() {
@@ -288,7 +297,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       final mine = await EvuddyApi.myBooking(token);
       if (mine != null) {
         b = mine;
-        registrationDraft.activeBooking = mine;
+        registrationDraft.applyActiveBooking(mine);
         if (mounted) setState(() => booking = mine);
       }
     }
@@ -358,7 +367,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       }
       final mine = await EvuddyApi.myBooking(token);
       if (mine != null) verified = verified.mergedWith(mine);
-      registrationDraft.activeBooking = verified;
+      registrationDraft.applyActiveBooking(verified);
       if (pay >= 1) {
         final held = verified.securityDeposit > 0
             ? verified.securityDeposit
@@ -438,7 +447,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     final token = await _token();
     if (token == null) return;
     final current = booking;
-    if (start && current != null && !current.readyForPickup) {
+    if (start && current != null && !current.pickupOtpVerified) {
       setState(() => error = 'Wait for the yard to enter pickup OTP first — same as evuddy.com.');
       return;
     }
@@ -465,13 +474,17 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         start: start,
         bookingId: booking?.bookingId,
       );
-      var mine = await EvuddyApi.myBooking(token) ?? booking;
+      RiderBooking? mine = booking;
+      try {
+        mine = await EvuddyApi.myBooking(token) ?? booking;
+      } catch (_) {}
       if (mine != null) {
         mine = mine.copy(
           rideEndOtp: ended.rideEndOtp.isNotEmpty ? ended.rideEndOtp : null,
           rideStatus: ended.rideStatus.isNotEmpty ? ended.rideStatus : null,
           message: ended.message,
         );
+        registrationDraft.applyActiveBooking(mine);
       }
       if (!start &&
           registrationDraft.depositHeld > 0 &&
@@ -547,30 +560,30 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         ? 4
         : wizard;
     return AuthScreen(
-      step: step,
+      showBack: widget.showBack,
+      compact: b != null && b.bookingId.isNotEmpty,
+      step: b != null && b.bookingId.isNotEmpty ? null : step,
       of: 4,
       kicker: b != null && b.bookingId.isNotEmpty
-          ? 'SECURE PAYMENT'
+          ? (b.bookingId.isEmpty ? 'BOOKING' : b.bookingId)
           : (wizard == 3 ? 'BOOKING REVIEW' : (rental ? 'CHOOSE SCOOTER' : 'RENT TO OWN')),
       title: b != null && b.bookingId.isNotEmpty
           ? (b.completed
               ? 'Ride complete'
               : remainingPay
-                  ? 'Pay the remaining amount'
+                  ? 'Pay remaining'
                   : (b.due <= 0.009 && b.hasPickupOtp
                       ? "You're booked"
-                      : 'Complete your payment'))
+                      : 'Pay to confirm'))
           : (wizard == 3
               ? 'Review your booking'
               : (rental ? 'Pick duration and scooter' : '${CatalogRates.rtoMonths}-month ownership')),
       subtitle: b != null && b.bookingId.isNotEmpty
-          ? (remainingPay
-              ? 'Razorpay charges only the remaining due — same as evuddy.com/book-bike. UPI and cards only.'
-              : (b.due <= 0.009
-                  ? 'Payment is complete. Use the OTP at the yard.'
-                  : (rental
-                      ? 'Pay any amount from ₹1 for pickup OTP. Fare is GST included plus ₹2,500 refundable deposit.'
-                      : 'Pay today’s full GST-included fare plus the ₹2,500 deposit in one go.')))
+          ? (b.pickupOtpVerified
+              ? 'Yard confirmed pickup. Slide to start, then pay any remaining on Razorpay.'
+              : (remainingPay
+                  ? 'Razorpay UPI or card. Same booking as evuddy.com.'
+                  : 'Pay from ₹1 for pickup OTP. Remaining can wait until return.'))
           : (wizard == 3
               ? 'GST included fare + refundable deposit. Then Razorpay — same as evuddy.com.'
               : (rental
@@ -959,7 +972,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Evuddy.muted, height: 1.35),
           ),
         ],
-        if (b.readyForPickup && !b.inRide) ...[
+        if (b.pickupOtpVerified && !b.inRide) ...[
           const SizedBox(height: 12),
           RideSwipeBar(
             label: 'Slide to start ride',

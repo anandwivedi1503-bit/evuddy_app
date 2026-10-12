@@ -176,7 +176,9 @@ class EvuddyApi {
         .get(_u('/api/bookings/mine'), headers: _auth(idToken))
         .timeout(const Duration(seconds: 15));
     final j = _json(r);
-    if (j['success'] != true) return null;
+    if (r.statusCode == 401 || j['success'] != true) {
+      throw ApiException(_message(j, 'Unable to load your booking.'));
+    }
     final data = j['data'];
     if (data is! Map) return null;
     return RiderBooking.fromJson(data);
@@ -868,6 +870,29 @@ class RiderBooking {
       message: message ?? this.message,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'mongoId': mongoId,
+        '_id': mongoId,
+        'bookingId': bookingId,
+        'rentalMode': rentalMode,
+        'paymentStatus': paymentStatus,
+        'rideStatus': rideStatus,
+        'pendingAmount': pendingAmount,
+        'receivedAmount': receivedAmount,
+        'paymentDue': paymentDue,
+        'pickupOTP': pickupOtp,
+        'rideEndOTP': rideEndOtp,
+        'pickupOTPVerified': pickupOtpVerified,
+        'vehicleId': vehicleId,
+        'vehicleModel': vehicleModel,
+        'vehicleNumber': vehicleNumber,
+        'startHub': startHub,
+        'pickupHubName': pickupHubName,
+        'city': city,
+        'securityDeposit': securityDeposit,
+        'message': message,
+      };
 
   RiderBooking mergedWith(RiderBooking live) {
     final preferLive = live.receivedAmount + 0.009 >= receivedAmount;

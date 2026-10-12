@@ -143,8 +143,10 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
           return;
         }
         if (registrationDraft.canBook) {
+          await registrationDraft.refreshFromServer();
           registrationDraft.jumpToTab(1);
           await registrationDraft.persist();
+          if (!mounted) return;
           Navigator.of(context).popUntil((r) => r.isFirst);
           return;
         }
