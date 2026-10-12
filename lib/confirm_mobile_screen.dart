@@ -18,11 +18,19 @@ class ConfirmMobileScreen extends StatefulWidget {
 class _ConfirmMobileScreenState extends State<ConfirmMobileScreen> {
   late final TextEditingController phone;
   String? error;
+  bool _openedOtp = false;
 
   @override
   void initState() {
     super.initState();
     phone = TextEditingController(text: registrationDraft.phone);
+    if (registrationDraft.otpGate == 'book' &&
+        registrationDraft.phoneVerified &&
+        registrationDraft.phone.length == 10) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_openedOtp) _send();
+      });
+    }
   }
 
   @override
@@ -40,6 +48,7 @@ class _ConfirmMobileScreenState extends State<ConfirmMobileScreen> {
     registrationDraft
       ..phone = p
       ..otpGate = 'book';
+    _openedOtp = true;
     Navigator.push(context, evuddyRoute(const VerifyMobileOtpScreen()));
   }
 
@@ -49,8 +58,9 @@ class _ConfirmMobileScreenState extends State<ConfirmMobileScreen> {
       showBack: false,
       kicker: 'Book EV',
       title: 'Confirm your\nmobile number',
-      subtitle:
-          'If this number is already approved, you go straight to booking.',
+      subtitle: registrationDraft.hasLiveBooking
+          ? 'Same registered mobile as this booking. OTP refreshes Firebase so Razorpay can charge remaining.'
+          : 'If this number is already approved, you go straight to booking.',
       error: error,
       footer: EvuddyButton(label: 'Send OTP', onPressed: _send),
       children: [

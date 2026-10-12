@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
+import 'api/firebase_phone.dart';
 import 'api/razorpay_checkout.dart';
+import 'confirm_mobile_screen.dart';
 import 'open_link.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
@@ -36,6 +38,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   String? helpStatus;
   List<SupportTicket> tickets = [];
   Timer? _poll;
+  Timer? _tokenKeepalive;
 
   bool get rental {
     if (registrationDraft.chosenPlan == 'rto') return false;
@@ -114,19 +117,69 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       if (b == null || b.completed) return;
       if (b.hasPickupOtp && !b.pickupOtpVerified) _load(silent: true);
       if (b.readyForPickup && !b.inRide) _load(silent: true);
+      if (b.inRide && _remainingCharge(b) > 0.009) _load(silent: true);
+    });
+    _tokenKeepalive = Timer.periodic(const Duration(minutes: 20), (_) {
+      registrationDraft.freshToken(force: true);
     });
   }
 
   @override
   void dispose() {
     _poll?.cancel();
+    _tokenKeepalive?.cancel();
     amount.dispose();
     help.dispose();
     super.dispose();
   }
 
-  Future<String?> _token() async {
-    return registrationDraft.freshToken();
+  bool _reauthOpen = false;
+
+  Future<String?> _token({bool force = true, bool prompt = true}) async {
+    final token = await registrationDraft.freshToken(force: force);
+    if (token == null || token.isEmpty || EvuddyFirebase.jwtExpired(token)) {
+      if (prompt) _askReauth();
+      return null;
+    }
+    return token;
+  }
+
+  Future<T?> _withToken<T>(Future<T> Function(String token) run) async {
+    var token = await _token();
+    if (token == null) return null;
+    try {
+      return await run(token);
+    } catch (e) {
+      if (!registrationDraft.isAuthError(e)) rethrow;
+      token = await _token(force: true, prompt: false);
+      if (token == null) {
+        _askReauth();
+        return null;
+      }
+      try {
+        return await run(token);
+      } catch (e2) {
+        if (registrationDraft.isAuthError(e2)) {
+          _askReauth();
+          return null;
+        }
+        rethrow;
+      }
+    }
+  }
+
+  void _askReauth() {
+    if (!mounted || _reauthOpen) return;
+    _reauthOpen = true;
+    setState(() {
+      error =
+          'Firebase session expired after waiting at the yard. Confirm this same registered mobile with OTP — then pay remaining. Booking is kept.';
+    });
+    registrationDraft.otpGate = 'book';
+    Navigator.push(context, evuddyRoute(const ConfirmMobileScreen())).then((_) {
+      _reauthOpen = false;
+      if (mounted) _load();
+    });
   }
 
   Future<void> _load({bool silent = false}) async {
@@ -155,7 +208,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         ..sort((a, b) => b.batteryPercentage.compareTo(a.batteryPercentage));
 
       RiderBooking? mine = booking;
-      final token = await _token();
+      final token = await _token(force: !silent, prompt: false);
       if (token != null) {
         try {
           final latest = await EvuddyApi.myBooking(token);
@@ -287,18 +340,26 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   }
 
   Future<void> _pay({bool useWallet = false}) async {
-    final token = await _token();
-    var b = booking;
-    if (token == null || b == null) {
+    if (booking == null) {
       setState(() => error = 'Reserve a scooter first.');
       return;
     }
+    var b = booking!;
+    var token = await _token();
+    if (token == null) return;
     if (b.mongoId.isEmpty) {
-      final mine = await EvuddyApi.myBooking(token);
-      if (mine != null) {
-        b = mine;
-        registrationDraft.applyActiveBooking(mine);
-        if (mounted) setState(() => booking = mine);
+      try {
+        final mine = await EvuddyApi.myBooking(token);
+        if (mine != null) {
+          b = mine;
+          registrationDraft.applyActiveBooking(mine);
+          if (mounted) setState(() => booking = mine);
+        }
+      } catch (e) {
+        if (registrationDraft.isAuthError(e)) {
+          _askReauth();
+          return;
+        }
       }
     }
     if (b.mongoId.isEmpty) {
@@ -311,7 +372,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       amount.text = _moneyInput(pay);
     }
     if (pay < 1 || pay > maxDue + 0.009) {
-      setState(() => error = b!.isRentToOwn
+      setState(() => error = b.isRentToOwn
           ? 'Rent to Own needs today’s full GST-included amount plus deposit in one payment.'
           : 'Enter a payment between ₹1 and ${CatalogRates.inr(maxDue)}.');
       return;
@@ -326,12 +387,19 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       error = null;
     });
     try {
-      final started = await EvuddyApi.startPayment(
-        idToken: token,
-        bookingMongoId: b.mongoId,
-        amountRupees: pay,
-        useWallet: useWallet,
+      final started = await _withToken(
+        (t) => EvuddyApi.startPayment(
+          idToken: t,
+          bookingMongoId: b.mongoId,
+          amountRupees: pay,
+          useWallet: useWallet,
+        ),
       );
+      if (started == null) {
+        if (mounted) setState(() => busy = false);
+        return;
+      }
+      token = registrationDraft.firebaseIdToken ?? token;
       if (!mounted) return;
       Map<String, String>? result;
       if (started.needsCheckout) {
@@ -357,14 +425,22 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       if (started.booking != null && result == null) {
         verified = started.booking!;
       } else {
-        verified = await EvuddyApi.verifyPayment(
-          idToken: token,
-          bookingMongoId: b.mongoId,
-          orderId: result?['orderId'],
-          paymentId: result?['paymentId'],
-          signature: result?['signature'],
+        final paid = await _withToken(
+          (t) => EvuddyApi.verifyPayment(
+            idToken: t,
+            bookingMongoId: b.mongoId,
+            orderId: result?['orderId'],
+            paymentId: result?['paymentId'],
+            signature: result?['signature'],
+          ),
         );
+        if (paid == null) {
+          if (mounted) setState(() => busy = false);
+          return;
+        }
+        verified = paid;
       }
+      token = registrationDraft.firebaseIdToken ?? token;
       final mine = await EvuddyApi.myBooking(token);
       if (mine != null) verified = verified.mergedWith(mine);
       registrationDraft.applyActiveBooking(verified);
@@ -412,10 +488,12 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        busy = false;
-        error = e.toString();
-      });
+      setState(() => busy = false);
+      if (registrationDraft.isAuthError(e)) {
+        _askReauth();
+        return;
+      }
+      setState(() => error = e.toString());
     }
   }
 
@@ -444,8 +522,6 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   }
 
   Future<void> _ride(bool start) async {
-    final token = await _token();
-    if (token == null) return;
     final current = booking;
     if (start && current != null && !current.pickupOtpVerified) {
       setState(() => error = 'Wait for the yard to enter pickup OTP first — same as evuddy.com.');
@@ -469,14 +545,21 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       error = null;
     });
     try {
-      final ended = await EvuddyApi.rideAction(
-        idToken: token,
-        start: start,
-        bookingId: booking?.bookingId,
+      final ended = await _withToken(
+        (token) => EvuddyApi.rideAction(
+          idToken: token,
+          start: start,
+          bookingId: booking?.bookingId,
+        ),
       );
+      if (ended == null) {
+        if (mounted) setState(() => busy = false);
+        return;
+      }
       RiderBooking? mine = booking;
       try {
-        mine = await EvuddyApi.myBooking(token) ?? booking;
+        final token = registrationDraft.firebaseIdToken;
+        if (token != null) mine = await EvuddyApi.myBooking(token) ?? booking;
       } catch (_) {}
       if (mine != null) {
         mine = mine.copy(
@@ -500,10 +583,12 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        busy = false;
-        error = e.toString();
-      });
+      setState(() => busy = false);
+      if (registrationDraft.isAuthError(e)) {
+        _askReauth();
+        return;
+      }
+      setState(() => error = e.toString());
     }
   }
 
@@ -947,9 +1032,31 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       return EvuddyButton(label: 'Refresh booking', onPressed: _load);
     }
     final payDue = b.due > 0.009 || remainingPay;
+    final waitForStart = b.pickupOtpVerified && !b.inRide;
     return Column(
       children: [
-        if (payDue) ...[
+        if (waitForStart) ...[
+          RideSwipeBar(
+            label: 'Slide to start ride',
+            hint: 'Yard has saved your pickup OTP. Slide to start — then pay remaining on Razorpay.',
+            busy: busy,
+            onConfirm: () => _ride(true),
+          ),
+          if (payDue) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Remaining ${CatalogRates.inr(_remainingCharge(b))} is paid after this slide — same as evuddy.com.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Evuddy.muted, height: 1.35),
+            ),
+          ],
+        ] else if (b.hasPickupOtp && !b.pickupOtpVerified) ...[
+          const SizedBox(height: 8),
+          EvuddyGhostButton(label: 'Resend pickup OTP SMS', onPressed: _resendOtp),
+          const SizedBox(height: 8),
+          EvuddyGhostButton(label: 'Refresh after yard confirms OTP', onPressed: _load),
+        ],
+        if (payDue && !waitForStart) ...[
           EvuddyButton(
             label: remainingPay
                 ? 'Pay remaining ${CatalogRates.inr(_remainingCharge(b))} with Razorpay'
@@ -971,20 +1078,6 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Evuddy.muted, height: 1.35),
           ),
-        ],
-        if (b.pickupOtpVerified && !b.inRide) ...[
-          const SizedBox(height: 12),
-          RideSwipeBar(
-            label: 'Slide to start ride',
-            hint: 'Yard has saved your pickup OTP. Slide to mark the ride as started.',
-            busy: busy,
-            onConfirm: () => _ride(true),
-          ),
-        ] else if (b.hasPickupOtp && !b.pickupOtpVerified) ...[
-          const SizedBox(height: 8),
-          EvuddyGhostButton(label: 'Resend pickup OTP SMS', onPressed: _resendOtp),
-          const SizedBox(height: 8),
-          EvuddyGhostButton(label: 'Refresh after yard confirms OTP', onPressed: _load),
         ],
         if (b.inRide && b.due <= 0.009 && b.rideEndOtp.isEmpty && !b.isRentToOwn) ...[
           const SizedBox(height: 12),

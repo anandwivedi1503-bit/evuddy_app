@@ -21,6 +21,7 @@ class AuthScreen extends StatelessWidget {
     this.expanded,
     this.expandedInset,
     this.compact = false,
+    this.headerTrailing,
   });
 
   final String title;
@@ -37,6 +38,7 @@ class AuthScreen extends StatelessWidget {
   final Widget? expanded;
   final EdgeInsetsGeometry? expandedInset;
   final bool compact;
+  final Widget? headerTrailing;
 
   @override
   Widget build(BuildContext context) {
@@ -58,9 +60,8 @@ class AuthScreen extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
                     child: EvuddyHeader(
                       showBack: showBack,
-                      trailing: step == null
-                          ? null
-                          : StepChip(step: step!, of: of),
+                      trailing: headerTrailing ??
+                          (step == null ? null : StepChip(step: step!, of: of)),
                     ),
                   ),
                   Expanded(
