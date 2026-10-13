@@ -85,7 +85,16 @@ class RegistrationDraft {
     if (b.completed) return false;
     final status = b.rideStatus.toLowerCase();
     if (status.contains('cancel')) return false;
-    return true;
+    if (status.contains('complete')) return false;
+    if (b.inRide || b.readyForPickup || b.hasPickupOtp || b.pickupOtpVerified) {
+      return true;
+    }
+    final pay = b.paymentStatus.toLowerCase();
+    if (pay == 'pending' || pay == 'partial' || pay.contains('pending')) {
+      return true;
+    }
+    if (status.isEmpty && b.mongoId.isEmpty) return false;
+    return status.isNotEmpty;
   }
 
   void applyActiveBooking(RiderBooking? mine) {

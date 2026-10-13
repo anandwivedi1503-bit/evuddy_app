@@ -15,6 +15,7 @@ import 'submitted_screen.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 import 'widgets/promo.dart';
+import 'widgets/scenes.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key, this.onLoggedOut});
@@ -273,14 +274,7 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
         ),
         const SizedBox(height: 14),
-        GestureDetector(
-          onTap: () => Navigator.push(context, evuddyRoute(const InvestScreen())),
-          child: const ScenePhoto(
-            asset: Evuddy.investPosterAsset,
-            height: 200,
-            fit: BoxFit.contain,
-          ),
-        ),
+        const OfferAdCarousel(),
         const SizedBox(height: 14),
         EvuddyButton(
           label: 'Investment plans',

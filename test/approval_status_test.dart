@@ -85,5 +85,7 @@ void main() {
     expect(d.chosenPlan, 'rto');
     d.applyActiveBooking(null);
     expect(d.hasLiveBooking, isFalse);
+    d.activeBooking = const RiderBooking(bookingId: 'STALE');
+    expect(d.hasLiveBooking, isFalse);
   });
 }

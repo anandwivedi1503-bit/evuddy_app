@@ -996,11 +996,18 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         );
       }
       if (vehicles.isEmpty) {
-        return EvuddyGhostButton(label: 'Refresh scooters', onPressed: _load);
+        return EvuddyButton(
+          label: 'Refresh scooters',
+          icon: Icons.refresh_rounded,
+          onPressed: _load,
+        );
       }
       return EvuddyButton(
-        label: 'Continue',
-        onPressed: selected == null ? null : () => setState(() => wizard = 3),
+        label: 'Continue to review',
+        onPressed: () {
+          selected ??= vehicles.first;
+          setState(() => wizard = 3);
+        },
       );
     }
     if (b.completed) {
