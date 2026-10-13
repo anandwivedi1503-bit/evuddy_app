@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'state/registration_draft.dart';
+import 'theme/evuddy.dart';
 import 'upload_documents_screen.dart';
 import 'widgets/chrome.dart';
 import 'widgets/voice_fill.dart';
@@ -93,9 +94,10 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
   Widget build(BuildContext context) {
     return AuthScreen(
       kicker: 'KYC  ·  Step 3 of 4',
-      title: 'KYC details',
+      title: 'Verify who you are',
       subtitle:
-          'Aadhaar is required. Licence and references are optional. Tap the mic to speak numbers.',
+          'Aadhaar is required so ops can approve you for Book EV. Licence and references help the yard — optional. Speak numbers with the mic.',
+      hero: const ScenePhoto(asset: Evuddy.riderCityAsset, height: 160),
       step: 3,
       error: error,
       footer: EvuddyButton(label: 'Continue', onPressed: _continue),

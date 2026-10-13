@@ -188,8 +188,10 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
     final d = registrationDraft;
     return AuthScreen(
       kicker: 'Documents  ·  Step 4 of 4',
-      title: 'Upload documents',
-      subtitle: 'Aadhaar front, back and a clear profile photo. Camera or gallery.',
+      title: 'Clear photos, faster approval',
+      subtitle:
+          'Aadhaar front, back and a face photo. Camera or gallery. Same upload as evuddy.com — then admin Approve unlocks booking.',
+      hero: const ScenePhoto(asset: Evuddy.hubAsset, height: 150, fit: BoxFit.cover),
       step: 4,
       error: error,
       footer: EvuddyButton(

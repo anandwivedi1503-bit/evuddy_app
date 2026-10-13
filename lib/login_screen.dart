@@ -101,12 +101,13 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return AuthScreen(
       showBack: false,
-      kicker: 'Personal  ·  Step 1 of 4',
-      title: 'Personal Information',
+      kicker: 'Register  ·  Step 1 of 4',
+      title: 'Let’s get you riding',
       subtitle:
-          'Tap the mic to speak. We’ll send an OTP to this number.',
+          'New rider? Enter your details once. Already on evuddy.com? Use the same mobile — OTP unlocks booking and Razorpay.',
       step: 1,
       error: error,
+      hero: const ScenePhoto(asset: Evuddy.yellowScooterAsset, height: 176, fit: BoxFit.contain),
       footer: EvuddyButton(
         label: 'Send OTP',
         busy: busy,
@@ -116,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (registrationDraft.apiOnline)
           const Padding(
             padding: EdgeInsets.only(bottom: 18),
-            child: InfoNote(text: 'Connected to evuddy.com — rider records use the live API.'),
+            child: InfoNote(text: 'Live on evuddy.com — your rider file, KYC and bookings stay in one place.'),
           ),
         EvuddyField(
           label: 'FULL NAME *',

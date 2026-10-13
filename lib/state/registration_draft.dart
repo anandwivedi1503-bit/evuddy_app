@@ -48,6 +48,8 @@ class RegistrationDraft {
   double depositHeld = 0;
   String depositStatus = 'none'; // none | held | refund_pending | released
   String? depositBookingId;
+  double walletAvailable = 0;
+  String walletStatus = '';
 
   String get depositLabel {
     switch (depositStatus) {
@@ -76,6 +78,40 @@ class RegistrationDraft {
 
   bool get canBook => phoneVerified && isApproved;
 
+  /// Website `/api/bookings/mine` — skip plan pick while this booking is live.
+  bool get hasLiveBooking {
+    final b = activeBooking;
+    if (b == null || b.bookingId.isEmpty) return false;
+    if (b.completed) return false;
+    final status = b.rideStatus.toLowerCase();
+    if (status.contains('cancel')) return false;
+    return true;
+  }
+
+  void applyActiveBooking(RiderBooking? mine) {
+    activeBooking = mine;
+    if (mine == null || mine.bookingId.isEmpty) {
+      persist();
+      riderSessionTick.value++;
+      return;
+    }
+    if (mine.isRentToOwn) {
+      chosenPlan = 'rto';
+      chosenDuration = 'Rent To Own';
+    } else {
+      chosenPlan = 'rental';
+      const modes = ['Hourly', 'Daily', 'Weekly', 'Monthly'];
+      if (modes.contains(mine.rentalMode)) {
+        chosenDuration = mine.rentalMode;
+      } else {
+        chosenDuration ??= 'Daily';
+      }
+    }
+    if (mine.city.isNotEmpty) chosenCity = mine.city;
+    persist();
+    riderSessionTick.value++;
+  }
+
   bool get aadhaarFront => aadhaarFrontPath != null;
   bool get aadhaarBack => aadhaarBackPath != null;
   bool get licenseFront => licenseFrontPath != null;
@@ -92,14 +128,16 @@ class RegistrationDraft {
     if (lookup.riderId != null && lookup.riderId!.isNotEmpty) {
       riderId = lookup.riderId;
     }
-    if (lookup.fullName != null && lookup.fullName!.isNotEmpty && fullName.isEmpty) {
+    if (lookup.fullName != null && lookup.fullName!.isNotEmpty) {
       fullName = lookup.fullName!;
     }
-    if (lookup.email != null && lookup.email!.isNotEmpty && email.isEmpty) {
+    if (lookup.email != null && lookup.email!.isNotEmpty) {
       email = lookup.email!;
     }
     approvalStatus = lookup.approvalStatus;
     bookingEnabled = lookup.bookingEnabled || RiderLookup.isApprovedStatus(lookup.approvalStatus);
+    walletAvailable = lookup.walletAvailable;
+    walletStatus = lookup.walletStatus;
     persist();
     riderSessionTick.value++;
   }
@@ -120,13 +158,36 @@ class RegistrationDraft {
     final token = await EvuddyFirebase.freshIdToken(
       storedToken: firebaseIdToken,
       refreshToken: firebaseRefreshToken,
+      expectedUid: firebaseUid,
       force: force,
     );
-    if (token != null && token.isNotEmpty) {
+    if (token != null && token.isNotEmpty && !EvuddyFirebase.jwtExpired(token)) {
       firebaseIdToken = token;
+      final nextRefresh = EvuddyFirebase.lastRefreshToken;
+      if (nextRefresh != null && nextRefresh.isNotEmpty) {
+        firebaseRefreshToken = nextRefresh;
+      }
       persist();
+      return token;
     }
-    return firebaseIdToken;
+    return null;
+  }
+
+  bool isAuthError(Object e) {
+    final m = e.toString().toLowerCase();
+    return m.contains('sign in again') ||
+        m.contains('sign in required') ||
+        m.contains('registered mobile') ||
+        m.contains('unauthorized') ||
+        m.contains('id token verification');
+  }
+
+  Future<void> logout() async {
+    try {
+      await EvuddyFirebase.ensure();
+      await EvuddyFirebase.signOut();
+    } catch (_) {}
+    clearSession();
   }
 
   Future<RiderLookup?> refreshFromServer({bool forceToken = false}) async {
@@ -143,8 +204,7 @@ class RegistrationDraft {
       }
       if (lookup.found) applyLookup(lookup);
       try {
-        final mine = await EvuddyApi.myBooking(token);
-        if (mine != null) activeBooking = mine;
+        applyActiveBooking(await EvuddyApi.myBooking(token));
       } catch (_) {}
       persist();
       return lookup;
@@ -168,6 +228,8 @@ class RegistrationDraft {
     depositHeld = 0;
     depositStatus = 'none';
     depositBookingId = null;
+    walletAvailable = 0;
+    walletStatus = '';
     persist();
     riderSessionTick.value++;
   }
@@ -199,6 +261,20 @@ class RegistrationDraft {
           : depositHeld;
       depositStatus = m['depositStatus']?.toString() ?? depositStatus;
       depositBookingId = m['depositBookingId']?.toString();
+      walletAvailable = (m['walletAvailable'] is num)
+          ? (m['walletAvailable'] as num).toDouble()
+          : walletAvailable;
+      walletStatus = m['walletStatus']?.toString() ?? walletStatus;
+      final rawBooking = m['activeBooking'];
+      if (rawBooking is Map) {
+        activeBooking = RiderBooking.fromJson(rawBooking);
+        if (activeBooking!.isRentToOwn) {
+          chosenPlan = 'rto';
+          chosenDuration = 'Rent To Own';
+        } else if (activeBooking!.rentalMode.isNotEmpty) {
+          chosenPlan = 'rental';
+        }
+      }
     } catch (_) {}
   }
 
@@ -226,6 +302,9 @@ class RegistrationDraft {
           'depositHeld': depositHeld,
           'depositStatus': depositStatus,
           'depositBookingId': depositBookingId,
+          'walletAvailable': walletAvailable,
+          'walletStatus': walletStatus,
+          if (activeBooking != null) 'activeBooking': activeBooking!.toJson(),
         }),
       );
     } catch (_) {}

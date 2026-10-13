@@ -53,10 +53,58 @@ class _AccountScreenState extends State<AccountScreen> {
     setState(() => checking = false);
   }
 
-  void _switchNumber() {
-    registrationDraft.clearSession();
+  Future<void> _logout() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log out?'),
+        content: const Text(
+          'You will need OTP on this registered mobile again — same as evuddy.com.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Stay')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Log out')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await registrationDraft.logout();
     widget.onLoggedOut?.call();
-    Navigator.push(context, evuddyRoute(const ConfirmMobileScreen()));
+    if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+  }
+
+  Widget _logoutButton({bool compact = false}) {
+    if (compact) {
+      return TextButton(
+        onPressed: _logout,
+        child: Text(
+          'Log out',
+          style: GoogleFonts.plusJakartaSans(
+            color: Evuddy.magenta,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      );
+    }
+    return SizedBox(
+      height: 56,
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: _logout,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Evuddy.magenta,
+          side: const BorderSide(color: Color(0xFFF9A8D4)),
+          backgroundColor: const Color(0xFFFDF2F8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+        child: Text(
+          'Log out',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+        ),
+      ),
+    );
   }
 
   Widget _footer(RegistrationDraft d) {
@@ -105,21 +153,13 @@ class _AccountScreenState extends State<AccountScreen> {
       kicker: 'Account',
       title: d.fullName.isEmpty ? 'Your EVUDDY' : d.fullName,
       subtitle: status,
+      headerTrailing: d.phoneVerified ? _logoutButton(compact: true) : null,
       footer: Column(
         children: [
           _footer(d),
           if (d.phoneVerified) ...[
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: _switchNumber,
-              child: Text(
-                'Use a different number',
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF44403C),
-                ),
-              ),
-            ),
+            const SizedBox(height: 10),
+            _logoutButton(),
           ],
         ],
       ),
@@ -221,7 +261,7 @@ class _AccountScreenState extends State<AccountScreen> {
                         style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
                       ),
                       Text(
-                        'Hold only · no recharge',
+                        'Wallet ${CatalogRates.inr(d.walletAvailable)} · deposit hold ${CatalogRates.inr(d.depositHeld)}',
                         style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
                       ),
                     ],

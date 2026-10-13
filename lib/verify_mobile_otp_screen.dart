@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
+import 'api/firebase_phone.dart';
 import 'api/web_otp.dart';
 import 'kyc_details_screen.dart';
 import 'login_screen.dart';
@@ -109,9 +110,11 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
         ..phoneVerified = true
         ..firebaseUid = session.uid
         ..firebaseIdToken = session.token
-        ..firebaseRefreshToken =
-            session.refreshToken.isEmpty ? registrationDraft.firebaseRefreshToken : session.refreshToken;
+        ..firebaseRefreshToken = session.refreshToken.isNotEmpty
+            ? session.refreshToken
+            : (EvuddyFirebase.lastRefreshToken ?? registrationDraft.firebaseRefreshToken);
       await registrationDraft.persist();
+      await registrationDraft.freshToken(force: true);
       await _routeAfterOtp();
     } catch (e) {
       if (!mounted) return;
@@ -125,7 +128,8 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
   }
 
   Future<void> _routeAfterOtp() async {
-    final token = registrationDraft.firebaseIdToken;
+    final token = await registrationDraft.freshToken(force: true) ??
+        registrationDraft.firebaseIdToken;
     if (token == null) return;
     try {
       final lookup = await EvuddyApi.lookupRider(
@@ -143,8 +147,10 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
           return;
         }
         if (registrationDraft.canBook) {
+          await registrationDraft.refreshFromServer(forceToken: true);
           registrationDraft.jumpToTab(1);
           await registrationDraft.persist();
+          if (!mounted) return;
           Navigator.of(context).popUntil((r) => r.isFirst);
           return;
         }
@@ -172,10 +178,10 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
     final phone = registrationDraft.phoneDisplay;
     return AuthScreen(
       kicker: 'OTP',
-      title: sentOk ? 'OTP Verification' : 'Security check',
+      title: sentOk ? 'Enter the SMS code' : 'Security check',
       subtitle: sentOk
-          ? 'SMS to ${phone.isEmpty ? "your number" : phone}. We fill the code from the message.'
-          : 'If Google shows a check or pictures, complete them — then we send SMS.',
+          ? 'We sent a 6-digit OTP to ${phone.isEmpty ? "your number" : phone}. It autofills from the message — same as evuddy.com.'
+          : 'If Google shows a check or pictures, complete them — then SMS is sent. This is the same Firebase OTP as the website.',
       error: error,
       expanded: WebOtpPanel(controller: webOtp),
       expandedInset: EdgeInsets.zero,

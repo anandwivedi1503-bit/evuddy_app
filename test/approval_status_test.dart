@@ -56,4 +56,34 @@ void main() {
     d.bookingEnabled = true;
     expect(d.canBook, isTrue);
   });
+
+  test('live website booking locks plan and skips plan pick', () {
+    final d = RegistrationDraft()
+      ..phoneVerified = true
+      ..approvalStatus = 'Approved';
+    expect(d.hasLiveBooking, isFalse);
+    d.applyActiveBooking(
+      RiderBooking.fromJson({
+        'bookingId': 'BK-22',
+        'rentalMode': 'Daily',
+        'pendingAmount': 2737,
+        'receivedAmount': 13,
+        'pickupOTP': '4821',
+        'rideStatus': 'Ready For Pickup',
+      }),
+    );
+    expect(d.hasLiveBooking, isTrue);
+    expect(d.chosenPlan, 'rental');
+    expect(d.chosenDuration, 'Daily');
+    d.applyActiveBooking(
+      RiderBooking.fromJson({
+        'bookingId': 'RTO-1',
+        'rentalMode': 'Rent To Own',
+        'pendingAmount': 2800,
+      }),
+    );
+    expect(d.chosenPlan, 'rto');
+    d.applyActiveBooking(null);
+    expect(d.hasLiveBooking, isFalse);
+  });
 }

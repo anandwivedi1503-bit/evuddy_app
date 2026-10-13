@@ -159,13 +159,18 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
+    if (canBook && registrationDraft.hasLiveBooking) {
+      return RideReadyScreen(showBack: widget.showBack);
+    }
     final plan = registrationDraft.chosenPlan;
     return AuthScreen(
       showBack: widget.showBack,
       kicker: 'Book EV',
       title: 'How do you want to ride?',
       subtitle:
-          'Pick rental or Rent to Own. Then city, hub, scooter, reserve, Razorpay — same as evuddy.com/book-bike.',
+          registrationDraft.chosenPlan != null
+              ? 'Your plan is saved. Confirm city and hub, then pick a live scooter and pay with Razorpay.'
+              : 'Pick rental or Rent to Own, then city and hub. Scooters, Razorpay, pickup OTP and ride sliders match evuddy.com/book-bike.',
       error: error,
       footer: EvuddyButton(
         label: !canBook
@@ -214,7 +219,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
             padding: EdgeInsets.only(bottom: 16),
             child: InfoNote(
               text:
-                  'Same catalog as the website. Razorpay checkout after you reserve a live scooter.',
+                  'Same catalog as the website. Razorpay after you reserve a live scooter. No PhonePe.',
             ),
           ),
         _PlanCard(
@@ -238,7 +243,11 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
           title: 'Rent to Own',
           body:
               '${CatalogRates.inr(CatalogRates.rtoDaily)} / day · ${CatalogRates.inr(CatalogRates.securityDeposit)} security deposit held · ownership after ${CatalogRates.rtoMonths} months.',
-          rates: const ['Deposit hold only', 'Refund on return', 'Hub OTP pickup'],
+          rates: const [
+            '₹2,500 refundable deposit',
+            'Full fare in one Razorpay pay',
+            'Hub OTP pickup',
+          ],
           onTap: () => _pickPlan('rto'),
           selected: plan == 'rto',
         ),
