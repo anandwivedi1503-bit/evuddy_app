@@ -522,10 +522,13 @@ class _EvuddyButtonState extends State<EvuddyButton> {
 
   @override
   Widget build(BuildContext context) {
+    final enabled = !widget.busy && widget.onPressed != null;
     return AnimatedScale(
-      scale: _down ? 0.98 : 1,
+      scale: _down && enabled ? 0.98 : 1,
       duration: const Duration(milliseconds: 120),
-      child: SizedBox(
+      child: Opacity(
+        opacity: enabled ? 1 : 0.45,
+        child: SizedBox(
         width: double.infinity,
         height: 56,
         child: DecoratedBox(
@@ -538,13 +541,15 @@ class _EvuddyButtonState extends State<EvuddyButton> {
                   ? const [Color(0xFF16A34A), Color(0xFF047857)]
                   : const [Evuddy.logoGreen, Evuddy.logoPink],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Evuddy.green.withOpacity(0.32),
-                blurRadius: 22,
-                offset: const Offset(0, 10),
-              ),
-            ],
+            boxShadow: enabled
+                ? [
+                    BoxShadow(
+                      color: Evuddy.green.withOpacity(0.32),
+                      blurRadius: 22,
+                      offset: const Offset(0, 10),
+                    ),
+                  ]
+                : const [],
           ),
           child: Material(
             color: Colors.transparent,
@@ -586,6 +591,7 @@ class _EvuddyButtonState extends State<EvuddyButton> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

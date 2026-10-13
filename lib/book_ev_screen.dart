@@ -38,6 +38,10 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     riderSessionTick.addListener(_onTick);
+    if (registrationDraft.canBook && registrationDraft.chosenPlan == null) {
+      registrationDraft.chosenPlan = 'rental';
+      registrationDraft.persist();
+    }
     _load();
     _refreshApproval();
     _poll = Timer.periodic(const Duration(seconds: 6), (_) {
@@ -112,7 +116,18 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
     hubId = listed.first.id;
   }
 
-  void _continue() {
+  void _toast(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _continue() async {
     if (!canBook) {
       Navigator.push(
         context,
@@ -122,39 +137,46 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
       );
       return;
     }
-    if (registrationDraft.chosenPlan == null) {
-      setState(() => error = 'Choose Normal booking or Rent to Own first.');
-      return;
-    }
+    registrationDraft.chosenPlan ??= 'rental';
     _ensureHub();
+    if (hubs.isEmpty && !loading) {
+      await _load();
+      _ensureHub();
+    }
     if (hubId == null) {
       setState(() => error = 'Select a pickup hub, then tap Continue.');
+      _toast('Select a pickup hub, then tap Continue.');
       return;
     }
     setState(() => error = null);
-    registrationDraft
-      ..chosenCity = city
-      ..chosenHubId = hubId
-      ..persist();
+    await (registrationDraft
+          ..chosenCity = city
+          ..chosenHubId = hubId)
+        .persist();
+    if (!mounted) return;
     Navigator.push(context, evuddyRoute(const RideReadyScreen()));
   }
 
-  Future<void> _pickPlan(String plan) async {
+  void _pickPlan(String plan) {
     if (!registrationDraft.phoneVerified) {
       Navigator.push(context, evuddyRoute(const ConfirmMobileScreen()));
       return;
     }
-    await _refreshApproval();
-    if (!mounted) return;
     if (registrationDraft.isRejected) {
       setState(() => error = 'This number was rejected. Call helpdesk.');
+      _toast('This number was rejected. Call helpdesk.');
       return;
     }
     if (!registrationDraft.canBook) {
       Navigator.push(context, evuddyRoute(const SubmittedScreen()));
       return;
     }
-    setState(() => registrationDraft.chosenPlan = plan);
+    setState(() {
+      error = null;
+      registrationDraft.chosenPlan = plan;
+    });
+    registrationDraft.persist();
+    _refreshApproval();
   }
 
   @override
@@ -175,7 +197,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
       footer: EvuddyButton(
         label: !canBook
             ? (waitingKyc ? 'Waiting for admin approval' : 'Verify mobile to book')
-            : (plan == null ? 'Choose a plan above' : 'Continue'),
+            : 'Continue to scooters',
         onPressed: _continue,
       ),
       children: [
@@ -223,7 +245,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
             ),
           ),
         _PlanCard(
-          frozen: canBook && plan == 'rto',
+          frozen: false,
           tag: 'FLEXIBLE RENTAL',
           title: 'Normal booking',
           body: 'Hourly, daily, weekly or monthly. GST included. Return the scooter when the plan ends.',
@@ -238,7 +260,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
         ),
         const SizedBox(height: 12),
         _PlanCard(
-          frozen: canBook && plan == 'rental',
+          frozen: false,
           tag: 'OWN AFTER ${CatalogRates.rtoMonths} MONTHS',
           title: 'Rent to Own',
           body:

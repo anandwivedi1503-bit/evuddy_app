@@ -108,13 +108,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.phone_outlined, color: Evuddy.ink),
                 ),
               ],
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(76),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: BookSearchBar(onBook: () => _book()),
-                ),
-              ),
             ),
             SliverToBoxAdapter(
               child: Padding(
@@ -166,6 +159,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     const RideTodayHero(),
                     const SizedBox(height: 18),
                     OfferAdCarousel(onBook: () => _book()),
+                    const SizedBox(height: 16),
+                    BookSearchBar(onBook: () => _book()),
                     const SizedBox(height: 12),
                     EvuddyButton(
                       label: 'Fleet calculator',
@@ -370,52 +365,63 @@ class BookSearchBar extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onBook,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(22),
         child: Ink(
-          height: 56,
+          height: 64,
           decoration: BoxDecoration(
-            color: const Color(0xFFF3F4F2),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Evuddy.line),
+            borderRadius: BorderRadius.circular(22),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF16A34A), Color(0xFF047857)],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Evuddy.green.withValues(alpha: 0.32),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+            padding: const EdgeInsets.fromLTRB(10, 8, 16, 8),
             child: Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
-                  decoration: const BoxDecoration(
-                    color: Evuddy.green,
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.16),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.search_rounded, color: Colors.white),
+                  child: const Icon(Icons.electric_moped_rounded, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    'Book an EV',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                      color: Evuddy.ink,
-                    ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Book an EV',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 17,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        'City · hub · scooter · Razorpay',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Evuddy.green,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Text(
-                    'Go',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
+                const Icon(Icons.arrow_forward_rounded, color: Colors.white),
               ],
             ),
           ),
