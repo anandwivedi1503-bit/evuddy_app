@@ -98,7 +98,8 @@ class _HomeScreenState extends State<HomeScreen> {
               pinned: true,
               backgroundColor: Colors.white,
               elevation: 0,
-              title: const EvuddyLogo(height: 34),
+              toolbarHeight: 72,
+              title: const EvuddyLogo(height: 42),
               centerTitle: true,
               automaticallyImplyLeading: false,
               actions: [
