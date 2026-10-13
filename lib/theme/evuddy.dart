@@ -103,17 +103,29 @@ class Evuddy {
 }
 
 class EvuddyLogo extends StatelessWidget {
-  const EvuddyLogo({super.key, this.height = 36, this.hero = false});
+  const EvuddyLogo({super.key, this.height = 40, this.hero = false});
   final double height;
   final bool hero;
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      Evuddy.wordmarkAsset,
-      height: height,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.high,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Image.asset(
+          Evuddy.logoMarkAsset,
+          height: height * 1.12,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+        ),
+        SizedBox(width: height * 0.22),
+        Image.asset(
+          Evuddy.wordmarkAsset,
+          height: height,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+        ),
+      ],
     );
   }
 }
@@ -123,11 +135,23 @@ class EvuddySplashMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      Evuddy.wordmarkAsset,
-      height: 56,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.high,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Image.asset(
+          Evuddy.logoMarkAsset,
+          height: 88,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+        ),
+        const SizedBox(height: 14),
+        Image.asset(
+          Evuddy.wordmarkAsset,
+          height: 48,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+        ),
+      ],
     );
   }
 }

@@ -177,7 +177,7 @@ class EvuddyHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 48,
+      height: 64,
       child: Row(
         children: [
           if (showBack)
@@ -192,7 +192,7 @@ class EvuddyHeader extends StatelessWidget {
             const SizedBox(width: 40),
           Expanded(
             child: showLogo
-                ? const EvuddyLogo(height: 28)
+                ? const Center(child: EvuddyLogo(height: 38))
                 : const SizedBox.shrink(),
           ),
           trailing ?? const SizedBox(width: 40),

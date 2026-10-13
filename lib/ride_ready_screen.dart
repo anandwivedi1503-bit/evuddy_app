@@ -413,6 +413,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       token = registrationDraft.firebaseIdToken ?? token;
       if (!mounted) return;
       Map<String, String>? result;
+      RiderBooking? recovered;
       if (started.needsCheckout) {
         setState(() => busy = false);
         result = await Navigator.push<Map<String, String>>(
@@ -429,11 +430,41 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             ),
           ),
         );
-        if (result == null) return;
+        if (result == null) {
+          try {
+            recovered = await EvuddyApi.verifyPayment(
+              idToken: token,
+              bookingMongoId: b.mongoId,
+              recover: true,
+            );
+            if (!(recovered.hasPickupOtp || recovered.receivedAmount + 0.009 >= pay)) {
+              recovered = null;
+            }
+          } catch (_) {
+            recovered = null;
+          }
+          if (recovered == null) {
+            if (!mounted) return;
+            setState(() {
+              busy = false;
+              error =
+                  'Razorpay closed without a payment. Tap Pay securely with Razorpay again — UPI or card, same as evuddy.com.';
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Payment not completed. Try Razorpay again.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return;
+          }
+        }
         setState(() => busy = true);
       }
       RiderBooking verified;
-      if (started.booking != null && result == null) {
+      if (recovered != null) {
+        verified = recovered;
+      } else if (started.booking != null && result == null) {
         verified = started.booking!;
       } else {
         final paid = await _withToken(
@@ -820,25 +851,54 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   }
 
   List<Widget> _bookingCards(RiderBooking b) {
+    final due = _remainingCharge(b);
     return [
-      SurfaceCard(
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF052E16), Color(0xFF16A34A)],
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Paid ${CatalogRates.inr(b.receivedAmount)}  ·  remaining ${CatalogRates.inr(_remainingCharge(b))}',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 16),
+              due > 0.009 ? 'AMOUNT DUE' : 'PAID',
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.white70,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.6,
+                fontSize: 11,
+              ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              '${b.paymentStatus.isEmpty ? "Pending" : b.paymentStatus} · ${b.rideStatus.isEmpty ? "Reserved" : b.rideStatus}',
-              style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontWeight: FontWeight.w600),
-            ),
-            if (b.vehicleNumber.isNotEmpty) Text(b.vehicleNumber),
             const SizedBox(height: 8),
             Text(
-              'Wallet ${CatalogRates.inr(registrationDraft.walletAvailable)} · Razorpay UPI / card (no PhonePe app)',
-              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Evuddy.muted),
+              CatalogRates.inr(due > 0.009 ? due : b.receivedAmount),
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.white,
+                fontSize: 42,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -1.4,
+                height: 1,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '${b.bookingId} · ${b.rideStatus.isEmpty ? "Reserved" : b.rideStatus}',
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Paid ${CatalogRates.inr(b.receivedAmount)} · Razorpay UPI / card',
+              style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontSize: 13),
             ),
           ],
         ),
