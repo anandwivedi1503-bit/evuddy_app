@@ -51,31 +51,58 @@ class EvuddyFirebase {
     );
   }
 
-  /// WebView OTP stores a token; native Auth may be empty. Refresh when JWT is stale.
+  /// Last refresh_token returned by Google (WebView OTP has no native user).
+  static String? lastRefreshToken;
+
+  /// WebView OTP stores a token; native Auth may be empty. Always refresh when
+  /// paying or starting a ride — same as evuddy.com `getIdToken(true)`.
   static Future<String?> freshIdToken({
     String? storedToken,
     String? refreshToken,
+    String? expectedUid,
     bool force = false,
   }) async {
     await ensure();
+    final storedOk =
+        storedToken != null && storedToken.isNotEmpty && !jwtExpired(storedToken);
+    final needRefresh = force || !storedOk;
+
+    // Prefer Google refresh of the WebView session. Native Auth can be empty
+    // or a leftover UID that does not own the rider on evuddy.com.
+    if (needRefresh && refreshToken != null && refreshToken.isNotEmpty) {
+      final refreshed = await _refreshWithGoogle(refreshToken);
+      if (refreshed != null) return refreshed;
+    }
+
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        return await user.getIdToken(force);
+      final uidOk = expectedUid == null ||
+          expectedUid.isEmpty ||
+          user?.uid == expectedUid;
+      if (user != null && uidOk) {
+        final token = await user.getIdToken(force || !storedOk);
+        final nativeRefresh = user.refreshToken;
+        if (nativeRefresh != null && nativeRefresh.isNotEmpty) {
+          lastRefreshToken = nativeRefresh;
+        }
+        if (token != null && token.isNotEmpty && !jwtExpired(token)) return token;
       }
     } catch (e) {
       debugPrint('Native token: $e');
     }
-    if (refreshToken != null &&
-        refreshToken.isNotEmpty &&
-        (force || storedToken == null || storedToken.isEmpty || _jwtExpired(storedToken))) {
+
+    if (storedOk) {
+      if (refreshToken != null && refreshToken.isNotEmpty) {
+        lastRefreshToken ??= refreshToken;
+      }
+      return storedToken;
+    }
+
+    if (refreshToken != null && refreshToken.isNotEmpty) {
       final refreshed = await _refreshWithGoogle(refreshToken);
       if (refreshed != null) return refreshed;
     }
-    if (storedToken != null && storedToken.isNotEmpty && !_jwtExpired(storedToken)) {
-      return storedToken;
-    }
-    return storedToken;
+    return null;
   }
 
   static Future<String?> _refreshWithGoogle(String refreshToken) async {
@@ -86,12 +113,18 @@ class EvuddyFirebase {
               'https://securetoken.googleapis.com/v1/token?key=${options.apiKey}',
             ),
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'grant_type=refresh_token&refresh_token=${Uri.encodeComponent(refreshToken)}',
+            body:
+                'grant_type=refresh_token&refresh_token=${Uri.encodeComponent(refreshToken)}',
           )
           .timeout(const Duration(seconds: 15));
       final j = jsonDecode(r.body);
       if (j is Map && j['id_token'] != null) {
-        return j['id_token'].toString();
+        final nextRefresh = j['refresh_token']?.toString();
+        if (nextRefresh != null && nextRefresh.isNotEmpty) {
+          lastRefreshToken = nextRefresh;
+        }
+        final id = j['id_token'].toString();
+        if (id.isNotEmpty && !jwtExpired(id)) return id;
       }
     } catch (e) {
       debugPrint('Token refresh: $e');
@@ -99,7 +132,7 @@ class EvuddyFirebase {
     return null;
   }
 
-  static bool _jwtExpired(String token) {
+  static bool jwtExpired(String token) {
     final parts = token.split('.');
     if (parts.length < 2) return true;
     try {
@@ -111,10 +144,16 @@ class EvuddyFirebase {
       if (map is! Map || map['exp'] is! num) return true;
       final exp = (map['exp'] as num).toInt();
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      return now >= exp - 90;
+      return now >= exp - 90; // match website: refresh before the hour is up
     } catch (_) {
       return true;
     }
+  }
+
+  static Future<void> signOut() async {
+    await ensure();
+    if (Firebase.apps.isEmpty) return;
+    await FirebaseAuth.instance.signOut();
   }
 
   static Future<User> confirmOtp({

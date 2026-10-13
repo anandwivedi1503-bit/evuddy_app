@@ -5,12 +5,57 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
-/// Talks only to the live EVUDDY site. Never writes website source.
+/// Talks only to the live EVUDDY site. Keys stay on evuddy.com — never in the app.
 class EvuddyApi {
   static const origin = 'https://www.evuddy.com';
 
+  /// Keep-alive client so thousands of riders reuse TLS to evuddy.com.
+  static final http.Client _http = http.Client();
+
   static Uri _u(String path, [Map<String, String>? query]) {
     return Uri.parse('$origin$path').replace(queryParameters: query);
+  }
+
+  static Future<http.Response> _get(
+    Uri uri, {
+    Map<String, String>? headers,
+    Duration timeout = const Duration(seconds: 12),
+  }) async {
+    Object? last;
+    for (var i = 0; i < 3; i++) {
+      try {
+        return await _http.get(uri, headers: headers).timeout(timeout);
+      } catch (e) {
+        last = e;
+        await Future<void>.delayed(Duration(milliseconds: 280 * (i + 1)));
+      }
+    }
+    throw ApiException(last?.toString() ?? 'Could not reach evuddy.com.');
+  }
+
+  static Future<http.Response> _post(
+    Uri uri, {
+    required Map<String, String> headers,
+    required Object body,
+    Duration timeout = const Duration(seconds: 20),
+  }) async {
+    Object? last;
+    for (var i = 0; i < 2; i++) {
+      try {
+        final r = await _http
+            .post(uri, headers: headers, body: body)
+            .timeout(timeout);
+        if (r.statusCode == 429 && i == 0) {
+          await Future<void>.delayed(const Duration(milliseconds: 900));
+          continue;
+        }
+        return r;
+      } catch (e) {
+        last = e;
+        await Future<void>.delayed(Duration(milliseconds: 400 * (i + 1)));
+      }
+    }
+    throw ApiException(last?.toString() ?? 'Could not reach evuddy.com.');
   }
 
   static Map<String, dynamic> _json(http.Response r) {
@@ -25,7 +70,7 @@ class EvuddyApi {
 
   static Future<bool> health() async {
     try {
-      final r = await http.get(_u('/api/health')).timeout(const Duration(seconds: 8));
+      final r = await _get(_u('/api/health'), timeout: const Duration(seconds: 8));
       final j = _json(r);
       return r.statusCode == 200 && j['success'] == true;
     } catch (_) {
@@ -37,12 +82,11 @@ class EvuddyApi {
     required String phone,
     required String idToken,
   }) async {
-    final r = await http
-        .get(
-          _u('/api/riders', {'phone': phone}),
-          headers: {'Authorization': 'Bearer $idToken'},
-        )
-        .timeout(const Duration(seconds: 15));
+    final r = await _get(
+      _u('/api/riders', {'phone': phone}),
+      headers: {'Authorization': 'Bearer $idToken'},
+      timeout: const Duration(seconds: 15),
+    );
     final j = _json(r);
     if (r.statusCode == 404 || j['errorCode'] == 'RIDER_NOT_FOUND') {
       return const RiderLookup.missing();
@@ -90,16 +134,14 @@ class EvuddyApi {
 
   static Future<RegisterResult> createRider(Map<String, dynamic> body) async {
     final token = body['firebaseIdToken']?.toString();
-    final r = await http
-        .post(
-          _u('/api/riders'),
-          headers: {
-            'Content-Type': 'application/json',
-            if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode(body),
-        )
-        .timeout(const Duration(seconds: 20));
+    final r = await _post(
+      _u('/api/riders'),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
     final j = _json(r);
     final errors = <String>[];
     final raw = j['errors'];
@@ -129,7 +171,7 @@ class EvuddyApi {
   }
 
   static Future<List<EvuddyCity>> cities() async {
-    final r = await http.get(_u('/api/cities')).timeout(const Duration(seconds: 12));
+    final r = await _get(_u('/api/cities'));
     final j = _json(r);
     final data = j['data'];
     if (j['success'] != true || data is! List) return [];
@@ -144,8 +186,10 @@ class EvuddyApi {
         .toList();
   }
 
-  static Future<List<EvuddyHub>> hubs() async {
-    final r = await http.get(_u('/api/hubs')).timeout(const Duration(seconds: 12));
+  static Future<List<EvuddyHub>> hubs({String? city}) async {
+    final r = await _get(
+      _u('/api/hubs', city == null || city.isEmpty ? null : {'city': city}),
+    );
     final j = _json(r);
     final data = j['data'];
     if (j['success'] != true || data is! List) return [];
@@ -156,14 +200,31 @@ class EvuddyApi {
         .toList();
   }
 
-  static Future<List<EvuddyVehicle>> vehicles({String? city}) async {
-    final r = await http
-        .get(_u('/api/vehicles', city == null ? null : {'city': city}))
-        .timeout(const Duration(seconds: 12));
-    final j = _json(r);
-    final data = j['data'];
-    if (j['success'] != true || data is! List) return [];
-    return data.whereType<Map>().map(EvuddyVehicle.fromJson).toList();
+  static Future<List<EvuddyVehicle>> vehicles({String? city, String? hub}) async {
+    Future<List<EvuddyVehicle>> fetch(Map<String, String>? query) async {
+      final r = await _get(_u('/api/vehicles', query));
+      final j = _json(r);
+      final data = j['data'];
+      if (j['success'] != true || data is! List) return [];
+      return data
+          .whereType<Map>()
+          .map(EvuddyVehicle.fromJson)
+          .where((v) => v.isBookable)
+          .toList();
+    }
+
+    final query = <String, String>{
+      if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
+      if (hub != null && hub.trim().isNotEmpty) 'hub': hub.trim().toUpperCase(),
+    };
+    var list = await fetch(query.isEmpty ? null : query);
+    if (list.isEmpty && query.isNotEmpty) {
+      list = await fetch(city != null && city.trim().isNotEmpty ? {'city': city.trim()} : null);
+    }
+    if (list.isEmpty && query.isNotEmpty) {
+      list = await fetch(null);
+    }
+    return list;
   }
 
   static Map<String, String> _auth(String idToken) => {
@@ -172,11 +233,15 @@ class EvuddyApi {
       };
 
   static Future<RiderBooking?> myBooking(String idToken) async {
-    final r = await http
-        .get(_u('/api/bookings/mine'), headers: _auth(idToken))
-        .timeout(const Duration(seconds: 15));
+    final r = await _get(
+      _u('/api/bookings/mine'),
+      headers: _auth(idToken),
+      timeout: const Duration(seconds: 15),
+    );
     final j = _json(r);
-    if (j['success'] != true) return null;
+    if (r.statusCode == 401 || j['success'] != true) {
+      throw ApiException(_message(j, 'Unable to load your booking.'));
+    }
     final data = j['data'];
     if (data is! Map) return null;
     return RiderBooking.fromJson(data);
@@ -193,10 +258,13 @@ class EvuddyApi {
     required String rentalMode,
     String? duration,
     String? referenceBy,
+    String? bookingRequestId,
   }) async {
+    final requestId = (bookingRequestId != null && bookingRequestId.isNotEmpty)
+        ? bookingRequestId
+        : '${DateTime.now().microsecondsSinceEpoch}-$userPhone';
     final body = {
-      'bookingRequestId':
-          '${DateTime.now().microsecondsSinceEpoch}-$userPhone',
+      'bookingRequestId': requestId,
       'userName': userName,
       'userPhone': userPhone,
       'riderId': riderId,
@@ -213,23 +281,16 @@ class EvuddyApi {
       'pickupCity': city,
       'rentalMode': rentalMode,
       if (duration != null && duration.isNotEmpty) 'rentalDuration': duration,
-      'catalog': CatalogRates.payload(),
-      'securityDepositInr': rentalMode.toLowerCase().contains('own')
-          ? CatalogRates.securityDeposit
-          : 0,
-      'depositHoldOnly': true,
       if (referenceBy != null && referenceBy.isNotEmpty) 'referenceBy': referenceBy,
       'firebaseIdToken': idToken,
       'paymentMode': 'Razorpay',
       'paymentStatus': 'Pending',
     };
-    final r = await http
-        .post(
-          _u('/api/bookings'),
-          headers: _auth(idToken),
-          body: jsonEncode(body),
-        )
-        .timeout(const Duration(seconds: 20));
+    final r = await _post(
+      _u('/api/bookings'),
+      headers: _auth(idToken),
+      body: jsonEncode(body),
+    );
     final j = _json(r);
     if (j['success'] != true) {
       throw ApiException(_message(j, 'Booking failed.'));
@@ -243,31 +304,104 @@ class EvuddyApi {
     return RiderBooking(bookingId: id);
   }
 
-  static Future<RazorpayOrder> createRazorpayOrder({
+  static Future<PaymentStart> startPayment({
     required String idToken,
     required String bookingMongoId,
     required double amountRupees,
+    bool useWallet = false,
   }) async {
-    final r = await http
-        .post(
-          _u('/api/razorpay/create-order'),
-          headers: _auth(idToken),
-          body: jsonEncode({
-            'bookingMongoId': bookingMongoId,
-            'amount': amountRupees,
-            'firebaseIdToken': idToken,
-          }),
-        )
-        .timeout(const Duration(seconds: 20));
+    final r = await _post(
+      _u('/api/razorpay/create-order'),
+      headers: _auth(idToken),
+      body: jsonEncode({
+        'bookingMongoId': bookingMongoId,
+        'amount': amountRupees,
+        'firebaseIdToken': idToken,
+        if (useWallet) 'useWallet': true,
+        if (useWallet) 'paymentMethod': 'wallet',
+      }),
+    );
     final j = _json(r);
     if (j['success'] != true) {
-      throw ApiException(_message(j, 'Unable to create Razorpay order.'));
+      throw ApiException(
+        _message(
+          j,
+          useWallet ? 'Wallet payment failed.' : 'Unable to create Razorpay order.',
+        ),
+      );
+    }
+    if (j['alreadyCaptured'] == true || j['paidWithWallet'] == true) {
+      return PaymentStart.settled(
+        booking: RiderBooking.fromJson(j),
+        wallet: j['paidWithWallet'] == true,
+      );
     }
     final order = RazorpayOrder.fromJson(j);
     if (order.keyId.isEmpty || order.orderId.isEmpty) {
       throw ApiException('evuddy.com did not return a Razorpay key or order id.');
     }
-    return order;
+    return PaymentStart.checkout(order);
+  }
+
+  static Future<RazorpayOrder> createRazorpayOrder({
+    required String idToken,
+    required String bookingMongoId,
+    required double amountRupees,
+  }) async {
+    final started = await startPayment(
+      idToken: idToken,
+      bookingMongoId: bookingMongoId,
+      amountRupees: amountRupees,
+    );
+    if (started.order == null) {
+      throw ApiException('This amount is already settled on the booking.');
+    }
+    return started.order!;
+  }
+
+  static Future<List<SupportTicket>> myTickets(String idToken) async {
+    final r = await _get(
+      _u('/api/tickets/mine'),
+      headers: _auth(idToken),
+      timeout: const Duration(seconds: 15),
+    );
+    final j = _json(r);
+    final data = j['data'];
+    if (j['success'] != true || data is! List) return [];
+    return data.whereType<Map>().map(SupportTicket.fromJson).toList();
+  }
+
+  static Future<SupportTicket> createTicket({
+    required String idToken,
+    required String bookingId,
+    required String userId,
+    required String category,
+    required String description,
+  }) async {
+    final r = await _post(
+      _u('/api/tickets'),
+      headers: _auth(idToken),
+      body: jsonEncode({
+        'ticketId': 'BK-${DateTime.now().millisecondsSinceEpoch}',
+        'bookingId': bookingId,
+        'userId': userId,
+        'category': category,
+        'description': description,
+        'firebaseIdToken': idToken,
+      }),
+    );
+    final j = _json(r);
+    if (j['success'] != true) {
+      throw ApiException(_message(j, 'Could not send support ticket.'));
+    }
+    final data = j['data'];
+    if (data is Map) return SupportTicket.fromJson(data);
+    return SupportTicket(
+      ticketId: j['ticketId']?.toString() ?? '',
+      category: category,
+      status: 'OPEN',
+      description: description,
+    );
   }
 
   static Future<Map<String, dynamic>> _postVerifyPayment({
@@ -278,20 +412,18 @@ class EvuddyApi {
     String? signature,
     bool recover = false,
   }) async {
-    final r = await http
-        .post(
-          _u('/api/razorpay/verify-payment'),
-          headers: _auth(idToken),
-          body: jsonEncode({
-            'bookingMongoId': bookingMongoId,
-            'firebaseIdToken': idToken,
-            if (recover) 'recover': true,
-            'razorpay_order_id': ?orderId,
-            'razorpay_payment_id': ?paymentId,
-            'razorpay_signature': ?signature,
-          }),
-        )
-        .timeout(const Duration(seconds: 20));
+    final r = await _post(
+      _u('/api/razorpay/verify-payment'),
+      headers: _auth(idToken),
+      body: jsonEncode({
+        'bookingMongoId': bookingMongoId,
+        'firebaseIdToken': idToken,
+        if (recover) 'recover': true,
+        'razorpay_order_id': ?orderId,
+        'razorpay_payment_id': ?paymentId,
+        'razorpay_signature': ?signature,
+      }),
+    );
     return _json(r);
   }
 
@@ -339,13 +471,12 @@ class EvuddyApi {
     required String idToken,
     required String bookingId,
   }) async {
-    await http
-        .post(
-          _u('/api/notify/booking-otp'),
-          headers: _auth(idToken),
-          body: jsonEncode({'bookingId': bookingId}),
-        )
-        .timeout(const Duration(seconds: 15));
+    await _post(
+      _u('/api/notify/booking-otp'),
+      headers: _auth(idToken),
+      body: jsonEncode({'bookingId': bookingId}),
+      timeout: const Duration(seconds: 15),
+    );
   }
 
   static Future<RideActionResult> rideAction({
@@ -353,16 +484,15 @@ class EvuddyApi {
     required bool start,
     String? bookingId,
   }) async {
-    final r = await http
-        .post(
-          _u(start ? '/api/rides/rider-start' : '/api/rides/rider-end'),
-          headers: _auth(idToken),
-          body: jsonEncode({
-            'firebaseIdToken': idToken,
-            if (bookingId != null && bookingId.isNotEmpty) 'bookingId': bookingId,
-          }),
-        )
-        .timeout(const Duration(seconds: 15));
+    final r = await _post(
+      _u(start ? '/api/rides/rider-start' : '/api/rides/rider-end'),
+      headers: _auth(idToken),
+      body: jsonEncode({
+        'firebaseIdToken': idToken,
+        if (bookingId != null && bookingId.isNotEmpty) 'bookingId': bookingId,
+      }),
+      timeout: const Duration(seconds: 15),
+    );
     final j = _json(r);
     if (j['success'] != true) {
       throw ApiException(_message(j, 'Unable to update ride.'));
@@ -455,6 +585,86 @@ class CatalogRates {
         return daily;
     }
   }
+
+  /// Website Book EV: GST-included fare + refundable ₹2,500 deposit.
+  static int payableForDuration(String duration) =>
+      amountForDuration(duration) + securityDeposit;
+
+  static GstSplit gstInclusive(num inclusive) {
+    final total = _money(inclusive);
+    final taxable = _money(total / 1.05);
+    final gst = _money(total - taxable);
+    final cgst = _money(gst / 2);
+    final sgst = _money(gst - cgst);
+    return GstSplit(
+      taxable: taxable,
+      cgst: cgst,
+      sgst: sgst,
+      gst: gst,
+      total: total,
+    );
+  }
+}
+
+double _money(num n) => double.parse(n.toDouble().toStringAsFixed(2));
+
+class GstSplit {
+  const GstSplit({
+    required this.taxable,
+    required this.cgst,
+    required this.sgst,
+    required this.gst,
+    required this.total,
+  });
+  final double taxable;
+  final double cgst;
+  final double sgst;
+  final double gst;
+  final double total;
+}
+
+class PaymentStart {
+  const PaymentStart.checkout(this.order)
+      : booking = null,
+        wallet = false;
+  const PaymentStart.settled({required this.booking, this.wallet = false})
+      : order = null;
+
+  final RazorpayOrder? order;
+  final RiderBooking? booking;
+  final bool wallet;
+
+  bool get needsCheckout =>
+      order != null && order!.keyId.isNotEmpty && order!.orderId.isNotEmpty;
+}
+
+class SupportTicket {
+  const SupportTicket({
+    this.ticketId = '',
+    this.bookingId = '',
+    this.category = '',
+    this.status = '',
+    this.description = '',
+    this.adminRemarks = '',
+  });
+
+  factory SupportTicket.fromJson(Map e) {
+    return SupportTicket(
+      ticketId: e['ticketId']?.toString() ?? '',
+      bookingId: e['bookingId']?.toString() ?? '',
+      category: e['category']?.toString() ?? '',
+      status: e['status']?.toString() ?? '',
+      description: e['description']?.toString() ?? '',
+      adminRemarks: e['adminRemarks']?.toString() ?? '',
+    );
+  }
+
+  final String ticketId;
+  final String bookingId;
+  final String category;
+  final String status;
+  final String description;
+  final String adminRemarks;
 }
 
 class EvuddyCity {
@@ -520,6 +730,7 @@ class EvuddyVehicle {
     required this.batteryPercentage,
     this.hourlyRate,
     this.dailyRate,
+    this.vehicleStatus = 'Available',
   });
 
   factory EvuddyVehicle.fromJson(Map e) {
@@ -536,6 +747,7 @@ class EvuddyVehicle {
       batteryPercentage: _asDouble(e['batteryPercentage']) ?? 0,
       hourlyRate: _asDouble(e['hourlyRate']),
       dailyRate: _asDouble(e['dailyRate']),
+      vehicleStatus: e['vehicleStatus']?.toString() ?? 'Available',
     );
   }
 
@@ -547,6 +759,35 @@ class EvuddyVehicle {
   final double batteryPercentage;
   final double? hourlyRate;
   final double? dailyRate;
+  final String vehicleStatus;
+
+  /// Same as evuddy.com Book EV: Available, or blank from a public list.
+  bool get isBookable {
+    final s = vehicleStatus.trim().toLowerCase();
+    return s.isEmpty || s == 'available';
+  }
+
+  String get displayId =>
+      vehicleId.isNotEmpty
+          ? vehicleId
+          : (registrationNumber.isNotEmpty ? registrationNumber : vehicleModel);
+}
+
+/// Hub codes like `01` match `1`, and names/locations match as on the website.
+bool hubMatches(String currentHub, EvuddyHub hub) {
+  final aliases = [hub.name, hub.code, hub.location, hub.city]
+      .map((s) => s.trim().toLowerCase())
+      .where((s) => s.isNotEmpty)
+      .toList();
+  final t = currentHub.trim().toLowerCase();
+  if (t.isEmpty) return true;
+  for (final a in aliases) {
+    if (t == a || t.contains(a) || a.contains(t)) return true;
+    final n1 = num.tryParse(t);
+    final n2 = num.tryParse(a);
+    if (n1 != null && n2 != null && n1 == n2) return true;
+  }
+  return false;
 }
 
 class RiderBooking {
@@ -568,6 +809,7 @@ class RiderBooking {
     this.startHub = '',
     this.pickupHubName = '',
     this.city = '',
+    this.securityDeposit = 0,
     this.message = '',
   });
 
@@ -621,6 +863,8 @@ class RiderBooking {
       startHub: m['startHub']?.toString() ?? '',
       pickupHubName: m['pickupHubName']?.toString() ?? '',
       city: (m['pickupCity'] ?? m['city'])?.toString() ?? '',
+      securityDeposit: _asDouble(m['securityDeposit'] ?? e['securityDeposit']) ??
+          CatalogRates.securityDeposit.toDouble(),
       message: e['message']?.toString() ?? '',
     );
   }
@@ -642,6 +886,7 @@ class RiderBooking {
   final String startHub;
   final String pickupHubName;
   final String city;
+  final double securityDeposit;
   final String message;
 
   /// Remaining Razorpay due — same rules as evuddy.com (`pendingAmount` /
@@ -661,6 +906,14 @@ class RiderBooking {
 
   bool get isRemainingPayment =>
       receivedAmount >= 1 || hasPickupOtp || pickupOtpVerified;
+
+  /// Website locks remaining amount after first pay, and always for Rent to Own.
+  bool get remainingPayLocked => isRentToOwn || isRemainingPayment;
+
+  bool get completed {
+    final s = rideStatus.toLowerCase();
+    return s == 'completed' || s.contains('complete');
+  }
 
   /// Yard has accepted pickup OTP. Rider still swipes start (same as evuddy.com).
   bool get readyForPickup {
@@ -702,9 +955,33 @@ class RiderBooking {
       startHub: startHub,
       pickupHubName: pickupHubName,
       city: city,
+      securityDeposit: securityDeposit,
       message: message ?? this.message,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'mongoId': mongoId,
+        '_id': mongoId,
+        'bookingId': bookingId,
+        'rentalMode': rentalMode,
+        'paymentStatus': paymentStatus,
+        'rideStatus': rideStatus,
+        'pendingAmount': pendingAmount,
+        'receivedAmount': receivedAmount,
+        'paymentDue': paymentDue,
+        'pickupOTP': pickupOtp,
+        'rideEndOTP': rideEndOtp,
+        'pickupOTPVerified': pickupOtpVerified,
+        'vehicleId': vehicleId,
+        'vehicleModel': vehicleModel,
+        'vehicleNumber': vehicleNumber,
+        'startHub': startHub,
+        'pickupHubName': pickupHubName,
+        'city': city,
+        'securityDeposit': securityDeposit,
+        'message': message,
+      };
 
   RiderBooking mergedWith(RiderBooking live) {
     final preferLive = live.receivedAmount + 0.009 >= receivedAmount;
@@ -729,6 +1006,8 @@ class RiderBooking {
       pickupHubName:
           live.pickupHubName.isNotEmpty ? live.pickupHubName : pickupHubName,
       city: live.city.isNotEmpty ? live.city : city,
+      securityDeposit:
+          live.securityDeposit > 0.009 ? live.securityDeposit : securityDeposit,
       message: message.isNotEmpty ? message : live.message,
     );
   }
@@ -853,6 +1132,8 @@ class RiderLookup {
     this.fullName,
     this.email,
     this.message,
+    this.walletAvailable = 0,
+    this.walletStatus = '',
   });
   const RiderLookup.missing() : this(found: false);
 
@@ -877,6 +1158,8 @@ class RiderLookup {
       fullName: (d['fullName'] ?? d['name'])?.toString(),
       email: d['email']?.toString(),
       message: message,
+      walletAvailable: _asDouble(d['walletAvailable'] ?? d['walletBalance']) ?? 0,
+      walletStatus: d['walletStatus']?.toString() ?? '',
     );
   }
 
@@ -919,6 +1202,11 @@ class RiderLookup {
   final String? fullName;
   final String? email;
   final String? message;
+  final double walletAvailable;
+  final String walletStatus;
+
+  bool get walletBlocked =>
+      walletStatus.toLowerCase().contains('block');
 }
 
 class RegisterResult {
