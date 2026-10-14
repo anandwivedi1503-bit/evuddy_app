@@ -378,4 +378,24 @@ void main() {
       isTrue,
     );
   });
+
+  test('new Book EV riders collect name and email after OTP', () {
+    final draft = RegistrationDraft()
+      ..otpGate = 'book'
+      ..phoneVerified = true
+      ..fullName = ''
+      ..email = '';
+    expect(draft.hasPersonalProfile, isFalse);
+    expect(draft.shouldCollectPersonalAfterOtp, isTrue);
+
+    draft
+      ..otpGate = 'book'
+      ..fullName = 'Test Rider'
+      ..email = 'test@evuddy.com';
+    expect(draft.hasPersonalProfile, isTrue);
+    expect(draft.shouldCollectPersonalAfterOtp, isTrue);
+
+    draft.otpGate = 'register';
+    expect(draft.shouldCollectPersonalAfterOtp, isFalse);
+  });
 }

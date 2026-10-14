@@ -37,7 +37,7 @@
         return;
       }
       var hint = document.getElementById("hint");
-      if (hint) hint.textContent = "Razorpay is open. Choose UPI or card, then Continue.";
+      if (hint) hint.textContent = "Razorpay is open. Use UPI ID, QR, card or netbanking here — same as evuddy.com.";
       var options = {
         key: n.key,
         amount: n.amount,
@@ -51,6 +51,25 @@
         theme: { color: "#18B368" },
         retry: { enabled: true, max_count: 2 },
         remember_customer: false,
+        one_click_checkout: false,
+        method: n.method || {
+          upi: true,
+          card: true,
+          netbanking: true,
+          wallet: false,
+          emi: false,
+          paylater: false
+        },
+        config: n.config || {
+          display: {
+            hide: [
+              { method: "wallet" },
+              { method: "paylater" },
+              { method: "emi" },
+              { method: "upi_intent" }
+            ]
+          }
+        },
         handler: function (response) {
           post({
             type: "success",

@@ -79,6 +79,27 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       },
       'theme': {'color': '#18B368'},
       'retry': {'enabled': true, 'max_count': 2},
+      'remember_customer': false,
+      'one_click_checkout': false,
+      'method': {
+        'upi': true,
+        'card': true,
+        'netbanking': true,
+        'wallet': false,
+        'emi': false,
+        'paylater': false,
+      },
+      'config': {
+        'display': {
+          'hide': [
+            {'method': 'wallet'},
+            {'method': 'paylater'},
+            {'method': 'emi'},
+            {'method': 'upi_intent'},
+          ],
+          'preferences': {'show_default_blocks': true},
+        },
+      },
     };
   }
 

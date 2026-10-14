@@ -1,10 +1,8 @@
 package com.example.evuddy_app
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Color
-import android.net.Uri
 import android.os.Bundle
 import android.os.Message
 import android.view.ViewGroup
@@ -17,7 +15,6 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
-import android.widget.Toast
 import org.json.JSONObject
 
 /**
@@ -129,30 +126,8 @@ class RazorpayWebActivity : Activity() {
         ) {
             return false
         }
-        return launchExternal(url)
-    }
-
-    /** UPI / intent links from Razorpay Continue. Failure stays in the sheet. */
-    private fun launchExternal(url: String): Boolean {
-        return try {
-            val parsed = if (url.startsWith("intent:", ignoreCase = true)) {
-                Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
-            } else {
-                Intent(Intent.ACTION_VIEW, Uri.parse(url))
-            }
-            parsed.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(parsed)
-            true
-        } catch (_: ActivityNotFoundException) {
-            Toast.makeText(
-                this,
-                "That UPI app is not on this phone. Use card, netbanking, or UPI QR in Razorpay.",
-                Toast.LENGTH_LONG,
-            ).show()
-            true
-        } catch (_: Exception) {
-            true
-        }
+        // Stay on Razorpay (UPI QR / UPI ID / card). Do not jump to GPay / PhonePe.
+        return true
     }
 
     private fun newWebView(): WebView {
@@ -171,8 +146,6 @@ class RazorpayWebActivity : Activity() {
         settings.displayZoomControls = false
         settings.mediaPlaybackRequiresUserGesture = false
         settings.allowContentAccess = true
-        settings.userAgentString =
-            "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
         web.setBackgroundColor(Color.WHITE)
         return web
