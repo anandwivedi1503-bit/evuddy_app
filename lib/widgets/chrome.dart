@@ -398,7 +398,7 @@ class _EvuddyFieldState extends State<EvuddyField> {
             boxShadow: focused
                 ? [
                     BoxShadow(
-                      color: Evuddy.rapidoYellow.withOpacity(0.38),
+                      color: Evuddy.rapidoYellow.withValues(alpha: 0.38),
                       blurRadius: 22,
                       offset: const Offset(0, 8),
                     ),
@@ -549,7 +549,7 @@ class _EvuddyButtonState extends State<EvuddyButton> {
                 ? [
                     BoxShadow(
                       color: (widget.sun ? Evuddy.rapidoYellow : Evuddy.green)
-                          .withOpacity(0.42),
+                          .withValues(alpha: 0.42),
                       blurRadius: 22,
                       offset: const Offset(0, 10),
                     ),
@@ -648,7 +648,7 @@ class InfoNote extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       decoration: BoxDecoration(
-        color: Evuddy.paper.withOpacity(0.78),
+        color: Evuddy.paper.withValues(alpha: 0.78),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Evuddy.line),
       ),
@@ -871,7 +871,7 @@ class _OtpRowState extends State<OtpRow> {
               boxShadow: focused
                   ? [
                       BoxShadow(
-                        color: Evuddy.green.withOpacity(0.16),
+                        color: Evuddy.green.withValues(alpha: 0.16),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),

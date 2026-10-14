@@ -182,7 +182,7 @@ class _YellowHero extends StatelessWidget {
                   fontSize: 11,
                   letterSpacing: 2.2,
                   fontWeight: FontWeight.w800,
-                  color: Evuddy.ink.withOpacity(0.7),
+                  color: Evuddy.ink.withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 8),
@@ -204,7 +204,7 @@ class _YellowHero extends StatelessWidget {
                     fontSize: 13.5,
                     height: 1.45,
                     fontWeight: FontWeight.w600,
-                    color: Evuddy.ink.withOpacity(0.72),
+                    color: Evuddy.ink.withValues(alpha: 0.72),
                   ),
                 ),
               ],
@@ -432,7 +432,7 @@ class PlanSelectCard extends StatelessWidget {
                       unit,
                       style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w700,
-                        color: Evuddy.ink.withOpacity(0.7),
+                        color: Evuddy.ink.withValues(alpha: 0.7),
                       ),
                     ),
                   ),
@@ -444,7 +444,7 @@ class PlanSelectCard extends StatelessWidget {
                 style: GoogleFonts.plusJakartaSans(
                   height: 1.4,
                   fontWeight: FontWeight.w600,
-                  color: Evuddy.ink.withOpacity(0.78),
+                  color: Evuddy.ink.withValues(alpha: 0.78),
                 ),
               ),
               const SizedBox(height: 12),
@@ -456,7 +456,7 @@ class PlanSelectCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: selected ? Colors.white.withOpacity(0.55) : const Color(0xFFF7F4EA),
+                        color: selected ? Colors.white.withValues(alpha: 0.55) : const Color(0xFFF7F4EA),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
@@ -524,7 +524,7 @@ class CityRail extends StatelessWidget {
                   Icon(
                     Icons.location_city_rounded,
                     size: 20,
-                    color: Evuddy.ink.withOpacity(0.8),
+                    color: Evuddy.ink.withValues(alpha: 0.8),
                   ),
                   const Spacer(),
                   Text(
@@ -679,7 +679,7 @@ class DurationRail extends StatelessWidget {
                       fontSize: 10,
                       letterSpacing: 1,
                       fontWeight: FontWeight.w800,
-                      color: Evuddy.ink.withOpacity(0.7),
+                      color: Evuddy.ink.withValues(alpha: 0.7),
                     ),
                   ),
                   const Spacer(),
