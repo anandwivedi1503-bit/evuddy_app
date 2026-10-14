@@ -25,6 +25,7 @@ class Evuddy {
 
   static const wordmarkAsset = 'assets/images/evuddy_wordmark.png';
   static const logoMarkAsset = 'assets/images/evuddy_logo.png';
+  static const appIconAsset = 'assets/images/evuddy_app_icon.png';
   static const riderCityAsset = 'assets/images/rider_city.png';
   static const riderEveningAsset = 'assets/images/rider_evening.png';
   static const yellowScooterAsset = 'assets/images/scooter_yellow.png';
@@ -109,23 +110,11 @@ class EvuddyLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Image.asset(
-          Evuddy.logoMarkAsset,
-          height: height * 1.12,
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-        ),
-        SizedBox(width: height * 0.22),
-        Image.asset(
-          Evuddy.wordmarkAsset,
-          height: height,
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-        ),
-      ],
+    return Image.asset(
+      Evuddy.wordmarkAsset,
+      height: height,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
     );
   }
 }
@@ -135,23 +124,11 @@ class EvuddySplashMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Image.asset(
-          Evuddy.logoMarkAsset,
-          height: 88,
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-        ),
-        const SizedBox(height: 14),
-        Image.asset(
-          Evuddy.wordmarkAsset,
-          height: 48,
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-        ),
-      ],
+    return Image.asset(
+      Evuddy.wordmarkAsset,
+      height: 56,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.high,
     );
   }
 }

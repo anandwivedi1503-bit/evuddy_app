@@ -381,7 +381,7 @@ class _EvuddyFieldState extends State<EvuddyField> {
             fontSize: 11,
             letterSpacing: 1.3,
             fontWeight: FontWeight.w800,
-            color: focused ? Evuddy.greenDeep : Evuddy.muted,
+            color: focused ? Evuddy.ink : Evuddy.muted,
           ),
         ),
         const SizedBox(height: 8),
@@ -390,15 +390,15 @@ class _EvuddyFieldState extends State<EvuddyField> {
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
             color: Evuddy.paper,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: focused ? Evuddy.green : Evuddy.line,
-              width: focused ? 1.7 : 1,
+              color: focused ? Evuddy.rapidoYellow : Evuddy.line,
+              width: focused ? 2 : 1,
             ),
             boxShadow: focused
                 ? [
                     BoxShadow(
-                      color: Evuddy.green.withOpacity(0.16),
+                      color: Evuddy.rapidoYellow.withOpacity(0.38),
                       blurRadius: 22,
                       offset: const Offset(0, 8),
                     ),
@@ -418,7 +418,7 @@ class _EvuddyFieldState extends State<EvuddyField> {
                   textCapitalization: widget.textCapitalization,
                   readOnly: widget.readOnly,
                   onTap: widget.onTap,
-                  cursorColor: Evuddy.magenta,
+                  cursorColor: Evuddy.ink,
                   cursorWidth: 2,
                   decoration: InputDecoration(
                     counterText: '',
@@ -504,6 +504,7 @@ class EvuddyButton extends StatefulWidget {
     required this.onPressed,
     this.icon = Icons.arrow_forward_rounded,
     this.dark = true,
+    this.sun = false,
     this.busy = false,
   });
 
@@ -511,6 +512,7 @@ class EvuddyButton extends StatefulWidget {
   final VoidCallback? onPressed;
   final IconData icon;
   final bool dark;
+  final bool sun;
   final bool busy;
 
   @override
@@ -537,14 +539,17 @@ class _EvuddyButtonState extends State<EvuddyButton> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: widget.dark
-                  ? const [Color(0xFF16A34A), Color(0xFF047857)]
-                  : const [Evuddy.logoGreen, Evuddy.logoPink],
+              colors: widget.sun
+                  ? const [Color(0xFFFFCC00), Color(0xFFFFB300)]
+                  : widget.dark
+                      ? const [Color(0xFF16A34A), Color(0xFF047857)]
+                      : const [Evuddy.logoGreen, Evuddy.logoPink],
             ),
             boxShadow: enabled
                 ? [
                     BoxShadow(
-                      color: Evuddy.green.withOpacity(0.32),
+                      color: (widget.sun ? Evuddy.rapidoYellow : Evuddy.green)
+                          .withOpacity(0.42),
                       blurRadius: 22,
                       offset: const Offset(0, 10),
                     ),
@@ -564,12 +569,12 @@ class _EvuddyButtonState extends State<EvuddyButton> {
                     },
               child: Center(
                 child: widget.busy
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.4,
-                          color: Colors.white,
+                          color: widget.sun ? Evuddy.ink : Colors.white,
                         ),
                       )
                     : Row(
@@ -580,11 +585,15 @@ class _EvuddyButtonState extends State<EvuddyButton> {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
-                              color: Colors.white,
+                              color: widget.sun ? Evuddy.ink : Colors.white,
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Icon(widget.icon, size: 18, color: Colors.white),
+                          Icon(
+                            widget.icon,
+                            size: 18,
+                            color: widget.sun ? Evuddy.ink : Colors.white,
+                          ),
                         ],
                       ),
               ),
@@ -906,11 +915,13 @@ class ChoicePills extends StatelessWidget {
     required this.options,
     required this.value,
     required this.onChanged,
+    this.sun = false,
   });
 
   final List<String> options;
   final String value;
   final ValueChanged<String> onChanged;
+  final bool sun;
 
   @override
   Widget build(BuildContext context) {
@@ -928,10 +939,14 @@ class ChoicePills extends StatelessWidget {
             duration: const Duration(milliseconds: 180),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: sel ? Evuddy.greenSoft : Evuddy.paper,
+              color: sel
+                  ? (sun ? Evuddy.rapidoYellow : Evuddy.greenSoft)
+                  : Evuddy.paper,
               borderRadius: BorderRadius.circular(99),
               border: Border.all(
-                color: sel ? Evuddy.green : Evuddy.line,
+                color: sel
+                    ? (sun ? Evuddy.ink : Evuddy.green)
+                    : Evuddy.line,
                 width: sel ? 1.4 : 1,
               ),
               boxShadow: sel ? Evuddy.lift : null,
@@ -941,7 +956,7 @@ class ChoicePills extends StatelessWidget {
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: sel ? Evuddy.greenDeep : Evuddy.ink,
+                color: Evuddy.ink,
               ),
             ),
           ),
@@ -983,10 +998,10 @@ class DocTile extends StatelessWidget {
             duration: const Duration(milliseconds: 220),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: selected ? Evuddy.greenSoft : Evuddy.paper,
+              color: selected ? const Color(0xFFFFF4C2) : Evuddy.paper,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: selected ? Evuddy.green : Evuddy.line,
+                color: selected ? Evuddy.ink : Evuddy.line,
                 width: selected ? 1.6 : 1,
               ),
               boxShadow: Evuddy.lift,
@@ -999,17 +1014,12 @@ class DocTile extends StatelessWidget {
                   height: 48,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
-                    gradient: selected
-                        ? const LinearGradient(
-                            colors: [Evuddy.logoGreen, Evuddy.greenDeep],
-                          )
-                        : null,
-                    color: selected ? null : const Color(0xFFF8FAFC),
+                    color: selected ? Evuddy.rapidoYellow : const Color(0xFFF8FAFC),
                     border: selected ? null : Border.all(color: Evuddy.line),
                   ),
                   child: Icon(
                     selected ? Icons.check_rounded : icon,
-                    color: selected ? Colors.white : Evuddy.muted,
+                    color: selected ? Evuddy.ink : Evuddy.muted,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1029,7 +1039,7 @@ class DocTile extends StatelessWidget {
                       Text(
                         selected ? 'Attached on this device' : subtitle,
                         style: GoogleFonts.plusJakartaSans(
-                          color: selected ? Evuddy.greenDeep : Evuddy.muted,
+                          color: selected ? Evuddy.ink : Evuddy.muted,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1039,7 +1049,7 @@ class DocTile extends StatelessWidget {
                 ),
                 Icon(
                   selected ? Icons.verified_rounded : Icons.add_rounded,
-                  color: selected ? Evuddy.green : Evuddy.muted,
+                  color: selected ? Evuddy.ink : Evuddy.muted,
                 ),
               ],
             ),

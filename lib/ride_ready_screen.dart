@@ -11,6 +11,7 @@ import 'confirm_mobile_screen.dart';
 import 'open_link.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
+import 'widgets/booking_ui.dart';
 import 'widgets/chrome.dart';
 
 class RideReadyScreen extends StatefulWidget {
@@ -686,9 +687,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     final step = b != null && b.bookingId.isNotEmpty
         ? 4
         : wizard;
-    return AuthScreen(
+    return BookStage(
       showBack: widget.showBack,
-      compact: b != null && b.bookingId.isNotEmpty,
       step: b != null && b.bookingId.isNotEmpty ? null : step,
       of: 4,
       kicker: b != null && b.bookingId.isNotEmpty
@@ -745,8 +745,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         const SizedBox(height: 16),
         if (b == null && wizard == 2) ...[
           if (rental)
-            ChoicePills(
-              options: const ['Hourly', 'Daily', 'Weekly', 'Monthly'],
+            DurationRail(
               value: duration,
               onChanged: (v) => setState(() {
                 duration = v;
@@ -754,7 +753,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
               }),
             ),
           if (rental) const SizedBox(height: 16),
-          Text('LIVE SCOOTERS', style: Theme.of(context).textTheme.labelSmall),
+          const SectionLabel('Live scooters'),
           const SizedBox(height: 10),
           if (!loading && vehicles.isEmpty)
             const InfoNote(
@@ -968,16 +967,12 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             ),
           )
         else
-          TextField(
+          EvuddyField(
+            label: 'PAY AMOUNT',
+            hint: '₹1 to remaining due',
             controller: amount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-            decoration: InputDecoration(
-              labelText: 'Pay amount (₹1 to remaining)',
-              filled: true,
-              fillColor: Evuddy.paper,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-            ),
           ),
       ],
       if (b.receivedAmount >= 1 && !b.completed) ...[
@@ -1043,13 +1038,13 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
 
   Widget _footer(RiderBooking? b) {
     if (busy) {
-      return const EvuddyButton(label: 'Working…', onPressed: null, busy: true);
+      return const EvuddyButton(sun: true, label: 'Working…', onPressed: null, busy: true);
     }
     if (b == null) {
       if (wizard == 3) {
         return Column(
           children: [
-            EvuddyButton(label: 'Reserve scooter', onPressed: _reserve),
+            EvuddyButton(sun: true, label: 'Reserve scooter', onPressed: _reserve),
             const SizedBox(height: 8),
             EvuddyGhostButton(label: 'Back', onPressed: () => setState(() => wizard = 2)),
           ],
@@ -1057,12 +1052,14 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       }
       if (vehicles.isEmpty) {
         return EvuddyButton(
+          sun: true,
           label: 'Refresh scooters',
           icon: Icons.refresh_rounded,
           onPressed: _load,
         );
       }
       return EvuddyButton(
+        sun: true,
         label: 'Continue to review',
         onPressed: () {
           selected ??= vehicles.first;
@@ -1071,7 +1068,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       );
     }
     if (b.completed) {
-      return EvuddyButton(label: 'Refresh booking', onPressed: _load);
+      return EvuddyButton(sun: true, label: 'Refresh booking', onPressed: _load);
     }
     final payDue = b.due > 0.009 || remainingPay;
     final waitForStart = b.pickupOtpVerified && !b.inRide;
@@ -1100,6 +1097,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         ],
         if (payDue && !waitForStart) ...[
           EvuddyButton(
+            sun: true,
             label: remainingPay
                 ? 'Pay remaining ${CatalogRates.inr(_remainingCharge(b))} with Razorpay'
                 : 'Pay securely with Razorpay',
@@ -1139,7 +1137,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         ],
         if (!payDue && !b.hasPickupOtp && !b.readyForPickup && !b.inRide) ...[
           const SizedBox(height: 8),
-          EvuddyButton(label: 'Refresh booking', onPressed: _load),
+          EvuddyButton(sun: true, label: 'Refresh booking', onPressed: _load),
         ],
       ],
     );
@@ -1170,11 +1168,11 @@ class ScooterPickCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         child: Ink(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: selected ? const Color(0xFFFFF4C2) : Colors.white,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: selected ? Evuddy.green : Evuddy.line,
-              width: selected ? 1.8 : 1,
+              color: selected ? Evuddy.ink : Evuddy.line,
+              width: selected ? 2 : 1,
             ),
             boxShadow: Evuddy.lift,
           ),
@@ -1185,7 +1183,7 @@ class ScooterPickCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: ColoredBox(
-                    color: const Color(0xFFFFF8DC),
+                    color: selected ? Evuddy.rapidoYellow : const Color(0xFFFFF8DC),
                     child: SizedBox(
                       width: 86,
                       height: 86,
@@ -1219,7 +1217,7 @@ class ScooterPickCard extends StatelessWidget {
                             selected
                                 ? Icons.check_circle_rounded
                                 : Icons.radio_button_off_rounded,
-                            color: selected ? Evuddy.green : Evuddy.muted,
+                            color: Evuddy.ink,
                           ),
                         ],
                       ),
@@ -1244,7 +1242,7 @@ class ScooterPickCard extends StatelessWidget {
                           value: pct,
                           minHeight: 6,
                           backgroundColor: Evuddy.line,
-                          color: pct > 0.4 ? Evuddy.green : Evuddy.magenta,
+                          color: pct > 0.4 ? Evuddy.ink : Evuddy.magenta,
                         ),
                       ),
                       const SizedBox(height: 8),

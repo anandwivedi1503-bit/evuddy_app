@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'shell.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
+import 'widgets/booking_ui.dart';
 import 'widgets/chrome.dart';
 
 class SubmittedScreen extends StatefulWidget {
@@ -74,7 +75,7 @@ class _SubmittedScreenState extends State<SubmittedScreen>
     final title = approved
         ? (first.isEmpty ? 'You’re approved.' : 'You’re approved, $first.')
         : (first.isEmpty ? 'You’re in.' : 'You’re in, $first.');
-    return AuthScreen(
+    return BookStage(
       showBack: false,
       kicker: 'Application',
       title: title,
@@ -84,6 +85,7 @@ class _SubmittedScreenState extends State<SubmittedScreen>
       footer: Column(
         children: [
           EvuddyButton(
+            sun: true,
             label: approved
                 ? 'Book EV now'
                 : (_checking ? 'Checking approval…' : 'Check approval now'),
