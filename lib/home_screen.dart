@@ -164,6 +164,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     BookSearchBar(onBook: () => _book()),
                     const SizedBox(height: 12),
                     EvuddyButton(
+                      sun: true,
+                      label: d.canBook ? 'Book EV now' : 'Start booking',
+                      onPressed: () => _book(),
+                    ),
+                    const SizedBox(height: 10),
+                    EvuddyGhostButton(
                       label: 'Fleet calculator',
                       onPressed: () {
                         Navigator.push(
@@ -371,16 +377,12 @@ class BookSearchBar extends StatelessWidget {
           height: 64,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF16A34A), Color(0xFF047857)],
-            ),
-            boxShadow: [
+            color: Evuddy.rapidoYellow,
+            boxShadow: const [
               BoxShadow(
-                color: Evuddy.green.withValues(alpha: 0.32),
+                color: Color(0x66FFCC00),
                 blurRadius: 22,
-                offset: const Offset(0, 10),
+                offset: Offset(0, 10),
               ),
             ],
           ),
@@ -392,10 +394,10 @@ class BookSearchBar extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.16),
+                    color: Evuddy.ink,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.electric_moped_rounded, color: Colors.white),
+                  child: const Icon(Icons.electric_moped_rounded, color: Evuddy.rapidoYellow),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -408,7 +410,7 @@ class BookSearchBar extends StatelessWidget {
                         style: GoogleFonts.plusJakartaSans(
                           fontWeight: FontWeight.w800,
                           fontSize: 17,
-                          color: Colors.white,
+                          color: Evuddy.ink,
                         ),
                       ),
                       Text(
@@ -416,13 +418,13 @@ class BookSearchBar extends StatelessWidget {
                         style: GoogleFonts.plusJakartaSans(
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
-                          color: Colors.white70,
+                          color: Evuddy.ink,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+                const Icon(Icons.arrow_forward_rounded, color: Evuddy.ink),
               ],
             ),
           ),

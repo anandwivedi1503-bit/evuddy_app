@@ -84,23 +84,23 @@ class _RiderShellState extends State<RiderShell> with WidgetsBindingObserver {
         elevation: 8,
         shadowColor: const Color(0x14000000),
         surfaceTintColor: Colors.white,
-        indicatorColor: Evuddy.greenSoft,
+        indicatorColor: Evuddy.rapidoYellow,
         height: 72,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded, color: Evuddy.greenDeep),
+            selectedIcon: Icon(Icons.home_rounded, color: Evuddy.ink),
             label: 'Home',
           ),
           NavigationDestination(
             icon: Icon(Icons.electric_moped_outlined),
-            selectedIcon: Icon(Icons.electric_moped_rounded, color: Evuddy.greenDeep),
+            selectedIcon: Icon(Icons.electric_moped_rounded, color: Evuddy.ink),
             label: 'Book EV',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded, color: Evuddy.greenDeep),
+            selectedIcon: Icon(Icons.person_rounded, color: Evuddy.ink),
             label: 'Account',
           ),
         ],

@@ -137,7 +137,7 @@ class FareCard extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: featured ? Evuddy.green.withValues(alpha: 0.45) : Evuddy.line,
+              color: featured ? Evuddy.ink : Evuddy.line,
             ),
             boxShadow: const [
               BoxShadow(color: Color(0x0C0B1F14), blurRadius: 14, offset: Offset(0, 6)),
@@ -150,7 +150,7 @@ class FareCard extends StatelessWidget {
                 height: offer.photoHeight,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: featured ? const Color(0xFFECFDF3) : const Color(0xFFF7F8F5),
+                  color: featured ? Evuddy.rapidoYellow : const Color(0xFFF7F4EA),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
                 ),
                 child: ClipRRect(
@@ -192,7 +192,7 @@ class FareCard extends StatelessWidget {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 8,
                               fontWeight: FontWeight.w800,
-                              color: Evuddy.green,
+                              color: Evuddy.ink,
                               letterSpacing: 0.4,
                             ),
                           ),

@@ -12,7 +12,7 @@ class MainActivity : FlutterFragmentActivity() {
     private val payLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
             val payload = res.data?.getStringExtra(RazorpayWebActivity.EXTRA_PAYLOAD)
-            payResult?.success(payload)
+            payResult?.success(payload ?: """{"type":"dismiss"}""")
             payResult = null
         }
 

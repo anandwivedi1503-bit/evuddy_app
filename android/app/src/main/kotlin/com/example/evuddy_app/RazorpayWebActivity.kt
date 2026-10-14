@@ -1,23 +1,28 @@
 package com.example.evuddy_app
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import android.os.Message
+import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
+import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import android.widget.Toast
 import org.json.JSONObject
 
 /**
- * Hosts checkout.js like evuddy.com Book EV.
- * Standard Razorpay only (UPI QR / cards in the sheet). Does not open PhonePe.
+ * Full-screen checkout.js host — same Razorpay Standard Checkout as evuddy.com/book-bike.
+ * Extra windows are required so Razorpay's Continue / 3DS / UPI sheet can proceed.
  */
 class RazorpayWebActivity : Activity() {
     private lateinit var container: FrameLayout
@@ -30,8 +35,14 @@ class RazorpayWebActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         container = FrameLayout(this)
-        container.setBackgroundColor(Color.parseColor("#F6FFF9"))
-        setContentView(container)
+        container.setBackgroundColor(Color.WHITE)
+        setContentView(
+            container,
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            ),
+        )
 
         CookieManager.getInstance().setAcceptCookie(true)
         optionsJson = intent.getStringExtra(EXTRA_OPTIONS) ?: "{}"
@@ -40,12 +51,7 @@ class RazorpayWebActivity : Activity() {
         main = newWebView()
         main.addJavascriptInterface(Bridge(), "PayBridge")
         main.webChromeClient = chrome()
-        main.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(
-                view: WebView,
-                request: WebResourceRequest,
-            ): Boolean = stayOnRazorpay(request.url.toString())
-        }
+        main.webViewClient = client()
         container.addView(
             main,
             FrameLayout.LayoutParams(
@@ -72,12 +78,7 @@ class RazorpayWebActivity : Activity() {
             ): Boolean {
                 val extra = newWebView()
                 extra.webChromeClient = this
-                extra.webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(
-                        view: WebView,
-                        request: WebResourceRequest,
-                    ): Boolean = stayOnRazorpay(request.url.toString())
-                }
+                extra.webViewClient = client()
                 dropPopup()
                 popup = extra
                 container.addView(
@@ -100,6 +101,57 @@ class RazorpayWebActivity : Activity() {
                     if (popup === window) popup = null
                 }
             }
+
+            override fun onPermissionRequest(request: PermissionRequest?) {
+                request?.grant(request.resources)
+            }
+        }
+    }
+
+    private fun client(): WebViewClient {
+        return object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(
+                view: WebView,
+                request: WebResourceRequest,
+            ): Boolean = handleUrl(request.url.toString())
+        }
+    }
+
+    private fun handleUrl(url: String): Boolean {
+        val lower = url.lowercase()
+        if (
+            lower.startsWith("http://") ||
+            lower.startsWith("https://") ||
+            lower.startsWith("about:") ||
+            lower.startsWith("javascript:") ||
+            lower.startsWith("blob:") ||
+            lower.startsWith("data:")
+        ) {
+            return false
+        }
+        return launchExternal(url)
+    }
+
+    /** UPI / intent links from Razorpay Continue. Failure stays in the sheet. */
+    private fun launchExternal(url: String): Boolean {
+        return try {
+            val parsed = if (url.startsWith("intent:", ignoreCase = true)) {
+                Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
+            } else {
+                Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            }
+            parsed.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(parsed)
+            true
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(
+                this,
+                "That UPI app is not on this phone. Use card, netbanking, or UPI QR in Razorpay.",
+                Toast.LENGTH_LONG,
+            ).show()
+            true
+        } catch (_: Exception) {
+            true
         }
     }
 
@@ -113,25 +165,17 @@ class RazorpayWebActivity : Activity() {
         settings.setSupportMultipleWindows(true)
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         settings.cacheMode = WebSettings.LOAD_DEFAULT
+        settings.useWideViewPort = true
+        settings.loadWithOverviewMode = true
+        settings.builtInZoomControls = false
+        settings.displayZoomControls = false
+        settings.mediaPlaybackRequiresUserGesture = false
+        settings.allowContentAccess = true
         settings.userAgentString =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
-        web.setBackgroundColor(Color.parseColor("#F6FFF9"))
+        web.setBackgroundColor(Color.WHITE)
         return web
-    }
-
-    /** Keep checkout.js in the WebView. Do not hand off to PhonePe / GPay / Paytm. */
-    private fun stayOnRazorpay(url: String): Boolean {
-        val lower = url.lowercase()
-        if (
-            lower.startsWith("http://") ||
-            lower.startsWith("https://") ||
-            lower.startsWith("about:") ||
-            lower.startsWith("javascript:")
-        ) {
-            return false
-        }
-        return true
     }
 
     private fun dropPopup() {
