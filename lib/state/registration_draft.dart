@@ -78,6 +78,41 @@ class RegistrationDraft {
 
   bool get canBook => phoneVerified && isApproved;
 
+  bool get hasPersonalProfile {
+    final n = fullName.trim().replaceAll(RegExp(r'\s+'), ' ');
+    final e = email.trim().toLowerCase();
+    return RegExp(r"^[A-Za-z][A-Za-z\s'.-]{2,49}$").hasMatch(n) &&
+        RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$').hasMatch(e);
+  }
+
+  /// Phone-first Book EV always collects name + email after OTP.
+  /// Home Register already collected them, so OTP continues to KYC.
+  bool get shouldCollectPersonalAfterOtp =>
+      otpGate != 'register' || !hasPersonalProfile;
+
+  void resetProfileForNewPhone() {
+    fullName = '';
+    email = '';
+    comingThrough = 'Direct / EVUDDY';
+    aadhaar = '';
+    drivingLicense = '';
+    instagramId = '';
+    facebookId = '';
+    reference1Name = '';
+    reference1Phone = '';
+    reference2Name = '';
+    reference2Phone = '';
+    aadhaarFrontPath = null;
+    aadhaarBackPath = null;
+    licenseFrontPath = null;
+    licenseBackPath = null;
+    profilePhotoPath = null;
+    riderId = null;
+    approvalStatus = '';
+    bookingEnabled = false;
+    activeBooking = null;
+  }
+
   /// Website `/api/bookings/mine` — skip plan pick while this booking is live.
   bool get hasLiveBooking {
     final b = activeBooking;

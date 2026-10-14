@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'api/evuddy_api.dart';
+import 'kyc_details_screen.dart';
 import 'state/registration_draft.dart';
 import 'verify_mobile_otp_screen.dart';
 import 'widgets/booking_ui.dart';
@@ -54,6 +55,8 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  bool get _verified => registrationDraft.phoneVerified;
+
   Future<void> _continue() async {
     FocusScope.of(context).unfocus();
     final n = name.text.trim().replaceAll(RegExp(r'\s+'), ' ');
@@ -72,44 +75,48 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     final previous = registrationDraft.phone;
+    if (previous != p && !_verified) {
+      registrationDraft.resetProfileForNewPhone();
+    }
     registrationDraft
       ..fullName = n
       ..phone = p
       ..email = e
-      ..comingThrough = comingThrough
-      ..phoneVerified = false
-      ..otpGate = 'register';
-    if (previous != p) {
+      ..comingThrough = comingThrough;
+    if (!_verified) {
       registrationDraft
-        ..riderId = null
-        ..approvalStatus = ''
-        ..bookingEnabled = false
-        ..activeBooking = null;
+        ..phoneVerified = false
+        ..otpGate = 'register';
     }
     await registrationDraft.persist();
     setState(() {
       error = null;
       busy = true;
     });
-    if (mounted) {
-      setState(() => busy = false);
-      Navigator.push(context, evuddyRoute(const VerifyMobileOtpScreen()));
+    if (!mounted) return;
+    setState(() => busy = false);
+    if (_verified) {
+      Navigator.pushReplacement(context, evuddyRoute(const KycDetailsScreen()));
+      return;
     }
+    Navigator.push(context, evuddyRoute(const VerifyMobileOtpScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
     return BookStage(
       showBack: false,
-      kicker: 'Register',
-      title: 'Let’s get you riding',
-      subtitle:
-          'New rider? Enter your details once. Already on evuddy.com? Use the same mobile — OTP unlocks booking.',
-      step: 1,
+      kicker: _verified ? 'Your details' : 'Register',
+      title: _verified ? 'Name and email' : 'Let’s get you riding',
+      subtitle: _verified
+          ? 'Number is verified. Add the name and email ops will use, then Aadhaar KYC.'
+          : 'New rider? Enter your details once. Already on evuddy.com? Use the same mobile — OTP unlocks booking.',
+      step: _verified ? 2 : 1,
+      of: 4,
       error: error,
       footer: EvuddyButton(
         sun: true,
-        label: 'Send OTP',
+        label: _verified ? 'Continue to KYC' : 'Send OTP',
         busy: busy,
         onPressed: busy ? null : _continue,
       ),
@@ -140,7 +147,8 @@ class _LoginScreenState extends State<LoginScreen> {
           maxLength: 10,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           prefix: const PhonePrefix(),
-          voiceKind: VoiceKind.phone,
+          readOnly: _verified,
+          voiceKind: _verified ? null : VoiceKind.phone,
         ),
         const SizedBox(height: 16),
         EvuddyField(

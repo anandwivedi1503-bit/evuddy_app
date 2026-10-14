@@ -45,6 +45,9 @@ class _ConfirmMobileScreenState extends State<ConfirmMobileScreen> {
       setState(() => error = 'Enter a valid 10-digit Indian mobile number.');
       return;
     }
+    if (registrationDraft.phone != p) {
+      registrationDraft.resetProfileForNewPhone();
+    }
     registrationDraft
       ..phone = p
       ..otpGate = 'book';
@@ -58,11 +61,13 @@ class _ConfirmMobileScreenState extends State<ConfirmMobileScreen> {
   Widget build(BuildContext context) {
     return BookStage(
       showBack: false,
-      kicker: 'Welcome back',
+      kicker: 'Book EV',
       title: 'Confirm your mobile',
+      step: 1,
+      of: 4,
       subtitle: registrationDraft.hasLiveBooking
           ? 'Same registered mobile as this booking. OTP refreshes Firebase so Razorpay can charge remaining.'
-          : 'Approved riders skip KYC and go straight to scooters. New riders continue to registration after OTP.',
+          : 'New riders: OTP, then name and email, then KYC. Approved riders skip to scooters.',
       error: error,
       footer: EvuddyButton(sun: true, label: 'Send OTP', onPressed: _send),
       children: [

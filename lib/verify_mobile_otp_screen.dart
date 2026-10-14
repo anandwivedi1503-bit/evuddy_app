@@ -166,11 +166,11 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       return;
     }
     if (!mounted) return;
-    if (registrationDraft.fullName.isNotEmpty && registrationDraft.email.isNotEmpty) {
-      Navigator.pushReplacement(context, evuddyRoute(const KycDetailsScreen()));
+    if (registrationDraft.shouldCollectPersonalAfterOtp) {
+      Navigator.pushReplacement(context, evuddyRoute(const LoginScreen()));
       return;
     }
-    Navigator.pushReplacement(context, evuddyRoute(const LoginScreen()));
+    Navigator.pushReplacement(context, evuddyRoute(const KycDetailsScreen()));
   }
 
   @override
