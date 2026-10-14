@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'state/registration_draft.dart';
-import 'theme/evuddy.dart';
 import 'verify_mobile_otp_screen.dart';
+import 'widgets/booking_ui.dart';
 import 'widgets/chrome.dart';
 import 'widgets/voice_fill.dart';
 
@@ -56,26 +56,32 @@ class _ConfirmMobileScreenState extends State<ConfirmMobileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AuthScreen(
+    return BookStage(
       showBack: false,
       kicker: 'Welcome back',
-      title: 'Confirm your\nmobile number',
+      title: 'Confirm your mobile',
       subtitle: registrationDraft.hasLiveBooking
           ? 'Same registered mobile as this booking. OTP refreshes Firebase so Razorpay can charge remaining.'
-          : 'Approved riders skip KYC and go straight to scooters, Razorpay and pickup OTP. New riders continue to registration after OTP.',
+          : 'Approved riders skip KYC and go straight to scooters. New riders continue to registration after OTP.',
       error: error,
-      hero: const ScenePhoto(asset: Evuddy.yellowScooterAsset, height: 188, fit: BoxFit.contain),
-      footer: EvuddyButton(label: 'Send OTP', onPressed: _send),
+      footer: EvuddyButton(sun: true, label: 'Send OTP', onPressed: _send),
       children: [
-        EvuddyField(
-          label: 'MOBILE NUMBER',
-          hint: '10-digit mobile',
-          controller: phone,
-          keyboardType: TextInputType.phone,
-          maxLength: 10,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          prefix: const PhonePrefix(),
-          voiceKind: VoiceKind.phone,
+        FormDeck(
+          eyebrow: 'Registered mobile',
+          title: 'We’ll text a 6-digit OTP',
+          icon: Icons.smartphone_rounded,
+          children: [
+            EvuddyField(
+              label: 'MOBILE NUMBER',
+              hint: '10-digit mobile',
+              controller: phone,
+              keyboardType: TextInputType.phone,
+              maxLength: 10,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              prefix: const PhonePrefix(),
+              voiceKind: VoiceKind.phone,
+            ),
+          ],
         ),
       ],
     );

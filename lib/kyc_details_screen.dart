@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'state/registration_draft.dart';
-import 'theme/evuddy.dart';
 import 'upload_documents_screen.dart';
+import 'widgets/booking_ui.dart';
 import 'widgets/chrome.dart';
 import 'widgets/voice_fill.dart';
 
@@ -92,64 +92,75 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AuthScreen(
-      kicker: 'KYC  ·  Step 3 of 4',
+    return BookStage(
+      kicker: 'KYC',
       title: 'Verify who you are',
       subtitle:
-          'Aadhaar is required so ops can approve you for Book EV. Licence and references help the yard — optional. Speak numbers with the mic.',
-      hero: const ScenePhoto(asset: Evuddy.riderCityAsset, height: 160),
+          'Aadhaar is required so ops can approve you. Licence and references help the yard — optional.',
       step: 3,
       error: error,
-      footer: EvuddyButton(label: 'Continue', onPressed: _continue),
+      footer: EvuddyButton(sun: true, label: 'Continue', onPressed: _continue),
       children: [
-        EvuddyField(
-          label: 'AADHAAR NUMBER *',
-          hint: '12 digits',
-          controller: aadhaar,
-          keyboardType: TextInputType.number,
-          maxLength: 12,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          voiceKind: VoiceKind.aadhaar,
+        FormDeck(
+          eyebrow: 'Identity',
+          title: 'Government IDs',
+          icon: Icons.badge_rounded,
+          children: [
+            EvuddyField(
+              label: 'AADHAAR NUMBER *',
+              hint: '12 digits',
+              controller: aadhaar,
+              keyboardType: TextInputType.number,
+              maxLength: 12,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              voiceKind: VoiceKind.aadhaar,
+            ),
+            const SizedBox(height: 16),
+            EvuddyField(
+              label: 'DRIVING LICENCE',
+              hint: 'Optional · UP1420110012345',
+              controller: license,
+              textCapitalization: TextCapitalization.characters,
+              voiceKind: VoiceKind.license,
+            ),
+            const SizedBox(height: 16),
+            EvuddyField(label: 'INSTAGRAM', hint: 'Optional', controller: ig),
+            const SizedBox(height: 16),
+            EvuddyField(label: 'FACEBOOK', hint: 'Optional', controller: fb),
+          ],
         ),
         const SizedBox(height: 16),
-        EvuddyField(
-          label: 'DRIVING LICENCE',
-          hint: 'Optional · UP1420110012345',
-          controller: license,
-          textCapitalization: TextCapitalization.characters,
-          voiceKind: VoiceKind.license,
-        ),
-        const SizedBox(height: 16),
-        EvuddyField(label: 'INSTAGRAM', hint: 'Optional', controller: ig),
-        const SizedBox(height: 16),
-        EvuddyField(label: 'FACEBOOK', hint: 'Optional', controller: fb),
-        const SizedBox(height: 24),
-        const WelcomeRule(caption: 'References'),
-        const SizedBox(height: 16),
-        EvuddyField(label: 'REFERENCE 1 NAME', hint: 'Optional', controller: r1n, voiceKind: VoiceKind.name),
-        const SizedBox(height: 16),
-        EvuddyField(
-          label: 'REFERENCE 1 MOBILE',
-          hint: 'Optional',
-          controller: r1p,
-          keyboardType: TextInputType.phone,
-          maxLength: 10,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          prefix: const PhonePrefix(),
-          voiceKind: VoiceKind.phone,
-        ),
-        const SizedBox(height: 16),
-        EvuddyField(label: 'REFERENCE 2 NAME', hint: 'Optional', controller: r2n, voiceKind: VoiceKind.name),
-        const SizedBox(height: 16),
-        EvuddyField(
-          label: 'REFERENCE 2 MOBILE',
-          hint: 'Optional',
-          controller: r2p,
-          keyboardType: TextInputType.phone,
-          maxLength: 10,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          prefix: const PhonePrefix(),
-          voiceKind: VoiceKind.phone,
+        FormDeck(
+          eyebrow: 'Yard contacts',
+          title: 'References',
+          icon: Icons.groups_rounded,
+          children: [
+            EvuddyField(label: 'REFERENCE 1 NAME', hint: 'Optional', controller: r1n, voiceKind: VoiceKind.name),
+            const SizedBox(height: 16),
+            EvuddyField(
+              label: 'REFERENCE 1 MOBILE',
+              hint: 'Optional',
+              controller: r1p,
+              keyboardType: TextInputType.phone,
+              maxLength: 10,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              prefix: const PhonePrefix(),
+              voiceKind: VoiceKind.phone,
+            ),
+            const SizedBox(height: 16),
+            EvuddyField(label: 'REFERENCE 2 NAME', hint: 'Optional', controller: r2n, voiceKind: VoiceKind.name),
+            const SizedBox(height: 16),
+            EvuddyField(
+              label: 'REFERENCE 2 MOBILE',
+              hint: 'Optional',
+              controller: r2p,
+              keyboardType: TextInputType.phone,
+              maxLength: 10,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              prefix: const PhonePrefix(),
+              voiceKind: VoiceKind.phone,
+            ),
+          ],
         ),
       ],
     );

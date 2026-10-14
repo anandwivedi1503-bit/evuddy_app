@@ -8,6 +8,7 @@ import 'state/registration_draft.dart';
 import 'submitted_screen.dart';
 import 'shell.dart';
 import 'theme/evuddy.dart';
+import 'widgets/booking_ui.dart';
 import 'widgets/chrome.dart';
 
 class UploadDocumentsScreen extends StatefulWidget {
@@ -186,15 +187,15 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
   @override
   Widget build(BuildContext context) {
     final d = registrationDraft;
-    return AuthScreen(
-      kicker: 'Documents  ·  Step 4 of 4',
+    return BookStage(
+      kicker: 'Documents',
       title: 'Clear photos, faster approval',
       subtitle:
-          'Aadhaar front, back and a face photo. Camera or gallery. Same upload as evuddy.com — then admin Approve unlocks booking.',
-      hero: const ScenePhoto(asset: Evuddy.hubAsset, height: 150, fit: BoxFit.cover),
+          'Aadhaar front, back and a face photo. Then admin Approve unlocks booking.',
       step: 4,
       error: error,
       footer: EvuddyButton(
+        sun: true,
         label: busy ? (progress ?? 'Working…') : 'Complete registration',
         busy: busy,
         onPressed: busy ? null : _complete,

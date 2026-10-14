@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 
 import 'api/evuddy_api.dart';
 import 'state/registration_draft.dart';
-import 'theme/evuddy.dart';
 import 'verify_mobile_otp_screen.dart';
+import 'widgets/booking_ui.dart';
 import 'widgets/chrome.dart';
 import 'widgets/voice_fill.dart';
 
@@ -99,16 +99,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AuthScreen(
+    return BookStage(
       showBack: false,
-      kicker: 'Register  ·  Step 1 of 4',
+      kicker: 'Register',
       title: 'Let’s get you riding',
       subtitle:
-          'New rider? Enter your details once. Already on evuddy.com? Use the same mobile — OTP unlocks booking and Razorpay.',
+          'New rider? Enter your details once. Already on evuddy.com? Use the same mobile — OTP unlocks booking.',
       step: 1,
       error: error,
-      hero: const ScenePhoto(asset: Evuddy.yellowScooterAsset, height: 176, fit: BoxFit.contain),
       footer: EvuddyButton(
+        sun: true,
         label: 'Send OTP',
         busy: busy,
         onPressed: busy ? null : _continue,
@@ -117,8 +117,13 @@ class _LoginScreenState extends State<LoginScreen> {
         if (registrationDraft.apiOnline)
           const Padding(
             padding: EdgeInsets.only(bottom: 18),
-            child: InfoNote(text: 'Live on evuddy.com — your rider file, KYC and bookings stay in one place.'),
+            child: InfoNote(text: 'Live on evuddy.com — rider file, KYC and bookings stay in one place.'),
           ),
+        FormDeck(
+          eyebrow: 'Personal',
+          title: 'How should we know you?',
+          icon: Icons.person_rounded,
+          children: [
         EvuddyField(
           label: 'FULL NAME *',
           hint: 'As on Aadhaar · or tap the mic',
@@ -147,10 +152,10 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 12),
         Material(
-          color: Evuddy.greenSoft,
+          color: const Color(0xFFFFF4C2),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
               children: [
                 VoiceMicButton(
@@ -171,13 +176,21 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 20),
-        Text('COMING THROUGH', style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 10),
-        ChoicePills(
-          options: comingThroughOptions,
-          value: comingThrough,
-          onChanged: (v) => setState(() => comingThrough = v),
+          ],
+        ),
+        const SizedBox(height: 16),
+        FormDeck(
+          eyebrow: 'Source',
+          title: 'Coming through',
+          icon: Icons.campaign_rounded,
+          children: [
+            ChoicePills(
+              sun: true,
+              options: comingThroughOptions,
+              value: comingThrough,
+              onChanged: (v) => setState(() => comingThrough = v),
+            ),
+          ],
         ),
       ],
     );
