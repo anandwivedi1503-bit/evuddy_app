@@ -1,8 +1,10 @@
 package com.example.evuddy_app
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import android.os.Message
 import android.view.ViewGroup
@@ -15,6 +17,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import android.widget.Toast
 import org.json.JSONObject
 
 /**
@@ -126,8 +129,30 @@ class RazorpayWebActivity : Activity() {
         ) {
             return false
         }
-        // Stay on Razorpay (UPI QR / UPI ID / card). Do not jump to GPay / PhonePe.
-        return true
+        return launchExternal(url)
+    }
+
+    /** Same as mobile Chrome on evuddy.com: Razorpay UPI Continue may open GPay. */
+    private fun launchExternal(url: String): Boolean {
+        return try {
+            val parsed = if (url.startsWith("intent:", ignoreCase = true)) {
+                Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
+            } else {
+                Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            }
+            parsed.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(parsed)
+            true
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(
+                this,
+                "Open UPI from the Razorpay sheet, or use card / netbanking.",
+                Toast.LENGTH_LONG,
+            ).show()
+            true
+        } catch (_: Exception) {
+            true
+        }
     }
 
     private fun newWebView(): WebView {

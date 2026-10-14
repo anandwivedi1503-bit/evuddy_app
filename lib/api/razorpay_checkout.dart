@@ -79,27 +79,6 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       },
       'theme': {'color': '#18B368'},
       'retry': {'enabled': true, 'max_count': 2},
-      'remember_customer': false,
-      'one_click_checkout': false,
-      'method': {
-        'upi': true,
-        'card': true,
-        'netbanking': true,
-        'wallet': false,
-        'emi': false,
-        'paylater': false,
-      },
-      'config': {
-        'display': {
-          'hide': [
-            {'method': 'wallet'},
-            {'method': 'paylater'},
-            {'method': 'emi'},
-            {'method': 'upi_intent'},
-          ],
-          'preferences': {'show_default_blocks': true},
-        },
-      },
     };
   }
 
@@ -120,12 +99,11 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     setState(() {
       _busy = true;
       _error = null;
+      _web = null;
     });
-    if (!kIsWeb && Platform.isAndroid) {
-      final ok = await _openNativeSheet();
-      if (ok || !mounted) return;
-    }
-    if (!kIsWeb && Platform.isIOS) {
+    // Real phones: official Razorpay Checkout (same order + verify as evuddy.com).
+    // UPI Continue may open GPay/PhonePe — that is still a Razorpay payment.
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       _openSdk();
       return;
     }
@@ -222,7 +200,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
         _busy = false;
         _error = e.toString();
       });
-      _initFlutterWeb();
+      _openNativeSheet();
     }
   }
 
@@ -245,10 +223,13 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     setState(() {
       _busy = false;
       _error = soft
-          ? 'Checkout closed. Tap Pay securely to open Razorpay UPI / card again.'
+          ? 'Checkout closed. Nothing was charged. Tap Pay securely with Razorpay again.'
           : (response.message ?? 'Payment failed.');
     });
-    if (soft) _initFlutterWeb();
+    final ssl = msg.contains('ssl') || msg.contains('handshake') || msg.contains('-101');
+    if (ssl && Platform.isAndroid) {
+      _openNativeSheet();
+    }
   }
 
   void _onSdkWallet(ExternalWalletResponse response) {
@@ -407,8 +388,8 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
               padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
               child: InfoNote(
                 text: _nativeOpen || _busy
-                    ? 'Razorpay is opening full screen. Choose UPI or card, then tap Continue — same as the website.'
-                    : 'Complete UPI or card in the Razorpay sheet. EVUDDY never sees your PIN or card number.',
+                    ? 'Razorpay is opening. Pay with UPI (GPay is fine), card or netbanking — same checkout as evuddy.com.'
+                    : 'Complete payment in the Razorpay sheet. EVUDDY never sees your PIN or card number.',
               ),
             ),
           Expanded(
