@@ -36,7 +36,17 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   String? note;
   final amount = TextEditingController();
   final help = TextEditingController();
+  late final TextEditingController rtoNominee;
+  late final TextEditingController rtoGuardian;
+  late final TextEditingController rtoEmergency;
+  late final TextEditingController rtoAddress;
+  late final TextEditingController rtoOccupation;
+  String rtoRelation = registrationDraft.rtoNomineeRelation;
+  bool rtoAgreed = registrationDraft.rtoAgreed;
   String helpCategory = 'BOOKING_ISSUE';
+  int reviewStars = 5;
+  final reviewComment = TextEditingController();
+  String? reviewStatus;
   String? helpStatus;
   List<SupportTicket> tickets = [];
   Timer? _poll;
@@ -114,6 +124,12 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   void initState() {
     super.initState();
     booking = registrationDraft.activeBooking;
+    final d = registrationDraft;
+    rtoNominee = TextEditingController(text: d.rtoNomineeName);
+    rtoGuardian = TextEditingController(text: d.rtoGuardianName);
+    rtoEmergency = TextEditingController(text: d.rtoEmergencyPhone);
+    rtoAddress = TextEditingController(text: d.rtoAddress);
+    rtoOccupation = TextEditingController(text: d.rtoOccupation);
     if (booking != null && booking!.bookingId.isNotEmpty) wizard = 4;
     _load();
     _poll = Timer.periodic(const Duration(seconds: 7), (_) {
@@ -138,6 +154,12 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     _tokenKeepalive?.cancel();
     amount.dispose();
     help.dispose();
+    reviewComment.dispose();
+    rtoNominee.dispose();
+    rtoGuardian.dispose();
+    rtoEmergency.dispose();
+    rtoAddress.dispose();
+    rtoOccupation.dispose();
     super.dispose();
   }
 
@@ -271,6 +293,53 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     }
   }
 
+  void _saveRtoDraft() {
+    registrationDraft
+      ..rtoNomineeName = rtoNominee.text.trim()
+      ..rtoNomineeRelation = rtoRelation
+      ..rtoGuardianName = rtoGuardian.text.trim()
+      ..rtoEmergencyPhone = rtoEmergency.text.replaceAll(RegExp(r'\D'), '')
+      ..rtoAddress = rtoAddress.text.trim()
+      ..rtoOccupation = rtoOccupation.text.trim()
+      ..rtoAgreed = rtoAgreed
+      ..persist();
+  }
+
+  Future<void> _submitReview() async {
+    final id = booking?.bookingId;
+    if (id == null || id.isEmpty) return;
+    final comment = reviewComment.text.trim();
+    if (comment.isNotEmpty && comment.length < 8) {
+      setState(() => reviewStatus = 'Write at least 8 characters, or leave the comment empty.');
+      return;
+    }
+    setState(() {
+      busy = true;
+      reviewStatus = null;
+    });
+    try {
+      await _withToken(
+        (token) => EvuddyApi.submitReview(
+          idToken: token,
+          bookingId: id,
+          stars: reviewStars,
+          comment: comment,
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        busy = false;
+        reviewStatus = 'Review saved on evuddy.com. Thank you.';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        busy = false;
+        reviewStatus = e.toString();
+      });
+    }
+  }
+
   Future<void> _reserve() async {
     final token = await _token();
     final bike = selected;
@@ -300,6 +369,16 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       setState(() => error = 'Select a hub on Book EV first.');
       return;
     }
+    RtoAgreement? rto;
+    if (!rental) {
+      _saveRtoDraft();
+      rto = registrationDraft.rtoAgreement;
+      final rtoError = rto.validationError;
+      if (rtoError != null) {
+        setState(() => error = rtoError);
+        return;
+      }
+    }
     setState(() {
       busy = true;
       error = null;
@@ -320,6 +399,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         duration: rental ? duration : 'Rent To Own',
         referenceBy: d.comingThrough,
         bookingRequestId: _bookingRequestId,
+        rto: rto,
       );
       registrationDraft
         ..chosenDuration = duration
@@ -845,6 +925,76 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             ],
           ),
         ),
+        if (!rental) ...[
+          const SizedBox(height: 12),
+          FormDeck(
+            eyebrow: 'Ownership',
+            title: 'Rent to Own agreement',
+            icon: Icons.assignment_ind_outlined,
+            children: [
+              EvuddyField(
+                label: 'NOMINEE NAME *',
+                hint: 'As on Aadhaar',
+                controller: rtoNominee,
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 12),
+              const SectionLabel('Nominee relation'),
+              const SizedBox(height: 8),
+              ChoicePills(
+                options: RtoAgreement.relations,
+                value: rtoRelation,
+                onChanged: (v) => setState(() => rtoRelation = v),
+              ),
+              const SizedBox(height: 12),
+              EvuddyField(
+                label: 'FATHER / GUARDIAN *',
+                hint: 'Required by the yard',
+                controller: rtoGuardian,
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 12),
+              EvuddyField(
+                label: 'EMERGENCY MOBILE *',
+                hint: '10-digit number',
+                controller: rtoEmergency,
+                keyboardType: TextInputType.phone,
+                maxLength: 10,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                prefix: const PhonePrefix(),
+              ),
+              const SizedBox(height: 12),
+              EvuddyField(
+                label: 'OCCUPATION *',
+                hint: 'Work or student',
+                controller: rtoOccupation,
+              ),
+              const SizedBox(height: 12),
+              EvuddyField(
+                label: 'PERMANENT ADDRESS *',
+                hint: 'House, street, city — at least 12 characters',
+                controller: rtoAddress,
+              ),
+              const SizedBox(height: 8),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: rtoAgreed,
+                onChanged: (v) => setState(() {
+                  rtoAgreed = v;
+                  _saveRtoDraft();
+                }),
+                title: Text(
+                  'I accept the ${CatalogRates.rtoMonths}-month Rent to Own ownership agreement, same as evuddy.com.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -920,7 +1070,43 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         const SizedBox(height: 12),
         const InfoNote(
           text:
-              'Thank you for riding with EVUDDY. Deposit refunds (if any) are approved by admin after return.',
+              'Thank you for riding with EVUDDY. Deposit refunds (if any) are approved by admin after return. Rate this ride so the same review shows on evuddy.com.',
+        ),
+        const SizedBox(height: 12),
+        SurfaceCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('RATE THIS RIDE', style: Theme.of(context).textTheme.labelSmall),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  for (var i = 1; i <= 5; i++)
+                    IconButton(
+                      onPressed: () => setState(() => reviewStars = i),
+                      icon: Icon(
+                        i <= reviewStars ? Icons.star_rounded : Icons.star_outline_rounded,
+                        color: const Color(0xFFF59E0B),
+                      ),
+                    ),
+                ],
+              ),
+              TextField(
+                controller: reviewComment,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Optional comment (8+ characters if you write one)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              EvuddyGhostButton(label: 'Save review on evuddy.com', onPressed: busy ? null : _submitReview),
+              if (reviewStatus != null) ...[
+                const SizedBox(height: 8),
+                Text(reviewStatus!, style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+              ],
+            ],
+          ),
         ),
       ],
       if (b.rideEndOtp.isNotEmpty) ...[
@@ -999,7 +1185,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                   DropdownMenuItem(value: 'VEHICLE_BREAKDOWN', child: Text('Scooter breakdown')),
                   DropdownMenuItem(value: 'BATTERY_ISSUE', child: Text('Battery / range')),
                   DropdownMenuItem(value: 'PAYMENT_ISSUE', child: Text('Payment')),
+                  DropdownMenuItem(value: 'OVERCHARGING', child: Text('Overcharging')),
                   DropdownMenuItem(value: 'REFUND_REQUEST', child: Text('Deposit refund')),
+                  DropdownMenuItem(value: 'OTHER', child: Text('Other')),
                 ],
                 onChanged: (v) => setState(() => helpCategory = v ?? 'BOOKING_ISSUE'),
                 decoration: InputDecoration(
@@ -1044,7 +1232,14 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       if (wizard == 3) {
         return Column(
           children: [
-            EvuddyButton(sun: true, label: 'Reserve scooter', onPressed: _reserve),
+            EvuddyButton(
+              sun: true,
+              label: 'Reserve scooter',
+              onPressed: () {
+                if (!rental) _saveRtoDraft();
+                _reserve();
+              },
+            ),
             const SizedBox(height: 8),
             EvuddyGhostButton(label: 'Back', onPressed: () => setState(() => wizard = 2)),
           ],

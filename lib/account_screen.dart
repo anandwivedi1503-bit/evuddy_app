@@ -9,6 +9,7 @@ import 'fleet_calculator_screen.dart';
 import 'invest_screen.dart';
 import 'login_screen.dart';
 import 'open_link.dart';
+import 'ride_history_screen.dart';
 import 'ride_ready_screen.dart';
 import 'state/registration_draft.dart';
 import 'submitted_screen.dart';
@@ -242,6 +243,38 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
           const SizedBox(height: 14),
         ],
+        GestureDetector(
+          onTap: d.phoneVerified
+              ? () => Navigator.push(context, evuddyRoute(const RideHistoryScreen()))
+              : null,
+          child: SurfaceCard(
+            child: Row(
+              children: [
+                const Icon(Icons.history_rounded, color: Evuddy.greenDeep),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('RIDES & RECEIPTS', style: Theme.of(context).textTheme.labelSmall),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Same booking history as evuddy.com',
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+                      ),
+                      Text(
+                        'Rate completed rides. Razorpay receipts stay on the shared database.',
+                        style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: Evuddy.muted),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
         const TrustStrip(),
         const SizedBox(height: 14),
         GestureDetector(

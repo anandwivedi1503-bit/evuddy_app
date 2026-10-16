@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final n = name.text.trim().replaceAll(RegExp(r'\s+'), ' ');
     final p = phone.text.replaceAll(RegExp(r'\D'), '');
     final e = email.text.trim().toLowerCase();
-    if (!RegExp(r"^[A-Za-z][A-Za-z\s'.-]{2,49}$").hasMatch(n)) {
+    if (!RtoAgreement.namePattern.hasMatch(n)) {
       setState(() => error = 'Enter a valid full name using letters only.');
       return;
     }

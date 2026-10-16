@@ -78,11 +78,30 @@ class RegistrationDraft {
 
   bool get canBook => phoneVerified && isApproved;
 
+  String rtoNomineeName = '';
+  String rtoNomineeRelation = 'Father';
+  String rtoGuardianName = '';
+  String rtoEmergencyPhone = '';
+  String rtoAddress = '';
+  String rtoOccupation = '';
+  bool rtoAgreed = false;
+
+  RtoAgreement get rtoAgreement => RtoAgreement(
+        nomineeName: rtoNomineeName,
+        nomineeRelation: rtoNomineeRelation,
+        guardianName: rtoGuardianName,
+        emergencyPhone: rtoEmergencyPhone,
+        email: email,
+        address: rtoAddress,
+        occupation: rtoOccupation,
+        agreed: rtoAgreed,
+      );
+
   bool get hasPersonalProfile {
     final n = fullName.trim().replaceAll(RegExp(r'\s+'), ' ');
     final e = email.trim().toLowerCase();
-    return RegExp(r"^[A-Za-z][A-Za-z\s'.-]{2,49}$").hasMatch(n) &&
-        RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$').hasMatch(e);
+    return RtoAgreement.namePattern.hasMatch(n) &&
+        RtoAgreement.emailPattern.hasMatch(e);
   }
 
   /// Phone-first Book EV always collects name + email after OTP.
@@ -300,6 +319,13 @@ class RegistrationDraft {
       chosenHubId = m['chosenHubId']?.toString();
       chosenPlan = m['chosenPlan']?.toString();
       chosenDuration = m['chosenDuration']?.toString();
+      rtoNomineeName = m['rtoNomineeName']?.toString() ?? rtoNomineeName;
+      rtoNomineeRelation = m['rtoNomineeRelation']?.toString() ?? rtoNomineeRelation;
+      rtoGuardianName = m['rtoGuardianName']?.toString() ?? rtoGuardianName;
+      rtoEmergencyPhone = m['rtoEmergencyPhone']?.toString() ?? rtoEmergencyPhone;
+      rtoAddress = m['rtoAddress']?.toString() ?? rtoAddress;
+      rtoOccupation = m['rtoOccupation']?.toString() ?? rtoOccupation;
+      rtoAgreed = m['rtoAgreed'] == true;
       depositHeld = (m['depositHeld'] is num)
           ? (m['depositHeld'] as num).toDouble()
           : depositHeld;
@@ -343,6 +369,13 @@ class RegistrationDraft {
           'chosenHubId': chosenHubId,
           'chosenPlan': chosenPlan,
           'chosenDuration': chosenDuration,
+          'rtoNomineeName': rtoNomineeName,
+          'rtoNomineeRelation': rtoNomineeRelation,
+          'rtoGuardianName': rtoGuardianName,
+          'rtoEmergencyPhone': rtoEmergencyPhone,
+          'rtoAddress': rtoAddress,
+          'rtoOccupation': rtoOccupation,
+          'rtoAgreed': rtoAgreed,
           'depositHeld': depositHeld,
           'depositStatus': depositStatus,
           'depositBookingId': depositBookingId,

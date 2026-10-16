@@ -379,6 +379,62 @@ void main() {
     );
   });
 
+  test('Rent to Own agreement matches website booking POST fields', () {
+    expect(
+      const RtoAgreement(
+        nomineeName: 'A',
+        nomineeRelation: 'Father',
+        guardianName: 'Parent Name',
+        emergencyPhone: '9876543210',
+        email: 'a@b.com',
+        address: 'Short',
+        occupation: 'Student',
+        agreed: true,
+      ).validationError,
+      isNotNull,
+    );
+    final ok = RtoAgreement(
+      nomineeName: 'Anita Sharma',
+      nomineeRelation: 'Father',
+      guardianName: 'Ramesh Sharma',
+      emergencyPhone: '9876543210',
+      email: 'anita@evuddy.com',
+      address: '12 Gomti Nagar Lucknow',
+      occupation: 'Delivery',
+      agreed: true,
+    );
+    expect(ok.validationError, isNull);
+    expect(ok.toJson()['rtoAgreementAccepted'], isTrue);
+    expect(ok.toJson()['rtoNomineeRelation'], 'Father');
+    expect(RtoAgreement.namePattern.hasMatch('Very Long Indian Name With Extra Words Allowed'), isTrue);
+  });
+
+  test('parses booking history and receipts from website APIs', () {
+    final ride = RideHistoryItem.fromJson({
+      'bookingId': 'BK-11',
+      'rideStatus': 'Completed',
+      'rentalMode': 'Daily',
+      'vehicleId': 'EV-01',
+      'pickupHubName': 'Luck',
+      'pickupCity': 'Lucknow',
+      'receivedAmount': 2750,
+      'canReview': true,
+      'reviewStars': null,
+    });
+    expect(ride.canReview, isTrue);
+    expect(ride.hub, 'Luck');
+    expect(ride.receivedAmount, 2750);
+    final rec = PaymentReceipt.fromJson({
+      'transactionId': 'txn_1',
+      'bookingId': 'BK-11',
+      'amount': 1,
+      'paymentMethod': 'Razorpay',
+      'invoiceNumber': 'INV-1',
+    });
+    expect(rec.amount, 1);
+    expect(rec.paymentMethod, 'Razorpay');
+  });
+
   test('new Book EV riders collect name and email after OTP', () {
     final draft = RegistrationDraft()
       ..otpGate = 'book'

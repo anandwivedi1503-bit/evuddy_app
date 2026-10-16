@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'api/evuddy_api.dart';
 import 'state/registration_draft.dart';
 import 'upload_documents_screen.dart';
 import 'widgets/booking_ui.dart';
@@ -59,7 +60,7 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
       return;
     }
     if (r1n.text.trim().isNotEmpty &&
-        !RegExp(r"^[A-Za-z][A-Za-z\s'.-]{2,49}$").hasMatch(r1n.text.trim())) {
+        !RtoAgreement.namePattern.hasMatch(r1n.text.trim())) {
       setState(() => error = 'Enter a valid Reference Person 1 name.');
       return;
     }
@@ -69,7 +70,7 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
       return;
     }
     if (r2n.text.trim().isNotEmpty &&
-        !RegExp(r"^[A-Za-z][A-Za-z\s'.-]{2,49}$").hasMatch(r2n.text.trim())) {
+        !RtoAgreement.namePattern.hasMatch(r2n.text.trim())) {
       setState(() => error = 'Enter a valid Reference Person 2 name.');
       return;
     }

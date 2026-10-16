@@ -259,6 +259,7 @@ class EvuddyApi {
     String? duration,
     String? referenceBy,
     String? bookingRequestId,
+    RtoAgreement? rto,
   }) async {
     final requestId = (bookingRequestId != null && bookingRequestId.isNotEmpty)
         ? bookingRequestId
@@ -285,6 +286,7 @@ class EvuddyApi {
       'firebaseIdToken': idToken,
       'paymentMode': 'Razorpay',
       'paymentStatus': 'Pending',
+      if (rto != null) ...rto.toJson(),
     };
     final r = await _post(
       _u('/api/bookings'),
@@ -357,6 +359,56 @@ class EvuddyApi {
       throw ApiException('This amount is already settled on the booking.');
     }
     return started.order!;
+  }
+
+  static Future<List<RideHistoryItem>> bookingHistory(String idToken) async {
+    final r = await _get(
+      _u('/api/bookings/history'),
+      headers: _auth(idToken),
+      timeout: const Duration(seconds: 15),
+    );
+    final j = _json(r);
+    final data = j['data'];
+    if (j['success'] != true || data is! List) return [];
+    return data.whereType<Map>().map(RideHistoryItem.fromJson).toList();
+  }
+
+  static Future<List<PaymentReceipt>> myReceipts(String idToken) async {
+    final r = await _get(
+      _u('/api/receipts/mine'),
+      headers: _auth(idToken),
+      timeout: const Duration(seconds: 15),
+    );
+    final j = _json(r);
+    final data = j['data'];
+    if (j['success'] != true || data is! List) return [];
+    return data.whereType<Map>().map(PaymentReceipt.fromJson).toList();
+  }
+
+  static Future<void> submitReview({
+    required String idToken,
+    required String bookingId,
+    required int stars,
+    String comment = '',
+    bool wouldRecommend = true,
+  }) async {
+    final r = await _post(
+      _u('/api/reviews'),
+      headers: _auth(idToken),
+      body: jsonEncode({
+        'bookingId': bookingId,
+        'stars': stars,
+        'vehicleStars': stars,
+        'hubStars': stars,
+        'comment': comment,
+        'wouldRecommend': wouldRecommend,
+        'firebaseIdToken': idToken,
+      }),
+    );
+    final j = _json(r);
+    if (j['success'] != true) {
+      throw ApiException(_message(j, 'Could not save your review.'));
+    }
   }
 
   static Future<List<SupportTicket>> myTickets(String idToken) async {
@@ -607,6 +659,149 @@ class CatalogRates {
 }
 
 double _money(num n) => double.parse(n.toDouble().toStringAsFixed(2));
+
+class RtoAgreement {
+  const RtoAgreement({
+    required this.nomineeName,
+    required this.nomineeRelation,
+    required this.guardianName,
+    required this.emergencyPhone,
+    required this.email,
+    required this.address,
+    required this.occupation,
+    required this.agreed,
+  });
+
+  static const relations = [
+    'Spouse',
+    'Father',
+    'Mother',
+    'Son',
+    'Daughter',
+    'Brother',
+    'Sister',
+    'Other',
+  ];
+
+  static final namePattern = RegExp(r"^[A-Za-z][A-Za-z\s'.-]{2,79}$");
+  static final phonePattern = RegExp(r'^[6-9]\d{9}$');
+  static final emailPattern = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');
+
+  final String nomineeName;
+  final String nomineeRelation;
+  final String guardianName;
+  final String emergencyPhone;
+  final String email;
+  final String address;
+  final String occupation;
+  final bool agreed;
+
+  String? get validationError {
+    if (!namePattern.hasMatch(nomineeName.trim())) {
+      return 'Nominee name is required for Rent to Own.';
+    }
+    if (!relations.contains(nomineeRelation)) {
+      return 'Nominee relation is required for Rent to Own.';
+    }
+    if (!namePattern.hasMatch(guardianName.trim())) {
+      return 'Father / guardian name is required for Rent to Own.';
+    }
+    if (!phonePattern.hasMatch(emergencyPhone.replaceAll(RegExp(r'\D'), ''))) {
+      return 'Valid emergency contact number is required for Rent to Own.';
+    }
+    if (!emailPattern.hasMatch(email.trim().toLowerCase())) {
+      return 'Valid email is required for Rent to Own.';
+    }
+    if (address.trim().length < 12) {
+      return 'Permanent address is required for Rent to Own.';
+    }
+    if (occupation.trim().length < 2) {
+      return 'Occupation is required for Rent to Own.';
+    }
+    if (!agreed) {
+      return 'You must accept the Rent to Own ownership agreement.';
+    }
+    return null;
+  }
+
+  Map<String, dynamic> toJson() => {
+        'rtoNomineeName': nomineeName.trim(),
+        'rtoNomineeRelation': nomineeRelation,
+        'rtoGuardianName': guardianName.trim(),
+        'rtoEmergencyPhone': emergencyPhone.replaceAll(RegExp(r'\D'), ''),
+        'rtoEmail': email.trim().toLowerCase(),
+        'rtoPermanentAddress': address.trim(),
+        'rtoOccupation': occupation.trim(),
+        'rtoAgreementAccepted': agreed,
+      };
+}
+
+class RideHistoryItem {
+  const RideHistoryItem({
+    this.bookingId = '',
+    this.rideStatus = '',
+    this.rentalMode = '',
+    this.vehicleId = '',
+    this.vehicleModel = '',
+    this.hub = '',
+    this.city = '',
+    this.receivedAmount = 0,
+    this.canReview = false,
+    this.reviewStars,
+  });
+
+  factory RideHistoryItem.fromJson(Map e) {
+    return RideHistoryItem(
+      bookingId: e['bookingId']?.toString() ?? '',
+      rideStatus: e['rideStatus']?.toString() ?? '',
+      rentalMode: e['rentalMode']?.toString() ?? '',
+      vehicleId: e['vehicleId']?.toString() ?? '',
+      vehicleModel: e['vehicleModel']?.toString() ?? '',
+      hub: (e['pickupHubName'] ?? e['startHub'])?.toString() ?? '',
+      city: (e['pickupCity'] ?? e['city'])?.toString() ?? '',
+      receivedAmount: _asDouble(e['receivedAmount']) ?? 0,
+      canReview: e['canReview'] == true,
+      reviewStars: (e['reviewStars'] is num) ? (e['reviewStars'] as num).toInt() : null,
+    );
+  }
+
+  final String bookingId;
+  final String rideStatus;
+  final String rentalMode;
+  final String vehicleId;
+  final String vehicleModel;
+  final String hub;
+  final String city;
+  final double receivedAmount;
+  final bool canReview;
+  final int? reviewStars;
+}
+
+class PaymentReceipt {
+  const PaymentReceipt({
+    this.transactionId = '',
+    this.bookingId = '',
+    this.amount = 0,
+    this.paymentMethod = '',
+    this.invoiceNumber = '',
+  });
+
+  factory PaymentReceipt.fromJson(Map e) {
+    return PaymentReceipt(
+      transactionId: e['transactionId']?.toString() ?? '',
+      bookingId: e['bookingId']?.toString() ?? '',
+      amount: _asDouble(e['amount']) ?? 0,
+      paymentMethod: e['paymentMethod']?.toString() ?? '',
+      invoiceNumber: e['invoiceNumber']?.toString() ?? '',
+    );
+  }
+
+  final String transactionId;
+  final String bookingId;
+  final double amount;
+  final String paymentMethod;
+  final String invoiceNumber;
+}
 
 class GstSplit {
   const GstSplit({
