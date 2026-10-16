@@ -501,15 +501,17 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       if (started.needsCheckout) {
         setState(() => busy = false);
         if (!mounted) return;
-        result = await InAppRazorpay.open(
-          order: started.order!,
-          rupees: pay,
-          bookingId: b.bookingId,
-          contact: registrationDraft.phone,
-          customerName: registrationDraft.fullName,
-          email: registrationDraft.email,
-          vehicleId: selected?.vehicleId ?? b.vehicleId,
-        );
+        if (started.order!.keyId.startsWith('rzp_')) {
+          result = await InAppRazorpay.open(
+            order: started.order!,
+            rupees: pay,
+            bookingId: b.bookingId,
+            contact: registrationDraft.phone,
+            customerName: registrationDraft.fullName,
+            email: registrationDraft.email,
+            vehicleId: selected?.vehicleId ?? b.vehicleId,
+          );
+        }
         if (result != null && result['cancelled'] == 'true') {
           if (!mounted) return;
           setState(() {
@@ -529,6 +531,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                 email: registrationDraft.email,
                 rupees: pay,
                 vehicleId: selected?.vehicleId ?? b.vehicleId,
+                bookingMongoId: b.mongoId,
+                idToken: token,
               ),
             ),
           );

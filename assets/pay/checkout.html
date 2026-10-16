@@ -30,7 +30,6 @@
         window.PayBridge.postMessage(msg);
       }
     }
-    // Continue / UPI / 3DS call window.open. Without this, Continue does nothing in the app WebView.
     window.open = function (url) {
       if (url) post({ type: "open", url: String(url) });
       return {
@@ -40,22 +39,56 @@
         location: { href: url || "" }
       };
     };
-    function openPay(raw) {
-      var n = typeof raw === "string" ? JSON.parse(raw) : raw;
+    function hint(text) {
+      var el = document.getElementById("hint");
+      if (el) el.textContent = text;
+    }
+    function sheet(options) {
       if (typeof Razorpay === "undefined") {
         post({ type: "failed", message: "Razorpay checkout.js did not load. Check network." });
         return;
       }
-      var hint = document.getElementById("hint");
-      if (hint) hint.textContent = "Razorpay is open. Use UPI, card or netbanking — same as evuddy.com.";
+      hint("Razorpay is open. Use UPI, card or netbanking — same as evuddy.com.");
+      var rzp = new Razorpay(options);
+      rzp.on("payment.failed", function (resp) {
+        post({
+          type: "failed",
+          message: (resp && resp.error && (resp.error.description || resp.error.reason)) || "Payment failed."
+        });
+      });
+      rzp.open();
+    }
+    // Live Book EV payWithRazorpay: create-order then Razorpay.open even if alreadyCaptured.
+    async function payLikeBookEv(n) {
+      hint("Creating Razorpay order...");
+      try {
+      var r = await fetch("https://www.evuddy.com/api/razorpay/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + n.token
+        },
+        body: JSON.stringify({
+          bookingMongoId: n.bookingMongoId,
+          amount: n.rupees,
+          firebaseIdToken: n.token
+        })
+      });
+      var i = await r.json();
+      if (!i.success) {
+        post({ type: "failed", message: i.message || "Unable to create Razorpay order." });
+        return;
+      }
+      var key = i.keyId || n.key;
+      var amount = i.amount || n.amount || Math.round(Number(n.rupees) * 100);
+      var orderId = i.orderId || n.order_id;
       var options = {
-        key: n.key,
-        amount: n.amount,
-        currency: n.currency || "INR",
-        name: n.name || "EVUDDY",
-        description: n.description || "Booking Payment",
-        order_id: n.order_id,
-        image: n.image || "https://www.evuddy.com/Evuddy-logo-dark-E.png",
+        key: key,
+        amount: amount,
+        currency: i.currency || n.currency || "INR",
+        name: i.name || "EVUDDY",
+        image: i.image || "https://www.evuddy.com/Evuddy-logo-dark-E.png",
+        description: "Booking Payment - " + (n.bookingId || ""),
         prefill: n.prefill || {},
         notes: n.notes || {},
         theme: { color: "#18B368" },
@@ -74,15 +107,46 @@
           });
         }
       };
+      if (orderId) options.order_id = orderId;
+      sheet(options);
+      } catch (e) {
+        post({ type: "failed", message: String(e.message || e) });
+      }
+    }
+    function openPay(raw) {
+      var n = typeof raw === "string" ? JSON.parse(raw) : raw;
       try {
-        var rzp = new Razorpay(options);
-        rzp.on("payment.failed", function (resp) {
-          post({
-            type: "failed",
-            message: (resp && resp.error && (resp.error.description || resp.error.reason)) || "Payment failed."
-          });
-        });
-        rzp.open();
+        if (n.token && n.bookingMongoId) {
+          payLikeBookEv(n);
+          return;
+        }
+        var options = {
+          key: n.key,
+          amount: n.amount,
+          currency: n.currency || "INR",
+          name: n.name || "EVUDDY",
+          description: n.description || "Booking Payment",
+          image: n.image || "https://www.evuddy.com/Evuddy-logo-dark-E.png",
+          prefill: n.prefill || {},
+          notes: n.notes || {},
+          theme: { color: "#18B368" },
+          retry: { enabled: true, max_count: 4 },
+          modal: {
+            ondismiss: function () { post({ type: "dismiss" }); },
+            confirm_close: true,
+            animation: true
+          },
+          handler: function (response) {
+            post({
+              type: "success",
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            });
+          }
+        };
+        if (n.order_id) options.order_id = n.order_id;
+        sheet(options);
       } catch (e) {
         post({ type: "failed", message: String(e.message || e) });
       }

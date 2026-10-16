@@ -390,6 +390,21 @@ class EvuddyApi {
       }
     }
     if (order.keyId.isEmpty) {
+      // Same as Book EV: success + remaining due still opens checkout.js.
+      // "Payment already verified" is only the first ₹1, not remaining rent.
+      if (remaining > 0.009) {
+        return PaymentStart.checkout(
+          RazorpayOrder(
+            keyId: '',
+            orderId: order.orderId,
+            amount: (amountRupees * 100).roundToDouble(),
+            currency: 'INR',
+            name: 'EVUDDY',
+            image: order.image,
+          ),
+          bookEvFlow: true,
+        );
+      }
       throw ApiException(
         _message(j, 'Unable to create Razorpay order.'),
       );
@@ -881,17 +896,20 @@ class GstSplit {
 }
 
 class PaymentStart {
-  const PaymentStart.checkout(this.order)
+  const PaymentStart.checkout(this.order, {this.bookEvFlow = false})
       : booking = null,
         wallet = false;
   const PaymentStart.settled({required this.booking, this.wallet = false})
-      : order = null;
+      : order = null,
+        bookEvFlow = false;
 
   final RazorpayOrder? order;
   final RiderBooking? booking;
   final bool wallet;
+  final bool bookEvFlow;
 
-  bool get needsCheckout => order != null && order!.keyId.isNotEmpty;
+  bool get needsCheckout =>
+      order != null && (order!.keyId.isNotEmpty || bookEvFlow);
 }
 
 class SupportTicket {
