@@ -30,6 +30,16 @@
         window.PayBridge.postMessage(msg);
       }
     }
+    // Continue / UPI / 3DS call window.open. Without this, Continue does nothing in the app WebView.
+    window.open = function (url) {
+      if (url) post({ type: "open", url: String(url) });
+      return {
+        closed: false,
+        close: function () {},
+        focus: function () {},
+        location: { href: url || "" }
+      };
+    };
     function openPay(raw) {
       var n = typeof raw === "string" ? JSON.parse(raw) : raw;
       if (typeof Razorpay === "undefined") {
@@ -49,6 +59,12 @@
         prefill: n.prefill || {},
         notes: n.notes || {},
         theme: { color: "#18B368" },
+        retry: { enabled: true, max_count: 4 },
+        modal: {
+          ondismiss: function () { post({ type: "dismiss" }); },
+          confirm_close: true,
+          animation: true
+        },
         handler: function (response) {
           post({
             type: "success",
@@ -56,9 +72,6 @@
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature
           });
-        },
-        modal: {
-          ondismiss: function () { post({ type: "dismiss" }); }
         }
       };
       try {

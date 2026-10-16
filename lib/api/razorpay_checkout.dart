@@ -92,7 +92,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   @override
   void initState() {
     super.initState();
-    if (_iosSdk) {
+    if (_androidHost || _iosSdk) {
       _sdk = Razorpay();
       _sdk!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSdkSuccess);
       _sdk!.on(Razorpay.EVENT_PAYMENT_ERROR, _onSdkError);
@@ -115,13 +115,15 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       _web = null;
       _opened = false;
     });
-    // Always show checkout.js in this page first so Pay remaining never looks
-    // frozen if the Android overlay activity fails to appear.
-    await _initFlutterWeb();
-    if (!mounted || _settled) return;
+    if (_androidHost) {
+      final overlay = await _openAndroidCheckoutJs();
+      if (overlay || !mounted || _settled) return;
+    }
     if (_iosSdk) {
       _openSdk();
+      return;
     }
+    await _initFlutterWeb();
   }
 
   Future<bool> _openAndroidCheckoutJs() async {
@@ -276,6 +278,9 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
         if (type == 'ready' && !_opened) {
           _opened = true;
           web.runJavaScript('openPay(${jsonEncode(_options)})');
+        } else if (type == 'open') {
+          final url = raw['url']?.toString() ?? '';
+          if (url.isNotEmpty) _openExternalPayUrl(url);
         } else if (type == 'success' && mounted) {
           _succeed(
             raw['razorpay_order_id']?.toString() ?? '',

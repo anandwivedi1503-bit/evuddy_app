@@ -167,6 +167,22 @@ class RazorpayWebActivity : Activity() {
         return web
     }
 
+    private fun openPopup(url: String) {
+        val extra = newWebView()
+        extra.webChromeClient = chrome()
+        extra.webViewClient = client()
+        dropPopup()
+        popup = extra
+        container.addView(
+            extra,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            ),
+        )
+        extra.loadUrl(url)
+    }
+
     private fun dropPopup() {
         val extra = popup ?: return
         container.removeView(extra)
@@ -192,6 +208,18 @@ class RazorpayWebActivity : Activity() {
                     }
                 when (type) {
                     "ready" -> openCheckout()
+                    "open" -> {
+                        val url = try {
+                            JSONObject(msg).optString("url")
+                        } catch (_: Exception) {
+                            ""
+                        }
+                        if (url.isNotEmpty()) {
+                            if (!handleUrl(url) && url.lowercase().startsWith("http")) {
+                                openPopup(url)
+                            }
+                        }
+                    }
                     "success", "failed", "dismiss" -> finishWith(msg)
                     else -> {}
                 }

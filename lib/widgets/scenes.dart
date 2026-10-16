@@ -186,7 +186,7 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
     return Column(
       children: [
         SizedBox(
-          height: 188,
+          height: 210,
           child: PageView.builder(
             controller: page,
             onPageChanged: (i) => setState(() => index = i),
@@ -194,6 +194,7 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
             itemBuilder: (context, i) {
               final ad = offerAds[i];
               final ink = ad.darkText ? const Color(0xFF1C1917) : Colors.white;
+              final narrow = MediaQuery.sizeOf(context).width < 380;
               return Padding(
                 padding: const EdgeInsets.only(right: 10),
                 child: GestureDetector(
@@ -209,7 +210,7 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
                         ),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                        padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -218,7 +219,7 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(
                                       color: ink.withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(99),
@@ -230,25 +231,28 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
                                       style: GoogleFonts.plusJakartaSans(
                                         color: ink,
                                         fontWeight: FontWeight.w800,
-                                        fontSize: 10,
-                                        letterSpacing: 0.8,
+                                        fontSize: 9,
+                                        letterSpacing: 0.6,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 8),
                                   Expanded(
                                     child: Align(
                                       alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        ad.title,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.plusJakartaSans(
-                                          color: ink,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 20,
-                                          height: 1.12,
-                                          letterSpacing: -0.5,
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          ad.title,
+                                          maxLines: 2,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            color: ink,
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 20,
+                                            height: 1.12,
+                                            letterSpacing: -0.5,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -260,11 +264,11 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
                                     style: GoogleFonts.plusJakartaSans(
                                       color: ink.withValues(alpha: 0.86),
                                       fontWeight: FontWeight.w600,
-                                      fontSize: 12,
+                                      fontSize: 11,
                                       height: 1.3,
                                     ),
                                   ),
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 8),
                                   Wrap(
                                     spacing: 8,
                                     runSpacing: 6,
@@ -306,25 +310,27 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            SizedBox(
-                              width: 118,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: ad.darkText ? 0.55 : 0.18),
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8),
-                                  child: Image.asset(
-                                    Evuddy.yellowScooterAsset,
-                                    fit: BoxFit.contain,
-                                    alignment: Alignment.center,
-                                    filterQuality: FilterQuality.high,
+                            if (!narrow) ...[
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                width: 92,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: ad.darkText ? 0.55 : 0.18),
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(6),
+                                    child: Image.asset(
+                                      Evuddy.yellowScooterAsset,
+                                      fit: BoxFit.contain,
+                                      alignment: Alignment.center,
+                                      filterQuality: FilterQuality.high,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ),
@@ -386,11 +392,15 @@ class RideSteps extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(
                     steps[i].$2,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 13),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     steps[i].$3,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Evuddy.muted, height: 1.35),
                   ),
                 ],

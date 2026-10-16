@@ -206,7 +206,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           'Firebase session expired after waiting at the yard. Confirm this same registered mobile with OTP — then pay remaining. Booking is kept.';
     });
     registrationDraft.otpGate = 'book';
-    Navigator.push(context, evuddyRoute(const ConfirmMobileScreen())).then((_) {
+    Navigator.of(context, rootNavigator: true)
+        .push(evuddyRoute(const ConfirmMobileScreen()))
+        .then((_) {
       _reauthOpen = false;
       if (mounted) _load();
     });
@@ -437,29 +439,29 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       return;
     }
     var b = booking!;
-    var token = await _token();
+    var token = await _token(force: true);
     if (token == null) return;
-    if (b.mongoId.isEmpty) {
-      try {
-        final mine = await EvuddyApi.myBooking(token);
-        if (mine != null) {
-          b = mine;
-          registrationDraft.applyActiveBooking(mine);
-          if (mounted) setState(() => booking = mine);
-        }
-      } catch (e) {
-        if (registrationDraft.isAuthError(e)) {
-          _askReauth();
-          return;
-        }
+    try {
+      final latest = await EvuddyApi.myBooking(token);
+      if (latest != null) {
+        b = latest;
+        registrationDraft.applyActiveBooking(latest);
+        if (mounted) setState(() => booking = latest);
+      }
+    } catch (e) {
+      if (registrationDraft.isAuthError(e)) {
+        _askReauth();
+        return;
       }
     }
     if (b.mongoId.isEmpty) {
       setState(() => error = 'Booking id is missing. Refresh, then pay.');
       return;
     }
-    final maxDue = amountDue;
-    final pay = _payNow(b);
+    final maxDue = _remainingCharge(b) > 0.009
+        ? _remainingCharge(b)
+        : catalogPayable.toDouble();
+    final pay = b.remainingPayLocked ? _remainingCharge(b) : _payNow(b);
     if (b.remainingPayLocked) {
       amount.text = _moneyInput(pay);
     }

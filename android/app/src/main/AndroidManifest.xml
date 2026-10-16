@@ -43,6 +43,12 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|layoutDirection|fontScale|uiMode"
             android:theme="@style/CheckoutTheme"
             android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name="com.razorpay.CheckoutActivity"
+            android:exported="false"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
+            android:hardwareAccelerated="true"
+            android:theme="@style/CheckoutTheme" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
