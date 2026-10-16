@@ -1,9 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -38,14 +36,16 @@ class RazorpayCheckoutPage extends StatefulWidget {
 }
 
 class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
-  static const _channel = MethodChannel('evuddy/razorpay');
-
   Razorpay? _sdk;
   WebViewController? _web;
   String? _error;
   bool _opened = false;
   bool _busy = true;
-  bool _nativeOpen = false;
+
+  bool get _useNativeSdk =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
 
   String get _contact10 {
     final digits = widget.contact.replaceAll(RegExp(r'\D'), '');
@@ -53,9 +53,10 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     return digits;
   }
 
-  /// Same fields as evuddy.com Book EV `new window.Razorpay({...})`.
+  /// Same fields as kebuone-website Book EV `new window.Razorpay({...})`.
   Map<String, dynamic> get _options {
-    final name = widget.order.name.trim().isEmpty ? 'EVUDDY' : widget.order.name.trim();
+    final name =
+        widget.order.name.trim().isEmpty ? 'EVUDDY' : widget.order.name.trim();
     final image = (widget.order.image ?? '').trim().isEmpty
         ? 'https://www.evuddy.com/Evuddy-logo-dark-E.png'
         : widget.order.image!.trim();
@@ -78,34 +79,18 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
           'vehicleId': widget.vehicleId,
       },
       'theme': {'color': '#18B368'},
-      'retry': {'enabled': true, 'max_count': 2},
-      'remember_customer': false,
-      'one_click_checkout': false,
-      'method': {
-        'upi': true,
-        'card': true,
-        'netbanking': true,
-        'wallet': false,
-        'emi': false,
-        'paylater': false,
-      },
-      'config': {
-        'display': {
-          'hide': [
-            {'method': 'wallet'},
-            {'method': 'paylater'},
-            {'method': 'emi'},
-            {'method': 'upi_intent'},
-          ],
-          'preferences': {'show_default_blocks': true},
-        },
-      },
     };
   }
 
   @override
   void initState() {
     super.initState();
+    if (_useNativeSdk) {
+      _sdk = Razorpay();
+      _sdk!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSdkSuccess);
+      _sdk!.on(Razorpay.EVENT_PAYMENT_ERROR, _onSdkError);
+      _sdk!.on(Razorpay.EVENT_EXTERNAL_WALLET, _onSdkWallet);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _start());
   }
 
@@ -120,84 +105,14 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     setState(() {
       _busy = true;
       _error = null;
+      _web = null;
+      _opened = false;
     });
-    if (!kIsWeb && Platform.isAndroid) {
-      final ok = await _openNativeSheet();
-      if (ok || !mounted) return;
-    }
-    if (!kIsWeb && Platform.isIOS) {
+    if (_useNativeSdk) {
       _openSdk();
       return;
     }
     await _initFlutterWeb();
-  }
-
-  Future<bool> _openNativeSheet() async {
-    if (_nativeOpen) return true;
-    _nativeOpen = true;
-    try {
-      final html = await rootBundle.loadString('assets/pay/checkout.html');
-      final payload = await _channel.invokeMethod<String>('open', {
-        'html': html,
-        'options': jsonEncode(_options),
-      });
-      _nativeOpen = false;
-      if (!mounted) return true;
-      _applyPayload(payload);
-      return true;
-    } on MissingPluginException {
-      _nativeOpen = false;
-      return false;
-    } catch (e) {
-      _nativeOpen = false;
-      if (!mounted) return true;
-      setState(() {
-        _busy = false;
-        _error = e.toString();
-      });
-      return true;
-    }
-  }
-
-  void _applyPayload(String? payload) {
-    if (payload == null || payload.isEmpty) {
-      setState(() {
-        _busy = false;
-        _error =
-            'Checkout closed. Nothing was charged. Tap Pay securely to open Razorpay again.';
-      });
-      return;
-    }
-    try {
-      final raw = jsonDecode(payload);
-      if (raw is! Map) {
-        setState(() {
-          _busy = false;
-          _error = 'Could not read Razorpay result.';
-        });
-        return;
-      }
-      final type = raw['type']?.toString();
-      if (type == 'success') {
-        _succeed(
-          raw['razorpay_order_id']?.toString() ?? '',
-          raw['razorpay_payment_id']?.toString() ?? '',
-          raw['razorpay_signature']?.toString() ?? '',
-        );
-        return;
-      }
-      setState(() {
-        _busy = false;
-        _error = type == 'dismiss'
-            ? 'Checkout closed. Nothing was charged. Tap Pay securely to open Razorpay again.'
-            : (raw['message']?.toString() ?? 'Payment failed.');
-      });
-    } catch (_) {
-      setState(() {
-        _busy = false;
-        _error = 'Could not read Razorpay result.';
-      });
-    }
   }
 
   void _succeed(String orderId, String paymentId, String signature) {
@@ -212,9 +127,6 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   void _openSdk() {
     try {
       _sdk ??= Razorpay();
-      _sdk!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSdkSuccess);
-      _sdk!.on(Razorpay.EVENT_PAYMENT_ERROR, _onSdkError);
-      _sdk!.on(Razorpay.EVENT_EXTERNAL_WALLET, _onSdkWallet);
       _sdk!.open(Map<String, dynamic>.from(_options));
     } catch (e) {
       if (!mounted) return;
@@ -222,7 +134,6 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
         _busy = false;
         _error = e.toString();
       });
-      _initFlutterWeb();
     }
   }
 
@@ -237,18 +148,16 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   void _onSdkError(PaymentFailureResponse response) {
     if (!mounted) return;
     final msg = (response.message ?? 'Payment failed.').toLowerCase();
-    final soft = msg.contains('cancel') ||
+    final cancelled = response.code == Razorpay.PAYMENT_CANCELLED ||
+        msg.contains('cancel') ||
         msg.contains('dismiss') ||
-        msg.contains('back pressed') ||
-        msg.contains('network') ||
-        msg.contains('ssl');
+        msg.contains('back pressed');
     setState(() {
       _busy = false;
-      _error = soft
-          ? 'Checkout closed. Tap Pay securely to open Razorpay UPI / card again.'
-          : (response.message ?? 'Payment failed.');
+      _error = cancelled
+          ? 'Payment cancelled. You can try again.'
+          : (response.message ?? 'Payment failed. Please try again.');
     });
-    if (soft) _initFlutterWeb();
   }
 
   void _onSdkWallet(ExternalWalletResponse response) {
@@ -256,7 +165,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     setState(() {
       _busy = false;
       _error =
-          'Use Razorpay UPI or card — same as evuddy.com. Wallet ${response.walletName ?? ""} is not enabled.';
+          'Finish the payment in ${response.walletName ?? 'the wallet app'}, then tap Pay securely with Razorpay again if this screen stays open.';
     });
   }
 
@@ -300,8 +209,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
         } else if (type == 'dismiss' && mounted) {
           setState(() {
             _busy = false;
-            _error =
-                'Checkout closed. Nothing was charged. Tap Pay securely to open Razorpay again.';
+            _error = 'Payment cancelled. You can try again.';
           });
         } else if (type == 'failed') {
           setState(() {
@@ -315,7 +223,8 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       final android = web.platform as AndroidWebViewController;
       await android.setMixedContentMode(MixedContentMode.alwaysAllow);
     }
-    final html = await rootBundle.loadString('assets/pay/checkout.html');
+    final html = await DefaultAssetBundle.of(context)
+        .loadString('assets/pay/checkout.html');
     await web.loadHtmlString(html, baseUrl: EvuddyApi.origin);
     if (!mounted) return;
     setState(() {
@@ -377,7 +286,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${widget.bookingId}  ·  UPI / card  ·  same checkout as evuddy.com',
+                    '${widget.bookingId}  ·  UPI / card / netbanking  ·  same checkout as evuddy.com',
                     style: GoogleFonts.plusJakartaSans(
                       color: Evuddy.muted,
                       fontWeight: FontWeight.w600,
@@ -406,15 +315,15 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
               child: InfoNote(
-                text: _nativeOpen || _busy
-                    ? 'Razorpay is opening full screen. Choose UPI or card, then tap Continue — same as the website.'
-                    : 'Complete UPI or card in the Razorpay sheet. EVUDDY never sees your PIN or card number.',
+                text: _busy
+                    ? 'Razorpay is opening. Choose UPI, card or netbanking — same as evuddy.com.'
+                    : 'Complete UPI, card or netbanking in the Razorpay sheet. EVUDDY never sees your PIN or card number.',
               ),
             ),
           Expanded(
             child: _web == null
                 ? Center(
-                    child: _busy || _nativeOpen
+                    child: _busy
                         ? const CircularProgressIndicator(color: Evuddy.ink)
                         : const SizedBox.shrink(),
                   )
