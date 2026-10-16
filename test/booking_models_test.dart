@@ -450,6 +450,18 @@ void main() {
       isTrue,
     );
     expect(
+      PaymentStart.checkout(
+        const RazorpayOrder(
+          keyId: '',
+          orderId: '',
+          amount: 274900,
+          currency: 'INR',
+        ),
+        bookEvFlow: true,
+      ).needsCheckout,
+      isTrue,
+    );
+    expect(
       RiderBooking.fromJson({
         'alreadyCaptured': true,
         'remainingAmount': 2749,

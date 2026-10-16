@@ -24,6 +24,8 @@ class RazorpayCheckoutPage extends StatefulWidget {
     required this.rupees,
     this.email = '',
     this.vehicleId,
+    this.bookingMongoId = '',
+    this.idToken = '',
   });
 
   final RazorpayOrder order;
@@ -33,6 +35,8 @@ class RazorpayCheckoutPage extends StatefulWidget {
   final double rupees;
   final String email;
   final String? vehicleId;
+  final String bookingMongoId;
+  final String idToken;
 
   @override
   State<RazorpayCheckoutPage> createState() => _RazorpayCheckoutPageState();
@@ -74,6 +78,10 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       'name': name,
       'image': image,
       'description': 'Booking Payment - ${widget.bookingId}',
+      'rupees': widget.rupees,
+      if (widget.idToken.isNotEmpty) 'token': widget.idToken,
+      if (widget.bookingMongoId.isNotEmpty) 'bookingMongoId': widget.bookingMongoId,
+      if (widget.bookingId.isNotEmpty) 'bookingId': widget.bookingId,
       if (widget.order.orderId.startsWith('order_'))
         'order_id': widget.order.orderId,
       'prefill': {
@@ -117,11 +125,17 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       _web = null;
       _opened = false;
     });
-    if (_androidHost || _iosSdk) {
+    // Book EV uses checkout.js. Use that when create-order omitted a new key
+    // (remaining due after the first ₹1), otherwise native SDK first.
+    if ((_androidHost || _iosSdk) && widget.order.keyId.startsWith('rzp_')) {
       await Future<void>.delayed(const Duration(milliseconds: 80));
       if (!mounted || _settled) return;
       _openSdk();
       return;
+    }
+    if (_androidHost) {
+      final overlay = await _openAndroidCheckoutJs();
+      if (overlay || !mounted || _settled) return;
     }
     await _initFlutterWeb();
   }
