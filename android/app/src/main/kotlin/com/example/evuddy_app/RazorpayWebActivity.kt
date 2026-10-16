@@ -1,8 +1,10 @@
 package com.example.evuddy_app
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import android.os.Message
 import android.view.ViewGroup
@@ -126,8 +128,22 @@ class RazorpayWebActivity : Activity() {
         ) {
             return false
         }
-        // Stay on Razorpay (UPI QR / UPI ID / card). Do not jump to GPay / PhonePe.
-        return true
+        // Continue / UPI intent / 3DS bank apps — same as checkout.js on evuddy.com.
+        return try {
+            val intent = if (lower.startsWith("intent:")) {
+                Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
+            } else {
+                Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            }
+            intent.addCategory(Intent.CATEGORY_BROWSABLE)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            true
+        } catch (_: ActivityNotFoundException) {
+            true
+        } catch (_: Exception) {
+            true
+        }
     }
 
     private fun newWebView(): WebView {

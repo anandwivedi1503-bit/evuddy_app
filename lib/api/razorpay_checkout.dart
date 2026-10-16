@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 
@@ -11,6 +13,7 @@ import '../theme/evuddy.dart';
 import '../widgets/chrome.dart';
 import 'evuddy_api.dart';
 
+/// Official Razorpay Standard Checkout — same `checkout.js` as evuddy.com Book EV.
 class RazorpayCheckoutPage extends StatefulWidget {
   const RazorpayCheckoutPage({
     super.key,
@@ -36,16 +39,20 @@ class RazorpayCheckoutPage extends StatefulWidget {
 }
 
 class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
+  static const _channel = MethodChannel('evuddy/razorpay');
+
   Razorpay? _sdk;
   WebViewController? _web;
   String? _error;
   bool _opened = false;
   bool _busy = true;
+  bool _settled = false;
 
-  bool get _useNativeSdk =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
+  bool get _androidHost =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  bool get _iosSdk =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   String get _contact10 {
     final digits = widget.contact.replaceAll(RegExp(r'\D'), '');
@@ -85,7 +92,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   @override
   void initState() {
     super.initState();
-    if (_useNativeSdk) {
+    if (_iosSdk) {
       _sdk = Razorpay();
       _sdk!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSdkSuccess);
       _sdk!.on(Razorpay.EVENT_PAYMENT_ERROR, _onSdkError);
@@ -101,22 +108,82 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   }
 
   Future<void> _start() async {
-    if (!mounted) return;
+    if (!mounted || _settled) return;
     setState(() {
       _busy = true;
       _error = null;
       _web = null;
       _opened = false;
     });
-    if (_useNativeSdk) {
+    if (_androidHost) {
+      final ok = await _openAndroidCheckoutJs();
+      if (ok || !mounted || _settled) return;
+    }
+    if (_iosSdk) {
       _openSdk();
       return;
     }
     await _initFlutterWeb();
   }
 
+  Future<bool> _openAndroidCheckoutJs() async {
+    final bundle = DefaultAssetBundle.of(context);
+    try {
+      final html = await bundle.loadString('assets/pay/checkout.html');
+      final raw = await _channel.invokeMethod<String>('open', {
+        'html': html,
+        'options': jsonEncode(_options),
+      });
+      if (!mounted) return true;
+      return _handleBridgePayload(raw);
+    } on PlatformException catch (e) {
+      if (!mounted) return false;
+      setState(() {
+        _busy = false;
+        _error = e.message ?? 'Could not open Razorpay checkout.';
+      });
+      return false;
+    } catch (e) {
+      if (!mounted) return false;
+      setState(() {
+        _busy = false;
+        _error = e.toString();
+      });
+      return false;
+    }
+  }
+
+  bool _handleBridgePayload(String? raw) {
+    Map<String, dynamic> data = const {};
+    if (raw != null && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          data = decoded.map((k, v) => MapEntry(k.toString(), v));
+        }
+      } catch (_) {}
+    }
+    final type = data['type']?.toString() ?? 'dismiss';
+    if (type == 'success') {
+      _succeed(
+        data['razorpay_order_id']?.toString() ?? '',
+        data['razorpay_payment_id']?.toString() ?? '',
+        data['razorpay_signature']?.toString() ?? '',
+      );
+      return true;
+    }
+    setState(() {
+      _busy = false;
+      _error = type == 'failed'
+          ? (data['message']?.toString() ?? 'Payment failed. Please try again.')
+          : 'Payment cancelled. You can try again.';
+    });
+    return true;
+  }
+
   void _succeed(String orderId, String paymentId, String signature) {
-    if (!mounted) return;
+    if (!mounted || _settled) return;
+    _settled = true;
     Navigator.pop(context, {
       'orderId': orderId.isEmpty ? widget.order.orderId : orderId,
       'paymentId': paymentId,
@@ -146,7 +213,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   }
 
   void _onSdkError(PaymentFailureResponse response) {
-    if (!mounted) return;
+    if (!mounted || _settled) return;
     final msg = (response.message ?? 'Payment failed.').toLowerCase();
     final cancelled = response.code == Razorpay.PAYMENT_CANCELLED ||
         msg.contains('cancel') ||
@@ -161,7 +228,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   }
 
   void _onSdkWallet(ExternalWalletResponse response) {
-    if (!mounted) return;
+    if (!mounted || _settled) return;
     setState(() {
       _busy = false;
       _error =
@@ -169,7 +236,16 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     });
   }
 
+  Future<void> _openExternalPayUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
   Future<void> _initFlutterWeb() async {
+    final bundle = DefaultAssetBundle.of(context);
     setState(() {
       _busy = true;
       _error = null;
@@ -184,9 +260,11 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
           if (u.startsWith('http://') ||
               u.startsWith('https://') ||
               u.startsWith('about:') ||
-              u.startsWith('data:')) {
+              u.startsWith('data:') ||
+              u.startsWith('blob:')) {
             return NavigationDecision.navigate;
           }
+          _openExternalPayUrl(request.url);
           return NavigationDecision.prevent;
         },
       ),
@@ -223,8 +301,8 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       final android = web.platform as AndroidWebViewController;
       await android.setMixedContentMode(MixedContentMode.alwaysAllow);
     }
-    final html = await DefaultAssetBundle.of(context)
-        .loadString('assets/pay/checkout.html');
+    if (!mounted) return;
+    final html = await bundle.loadString('assets/pay/checkout.html');
     await web.loadHtmlString(html, baseUrl: EvuddyApi.origin);
     if (!mounted) return;
     setState(() {

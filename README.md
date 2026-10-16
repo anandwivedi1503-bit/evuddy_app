@@ -9,10 +9,10 @@ Premium cream canvas, official lockup, Rapido-style yellow splash, a **Book an E
 ## What you get
 
 - **Home** — Book an EV bar, photo carousel, fleet ads (calculator), live trip banner after payment
-- **Book EV** — confirm mobile → admin Approve unlocks booking → city/hub → scooter → reserve → Razorpay (from ₹1) → **pickup OTP** → yard confirms → Mark ride started → pay remaining → **Generate ride-end OTP** (not for Rent to Own)
+- **Book EV** — confirm mobile → admin Approve unlocks booking → city/hub → scooter → reserve → Razorpay Standard Checkout (same `checkout.js` as evuddy.com, from ₹1) → **pickup OTP** → yard confirms → Mark ride started → pay remaining → **Generate ride-end OTP** (not for Rent to Own). Rent to Own collects nominee / agreement fields the website API requires.
+- **Account** — rides & Razorpay receipts, ride ratings, approval, copyable pickup / ride-end OTP, deposit hold, calculator
 - **OTP** — Firebase SMS for login; booking OTPs come from evuddy.com (`/api/notify/booking-otp`, `/api/rides/rider-start`, `/api/rides/rider-end`)
 - **Fleet calculator** — investors enter scooters or rupees and see fleet size + monthly return; business planner sees annual, 48-month and FOCO ops. Numbers match the Fleet Partner PDF (₹60,000 / ₹90,000 per scooter)
-- **Account** — approval, copyable pickup / ride-end OTP, deposit hold, calculator
 
 ## CEO handover (merge + deploy)
 
