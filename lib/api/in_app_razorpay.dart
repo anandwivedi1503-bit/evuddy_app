@@ -33,7 +33,7 @@ class InAppRazorpay {
       'name': name,
       'image': image,
       'description': 'Booking Payment - $bookingId',
-      'order_id': order.orderId,
+      if (order.orderId.startsWith('order_')) 'order_id': order.orderId,
       'prefill': {
         'name': customerName.isEmpty ? 'Rider' : customerName,
         'contact': contact10,
@@ -58,7 +58,7 @@ class InAppRazorpay {
     String? vehicleId,
   }) async {
     if (kIsWeb) return null;
-    if (order.keyId.isEmpty || order.orderId.isEmpty) return null;
+    if (order.keyId.isEmpty) return null;
 
     final options = optionsFor(
       order: order,
