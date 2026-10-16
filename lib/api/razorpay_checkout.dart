@@ -86,6 +86,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
           'vehicleId': widget.vehicleId,
       },
       'theme': {'color': '#18B368'},
+      'retry': {'enabled': true, 'max_count': 4},
     };
   }
 
@@ -115,11 +116,9 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       _web = null;
       _opened = false;
     });
-    if (_androidHost) {
-      final overlay = await _openAndroidCheckoutJs();
-      if (overlay || !mounted || _settled) return;
-    }
-    if (_iosSdk) {
+    if (_androidHost || _iosSdk) {
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      if (!mounted || _settled) return;
       _openSdk();
       return;
     }
