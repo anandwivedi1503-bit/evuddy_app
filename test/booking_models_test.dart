@@ -408,6 +408,20 @@ void main() {
     expect(native['key'], 'rzp_live_x');
     expect(native['order_id'], 'order_remaining');
     expect(native['amount'], 274900);
+    final remainingSheet = InAppRazorpay.optionsFor(
+      order: const RazorpayOrder(
+        keyId: 'rzp_live_x',
+        orderId: '',
+        amount: 274900,
+        currency: 'INR',
+      ),
+      rupees: 2749,
+      bookingId: 'BK-000001',
+      contact: '9876543210',
+      customerName: 'Rider',
+    );
+    expect(remainingSheet.containsKey('order_id'), isFalse);
+    expect(remainingSheet['amount'], 274900);
     expect((native['prefill'] as Map)['contact'], '9876543210');
     final capturedPayload = RazorpayOrder.fromJson({
       'success': true,
@@ -424,6 +438,17 @@ void main() {
     });
     expect(capturedPayload.keyId, isEmpty);
     expect(capturedPayload.orderId, isEmpty);
+    expect(
+      PaymentStart.checkout(
+        RazorpayOrder(
+          keyId: 'rzp_live_x',
+          orderId: '',
+          amount: 274900,
+          currency: 'INR',
+        ),
+      ).needsCheckout,
+      isTrue,
+    );
     expect(
       RiderBooking.fromJson({
         'alreadyCaptured': true,
