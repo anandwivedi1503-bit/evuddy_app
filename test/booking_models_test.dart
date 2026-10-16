@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:evuddy_app/api/evuddy_api.dart';
+import 'package:evuddy_app/api/in_app_razorpay.dart';
 import 'package:evuddy_app/api/firebase_phone.dart';
 import 'package:evuddy_app/api/partner_pdf.dart';
 import 'package:evuddy_app/state/registration_draft.dart';
@@ -397,6 +398,45 @@ void main() {
       'amount': 274900,
     });
     expect(PaymentStart.checkout(remainingOrder).needsCheckout, isTrue);
+    final native = InAppRazorpay.optionsFor(
+      order: remainingOrder,
+      rupees: 2749,
+      bookingId: 'BK-000001',
+      contact: '+91 98765 43210',
+      customerName: 'Rider',
+    );
+    expect(native['key'], 'rzp_live_x');
+    expect(native['order_id'], 'order_remaining');
+    expect(native['amount'], 274900);
+    expect((native['prefill'] as Map)['contact'], '9876543210');
+    final capturedPayload = RazorpayOrder.fromJson({
+      'success': true,
+      'alreadyCaptured': true,
+      'remainingAmount': 2749,
+      'receivedAmount': 1,
+      'data': {
+        '_id': '64f000mongo',
+        'id': '64f000mongo',
+        'bookingId': 'BK-000001',
+        'razorpayOrderId': 'order_old_rupee',
+        'pendingAmount': 2749,
+      },
+    });
+    expect(capturedPayload.keyId, isEmpty);
+    expect(capturedPayload.orderId, isEmpty);
+    expect(
+      RiderBooking.fromJson({
+        'alreadyCaptured': true,
+        'remainingAmount': 2749,
+        'receivedAmount': 1,
+        'data': {
+          'bookingId': 'BK-000001',
+          'receivedAmount': 1,
+          'pendingAmount': 0,
+        },
+      }).due,
+      2749,
+    );
   });
 
   test('logout clears name, phone and booking from Account', () {

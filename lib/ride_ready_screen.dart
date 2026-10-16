@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
 import 'api/firebase_phone.dart';
+import 'api/in_app_razorpay.dart';
 import 'api/razorpay_checkout.dart';
 import 'confirm_mobile_screen.dart';
 import 'open_link.dart';
@@ -480,15 +481,6 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       busy = true;
       error = null;
     });
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Opening Razorpay — same checkout as evuddy.com…'),
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
     try {
       final started = await _withToken(
         (t) => EvuddyApi.startPayment(
@@ -509,19 +501,38 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       if (started.needsCheckout) {
         setState(() => busy = false);
         if (!mounted) return;
-        result = await Navigator.of(context, rootNavigator: true).push<Map<String, String>>(
-          evuddyRoute(
-            RazorpayCheckoutPage(
-              order: started.order!,
-              bookingId: b.bookingId,
-              contact: registrationDraft.phone,
-              customerName: registrationDraft.fullName,
-              email: registrationDraft.email,
-              rupees: pay,
-              vehicleId: selected?.vehicleId ?? b.vehicleId,
-            ),
-          ),
+        result = await InAppRazorpay.open(
+          order: started.order!,
+          rupees: pay,
+          bookingId: b.bookingId,
+          contact: registrationDraft.phone,
+          customerName: registrationDraft.fullName,
+          email: registrationDraft.email,
+          vehicleId: selected?.vehicleId ?? b.vehicleId,
         );
+        if (result != null && result['cancelled'] == 'true') {
+          if (!mounted) return;
+          setState(() {
+            busy = false;
+            error = 'Payment cancelled. Tap Pay remaining to open GPay / PhonePe / UPI again.';
+          });
+          return;
+        }
+        if ((result == null || (result['paymentId'] ?? '').isEmpty) && mounted) {
+          result = await Navigator.of(context, rootNavigator: true).push<Map<String, String>>(
+            evuddyRoute(
+              RazorpayCheckoutPage(
+                order: started.order!,
+                bookingId: b.bookingId,
+                contact: registrationDraft.phone,
+                customerName: registrationDraft.fullName,
+                email: registrationDraft.email,
+                rupees: pay,
+                vehicleId: selected?.vehicleId ?? b.vehicleId,
+              ),
+            ),
+          );
+        }
         if (result == null) {
           try {
             recovered = await EvuddyApi.verifyPayment(
@@ -537,17 +548,13 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           }
           if (recovered == null) {
             if (!mounted) return;
+            const closed =
+                'Razorpay closed without a payment. Tap Pay remaining again and choose GPay, PhonePe, UPI or card.';
             setState(() {
               busy = false;
-              error =
-                  'Razorpay closed without a payment. Tap Pay securely with Razorpay again — UPI or card, same as evuddy.com.';
+              error = closed;
             });
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Payment not completed. Try Razorpay again.'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            await _payAlert('Payment not completed', closed);
             return;
           }
         }
@@ -627,8 +634,27 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         _askReauth();
         return;
       }
-      setState(() => error = e.toString());
+      final text = e.toString().replaceFirst('ApiException: ', '');
+      setState(() => error = text);
+      await _payAlert('Razorpay did not open', text);
     }
+  }
+
+  Future<void> _payAlert(String title, String body) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _resendOtp() async {
