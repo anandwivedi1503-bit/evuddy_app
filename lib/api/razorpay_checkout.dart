@@ -115,15 +115,13 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       _web = null;
       _opened = false;
     });
-    if (_androidHost) {
-      final ok = await _openAndroidCheckoutJs();
-      if (ok || !mounted || _settled) return;
-    }
+    // Always show checkout.js in this page first so Pay remaining never looks
+    // frozen if the Android overlay activity fails to appear.
+    await _initFlutterWeb();
+    if (!mounted || _settled) return;
     if (_iosSdk) {
       _openSdk();
-      return;
     }
-    await _initFlutterWeb();
   }
 
   Future<bool> _openAndroidCheckoutJs() async {
@@ -386,7 +384,22 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
                     label: 'Pay securely with Razorpay',
                     onPressed: _start,
                   ),
+                  if (_androidHost) ...[
+                    const SizedBox(height: 8),
+                    EvuddyGhostButton(
+                      label: 'Open full-screen Razorpay',
+                      onPressed: () => _openAndroidCheckoutJs(),
+                    ),
+                  ],
                 ],
+              ),
+            )
+          else if (_androidHost)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+              child: EvuddyGhostButton(
+                label: 'Open full-screen Razorpay',
+                onPressed: () => _openAndroidCheckoutJs(),
               ),
             )
           else

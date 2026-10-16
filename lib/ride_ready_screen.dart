@@ -478,6 +478,15 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       busy = true;
       error = null;
     });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Opening Razorpay — same checkout as evuddy.com…'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
     try {
       final started = await _withToken(
         (t) => EvuddyApi.startPayment(
@@ -497,8 +506,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       RiderBooking? recovered;
       if (started.needsCheckout) {
         setState(() => busy = false);
-        result = await Navigator.push<Map<String, String>>(
-          context,
+        if (!mounted) return;
+        result = await Navigator.of(context, rootNavigator: true).push<Map<String, String>>(
           evuddyRoute(
             RazorpayCheckoutPage(
               order: started.order!,
@@ -1276,21 +1285,18 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             busy: busy,
             onConfirm: () => _ride(true),
           ),
-          if (payDue) ...[
-            const SizedBox(height: 10),
-            Text(
-              'Remaining ${CatalogRates.inr(_remainingCharge(b))} is paid after this slide — same as evuddy.com.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Evuddy.muted, height: 1.35),
-            ),
-          ],
+          const SizedBox(height: 10),
         ] else if (b.hasPickupOtp && !b.pickupOtpVerified) ...[
           const SizedBox(height: 8),
           EvuddyGhostButton(label: 'Resend pickup OTP SMS', onPressed: _resendOtp),
           const SizedBox(height: 8),
           EvuddyGhostButton(label: 'Refresh after yard confirms OTP', onPressed: _load),
         ],
-        if (payDue && !waitForStart) ...[
+        if (error != null && error!.isNotEmpty) ...[
+          InfoNote(text: error!),
+          const SizedBox(height: 8),
+        ],
+        if (payDue) ...[
           EvuddyButton(
             sun: true,
             label: remainingPay
