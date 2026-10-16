@@ -92,8 +92,11 @@ class QuickActions extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     item.$2,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
                     style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.w800,
                     ),
                   ),

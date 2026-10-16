@@ -44,7 +44,7 @@ class MainActivity : FlutterFragmentActivity() {
             val intent = Intent(this, RazorpayWebActivity::class.java)
             intent.putExtra(RazorpayWebActivity.EXTRA_HTML, html)
             intent.putExtra(RazorpayWebActivity.EXTRA_OPTIONS, options)
-            payLauncher.launch(intent)
+            window.decorView.post { payLauncher.launch(intent) }
         }
     }
 

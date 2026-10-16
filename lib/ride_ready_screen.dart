@@ -206,7 +206,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           'Firebase session expired after waiting at the yard. Confirm this same registered mobile with OTP — then pay remaining. Booking is kept.';
     });
     registrationDraft.otpGate = 'book';
-    Navigator.push(context, evuddyRoute(const ConfirmMobileScreen())).then((_) {
+    Navigator.of(context, rootNavigator: true)
+        .push(evuddyRoute(const ConfirmMobileScreen()))
+        .then((_) {
       _reauthOpen = false;
       if (mounted) _load();
     });
@@ -437,29 +439,29 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       return;
     }
     var b = booking!;
-    var token = await _token();
+    var token = await _token(force: true);
     if (token == null) return;
-    if (b.mongoId.isEmpty) {
-      try {
-        final mine = await EvuddyApi.myBooking(token);
-        if (mine != null) {
-          b = mine;
-          registrationDraft.applyActiveBooking(mine);
-          if (mounted) setState(() => booking = mine);
-        }
-      } catch (e) {
-        if (registrationDraft.isAuthError(e)) {
-          _askReauth();
-          return;
-        }
+    try {
+      final latest = await EvuddyApi.myBooking(token);
+      if (latest != null) {
+        b = latest;
+        registrationDraft.applyActiveBooking(latest);
+        if (mounted) setState(() => booking = latest);
+      }
+    } catch (e) {
+      if (registrationDraft.isAuthError(e)) {
+        _askReauth();
+        return;
       }
     }
     if (b.mongoId.isEmpty) {
       setState(() => error = 'Booking id is missing. Refresh, then pay.');
       return;
     }
-    final maxDue = amountDue;
-    final pay = _payNow(b);
+    final maxDue = _remainingCharge(b) > 0.009
+        ? _remainingCharge(b)
+        : catalogPayable.toDouble();
+    final pay = b.remainingPayLocked ? _remainingCharge(b) : _payNow(b);
     if (b.remainingPayLocked) {
       amount.text = _moneyInput(pay);
     }
@@ -478,6 +480,15 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       busy = true;
       error = null;
     });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Opening Razorpay — same checkout as evuddy.com…'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
     try {
       final started = await _withToken(
         (t) => EvuddyApi.startPayment(
@@ -497,8 +508,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       RiderBooking? recovered;
       if (started.needsCheckout) {
         setState(() => busy = false);
-        result = await Navigator.push<Map<String, String>>(
-          context,
+        if (!mounted) return;
+        result = await Navigator.of(context, rootNavigator: true).push<Map<String, String>>(
           evuddyRoute(
             RazorpayCheckoutPage(
               order: started.order!,
@@ -1276,21 +1287,18 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             busy: busy,
             onConfirm: () => _ride(true),
           ),
-          if (payDue) ...[
-            const SizedBox(height: 10),
-            Text(
-              'Remaining ${CatalogRates.inr(_remainingCharge(b))} is paid after this slide — same as evuddy.com.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Evuddy.muted, height: 1.35),
-            ),
-          ],
+          const SizedBox(height: 10),
         ] else if (b.hasPickupOtp && !b.pickupOtpVerified) ...[
           const SizedBox(height: 8),
           EvuddyGhostButton(label: 'Resend pickup OTP SMS', onPressed: _resendOtp),
           const SizedBox(height: 8),
           EvuddyGhostButton(label: 'Refresh after yard confirms OTP', onPressed: _load),
         ],
-        if (payDue && !waitForStart) ...[
+        if (error != null && error!.isNotEmpty) ...[
+          InfoNote(text: error!),
+          const SizedBox(height: 8),
+        ],
+        if (payDue) ...[
           EvuddyButton(
             sun: true,
             label: remainingPay

@@ -332,14 +332,25 @@ class EvuddyApi {
         ),
       );
     }
-    if (j['alreadyCaptured'] == true || j['paidWithWallet'] == true) {
+    if (j['paidWithWallet'] == true) {
       return PaymentStart.settled(
         booking: RiderBooking.fromJson(j),
-        wallet: j['paidWithWallet'] == true,
+        wallet: true,
       );
     }
+    final booking = RiderBooking.fromJson(j);
     final order = RazorpayOrder.fromJson(j);
+    // First ₹1 capture can come back as alreadyCaptured while remaining is still due.
+    // Only treat it as settled when the booking balance is actually ₹0.
+    if (j['alreadyCaptured'] == true && booking.due <= 0.009) {
+      return PaymentStart.settled(booking: booking);
+    }
     if (order.keyId.isEmpty || order.orderId.isEmpty) {
+      if (j['alreadyCaptured'] == true && booking.due > 0.009) {
+        throw ApiException(
+          '₹1 is already saved on this booking. Remaining ${CatalogRates.inr(booking.due)} needs a new Razorpay order. Pull to refresh, then tap Pay remaining again. If it still does not open, pay remaining on evuddy.com for the same booking — both write to one database.',
+        );
+      }
       throw ApiException('evuddy.com did not return a Razorpay key or order id.');
     }
     return PaymentStart.checkout(order);

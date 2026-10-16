@@ -277,22 +277,30 @@ class RegistrationDraft {
   }
 
   void clearSession() {
+    phone = '';
     phoneVerified = false;
     firebaseIdToken = null;
     firebaseRefreshToken = null;
     firebaseUid = null;
     verificationId = null;
-    bookingEnabled = false;
-    approvalStatus = '';
+    resetProfileForNewPhone();
     chosenPlan = null;
     chosenDuration = null;
-    riderId = null;
-    activeBooking = null;
+    chosenCity = null;
+    chosenHubId = null;
+    otpGate = 'register';
     depositHeld = 0;
     depositStatus = 'none';
     depositBookingId = null;
     walletAvailable = 0;
     walletStatus = '';
+    rtoNomineeName = '';
+    rtoNomineeRelation = 'Father';
+    rtoGuardianName = '';
+    rtoEmergencyPhone = '';
+    rtoAddress = '';
+    rtoOccupation = '';
+    rtoAgreed = false;
     persist();
     riderSessionTick.value++;
   }

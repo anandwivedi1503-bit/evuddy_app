@@ -92,7 +92,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   @override
   void initState() {
     super.initState();
-    if (_iosSdk) {
+    if (_androidHost || _iosSdk) {
       _sdk = Razorpay();
       _sdk!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSdkSuccess);
       _sdk!.on(Razorpay.EVENT_PAYMENT_ERROR, _onSdkError);
@@ -116,8 +116,8 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       _opened = false;
     });
     if (_androidHost) {
-      final ok = await _openAndroidCheckoutJs();
-      if (ok || !mounted || _settled) return;
+      final overlay = await _openAndroidCheckoutJs();
+      if (overlay || !mounted || _settled) return;
     }
     if (_iosSdk) {
       _openSdk();
@@ -278,6 +278,9 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
         if (type == 'ready' && !_opened) {
           _opened = true;
           web.runJavaScript('openPay(${jsonEncode(_options)})');
+        } else if (type == 'open') {
+          final url = raw['url']?.toString() ?? '';
+          if (url.isNotEmpty) _openExternalPayUrl(url);
         } else if (type == 'success' && mounted) {
           _succeed(
             raw['razorpay_order_id']?.toString() ?? '',
@@ -386,7 +389,22 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
                     label: 'Pay securely with Razorpay',
                     onPressed: _start,
                   ),
+                  if (_androidHost) ...[
+                    const SizedBox(height: 8),
+                    EvuddyGhostButton(
+                      label: 'Open full-screen Razorpay',
+                      onPressed: () => _openAndroidCheckoutJs(),
+                    ),
+                  ],
                 ],
+              ),
+            )
+          else if (_androidHost)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+              child: EvuddyGhostButton(
+                label: 'Open full-screen Razorpay',
+                onPressed: () => _openAndroidCheckoutJs(),
               ),
             )
           else

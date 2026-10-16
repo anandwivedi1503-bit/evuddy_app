@@ -379,6 +379,48 @@ void main() {
     );
   });
 
+  test('alreadyCaptured of the first rupee is not remaining-pay success', () {
+    final firstRupee = PaymentStart.settled(
+      booking: RiderBooking.fromJson({
+        'bookingId': 'BK-000001',
+        'receivedAmount': 1,
+        'pendingAmount': 2749,
+        'pickupOTP': '1234',
+        'rideStatus': 'In Ride',
+      }),
+    );
+    expect(firstRupee.booking!.due, 2749);
+    expect(firstRupee.needsCheckout, isFalse);
+    final remainingOrder = RazorpayOrder.fromJson({
+      'keyId': 'rzp_live_x',
+      'orderId': 'order_remaining',
+      'amount': 274900,
+    });
+    expect(PaymentStart.checkout(remainingOrder).needsCheckout, isTrue);
+  });
+
+  test('logout clears name, phone and booking from Account', () {
+    final draft = RegistrationDraft()
+      ..phone = '9876543210'
+      ..phoneVerified = true
+      ..fullName = 'Test Rider'
+      ..email = 'test@evuddy.com'
+      ..riderId = 'R1'
+      ..bookingEnabled = true
+      ..activeBooking = RiderBooking.fromJson({
+        'bookingId': 'BK-000001',
+        'rideStatus': 'In Ride',
+      });
+    draft.clearSession();
+    expect(draft.phone, isEmpty);
+    expect(draft.fullName, isEmpty);
+    expect(draft.email, isEmpty);
+    expect(draft.phoneVerified, isFalse);
+    expect(draft.riderId, isNull);
+    expect(draft.activeBooking, isNull);
+    expect(draft.canBook, isFalse);
+  });
+
   test('Rent to Own agreement matches website booking POST fields', () {
     expect(
       const RtoAgreement(
