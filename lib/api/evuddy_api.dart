@@ -311,6 +311,7 @@ class EvuddyApi {
     required String bookingMongoId,
     required double amountRupees,
     bool useWallet = false,
+    bool retryCaptured = true,
   }) async {
     final r = await _post(
       _u('/api/razorpay/create-order'),
@@ -319,6 +320,8 @@ class EvuddyApi {
         'bookingMongoId': bookingMongoId,
         'amount': amountRupees,
         'firebaseIdToken': idToken,
+        'forceNewOrder': !useWallet,
+        'remainingPayment': !useWallet && amountRupees >= 1,
         if (useWallet) 'useWallet': true,
         if (useWallet) 'paymentMethod': 'wallet',
       }),
@@ -340,15 +343,28 @@ class EvuddyApi {
     }
     final booking = RiderBooking.fromJson(j);
     final order = RazorpayOrder.fromJson(j);
+    final remaining = booking.due > 0.009
+        ? booking.due
+        : (_asDouble(j['remainingAmount'] ?? j['pendingAmount']) ?? 0);
     // First ₹1 capture can come back as alreadyCaptured while remaining is still due.
     // Only treat it as settled when the booking balance is actually ₹0.
-    if (j['alreadyCaptured'] == true && booking.due <= 0.009) {
+    if (j['alreadyCaptured'] == true && remaining <= 0.009) {
       return PaymentStart.settled(booking: booking);
     }
     if (order.keyId.isEmpty || order.orderId.isEmpty) {
-      if (j['alreadyCaptured'] == true && booking.due > 0.009) {
+      if (j['alreadyCaptured'] == true && remaining > 0.009 && retryCaptured) {
+        await Future<void>.delayed(const Duration(milliseconds: 700));
+        return startPayment(
+          idToken: idToken,
+          bookingMongoId: bookingMongoId,
+          amountRupees: amountRupees,
+          useWallet: useWallet,
+          retryCaptured: false,
+        );
+      }
+      if (j['alreadyCaptured'] == true && remaining > 0.009) {
         throw ApiException(
-          '₹1 is already saved on this booking. Remaining ${CatalogRates.inr(booking.due)} needs a new Razorpay order. Pull to refresh, then tap Pay remaining again. If it still does not open, pay remaining on evuddy.com for the same booking — both write to one database.',
+          'First ₹${booking.receivedAmount.round()} is saved. Remaining ${CatalogRates.inr(remaining)} needs a fresh Razorpay order. Tap Pay remaining again.',
         );
       }
       throw ApiException('evuddy.com did not return a Razorpay key or order id.');
@@ -1025,13 +1041,16 @@ class RiderBooking {
     final m = nested is Map
         ? nested
         : (booking is Map ? booking : e);
-    final pending = _asDouble(
+    var pending = _asDouble(
           m['pendingAmount'] ??
               e['pendingAmount'] ??
               m['remainingAmount'] ??
               e['remainingAmount'],
         ) ??
         0;
+    final topRemaining =
+        _asDouble(e['remainingAmount'] ?? e['pendingAmount']) ?? 0;
+    if (pending <= 0.009 && topRemaining > 0.009) pending = topRemaining;
     final received = _asDouble(
           m['receivedAmount'] ?? e['receivedAmount'] ?? e['paidAmount'] ?? m['paidAmount'],
         ) ??
@@ -1231,18 +1250,36 @@ class RazorpayOrder {
 
   factory RazorpayOrder.fromJson(Map e) {
     final data = e['data'] is Map ? e['data'] as Map : const {};
+    final booking = e['booking'] is Map ? e['booking'] as Map : const {};
     String pick(List<String> keys) {
       for (final k in keys) {
-        final v = e[k] ?? data[k];
-        if (v != null && v.toString().trim().isNotEmpty) return v.toString().trim();
+        for (final src in [e, data, booking]) {
+          final v = src[k];
+          if (v != null && v.toString().trim().isNotEmpty) {
+            return v.toString().trim();
+          }
+        }
+      }
+      return '';
+    }
+
+    String pickKey() {
+      final raw = pick(['keyId', 'key', 'key_id', 'razorpayKeyId', 'razorpay_key']);
+      return raw.startsWith('rzp_') ? raw : '';
+    }
+
+    String pickOrder() {
+      for (final k in ['orderId', 'order_id']) {
+        final raw = pick([k]);
+        if (raw.startsWith('order_')) return raw;
       }
       return '';
     }
 
     final name = pick(['name', 'merchantName', 'businessName']);
     return RazorpayOrder(
-      keyId: pick(['keyId', 'key', 'key_id', 'razorpayKeyId', 'razorpay_key']),
-      orderId: pick(['orderId', 'id', 'order_id']),
+      keyId: pickKey(),
+      orderId: pickOrder(),
       amount: _asDouble(e['amount']) ?? _asDouble(data['amount']) ?? 0,
       currency: pick(['currency']).isEmpty ? 'INR' : pick(['currency']),
       name: name.isEmpty ? 'Shubhrax Mobility Limited' : name,
