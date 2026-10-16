@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Talks only to the live EVUDDY site. Keys stay on evuddy.com — never in the app.
 class EvuddyApi {
@@ -11,6 +12,31 @@ class EvuddyApi {
 
   /// Keep-alive client so thousands of riders reuse TLS to evuddy.com.
   static final http.Client _http = http.Client();
+
+  /// Public Razorpay key from create-order — same `keyId` Book EV keeps in the page.
+  static const _keyPref = 'evuddy_rzp_key_v1';
+  static String? _rzpKey;
+
+  static Future<void> _rememberRzpKey(String key) async {
+    if (!key.startsWith('rzp_')) return;
+    _rzpKey = key;
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setString(_keyPref, key);
+    } catch (_) {}
+  }
+
+  static Future<String> _rzpKeyId() async {
+    if (_rzpKey != null && _rzpKey!.startsWith('rzp_')) return _rzpKey!;
+    try {
+      final p = await SharedPreferences.getInstance();
+      final saved = p.getString(_keyPref) ?? '';
+      if (saved.startsWith('rzp_')) _rzpKey = saved;
+      return saved.startsWith('rzp_') ? saved : '';
+    } catch (_) {
+      return '';
+    }
+  }
 
   static Uri _u(String path, [Map<String, String>? query]) {
     return Uri.parse('$origin$path').replace(queryParameters: query);
@@ -311,8 +337,8 @@ class EvuddyApi {
     required String bookingMongoId,
     required double amountRupees,
     bool useWallet = false,
-    bool retryCaptured = true,
   }) async {
+    // Same body as live Book EV `payWithRazorpay` on evuddy.com.
     final r = await _post(
       _u('/api/razorpay/create-order'),
       headers: _auth(idToken),
@@ -320,8 +346,6 @@ class EvuddyApi {
         'bookingMongoId': bookingMongoId,
         'amount': amountRupees,
         'firebaseIdToken': idToken,
-        'forceNewOrder': !useWallet,
-        'remainingPayment': !useWallet && amountRupees >= 1,
         if (useWallet) 'useWallet': true,
         if (useWallet) 'paymentMethod': 'wallet',
       }),
@@ -342,34 +366,45 @@ class EvuddyApi {
       );
     }
     final booking = RiderBooking.fromJson(j);
-    final order = RazorpayOrder.fromJson(j);
+    var order = RazorpayOrder.fromJson(j);
+    if (order.keyId.isNotEmpty) await _rememberRzpKey(order.keyId);
     final remaining = booking.due > 0.009
         ? booking.due
         : (_asDouble(j['remainingAmount'] ?? j['pendingAmount']) ?? 0);
-    // First ₹1 capture can come back as alreadyCaptured while remaining is still due.
-    // Only treat it as settled when the booking balance is actually ₹0.
+    // Website: if success, always `new window.Razorpay({ key, amount, order_id }).open()`.
+    // alreadyCaptured with remaining ₹0 is fully paid — do not open checkout.
     if (j['alreadyCaptured'] == true && remaining <= 0.009) {
       return PaymentStart.settled(booking: booking);
     }
-    if (order.keyId.isEmpty || order.orderId.isEmpty) {
-      if (j['alreadyCaptured'] == true && remaining > 0.009 && retryCaptured) {
-        await Future<void>.delayed(const Duration(milliseconds: 700));
-        return startPayment(
-          idToken: idToken,
-          bookingMongoId: bookingMongoId,
-          amountRupees: amountRupees,
-          useWallet: useWallet,
-          retryCaptured: false,
+    if (order.keyId.isEmpty) {
+      final cached = await _rzpKeyId();
+      if (cached.isNotEmpty) {
+        order = RazorpayOrder(
+          keyId: cached,
+          orderId: order.orderId,
+          amount: (amountRupees * 100).roundToDouble(),
+          currency: order.currency.isEmpty ? 'INR' : order.currency,
+          name: order.name,
+          image: order.image,
         );
       }
-      if (j['alreadyCaptured'] == true && remaining > 0.009) {
-        throw ApiException(
-          'First ₹${booking.receivedAmount.round()} is saved. Remaining ${CatalogRates.inr(remaining)} needs a fresh Razorpay order. Tap Pay remaining again.',
-        );
-      }
-      throw ApiException('evuddy.com did not return a Razorpay key or order id.');
     }
-    return PaymentStart.checkout(order);
+    if (order.keyId.isEmpty) {
+      throw ApiException(
+        _message(j, 'Unable to create Razorpay order.'),
+      );
+    }
+    await _rememberRzpKey(order.keyId);
+    return PaymentStart.checkout(
+      RazorpayOrder(
+        keyId: order.keyId,
+        orderId: order.orderId,
+        amount: order.amount > 0 ? order.amount : (amountRupees * 100).roundToDouble(),
+        currency: order.currency.isEmpty ? 'INR' : order.currency,
+        name: order.name,
+        image: order.image,
+      ),
+    );
   }
 
   static Future<RazorpayOrder> createRazorpayOrder({
@@ -856,8 +891,7 @@ class PaymentStart {
   final RiderBooking? booking;
   final bool wallet;
 
-  bool get needsCheckout =>
-      order != null && order!.keyId.isNotEmpty && order!.orderId.isNotEmpty;
+  bool get needsCheckout => order != null && order!.keyId.isNotEmpty;
 }
 
 class SupportTicket {

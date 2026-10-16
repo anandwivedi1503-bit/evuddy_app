@@ -74,7 +74,8 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       'name': name,
       'image': image,
       'description': 'Booking Payment - ${widget.bookingId}',
-      'order_id': widget.order.orderId,
+      if (widget.order.orderId.startsWith('order_'))
+        'order_id': widget.order.orderId,
       'prefill': {
         'name': widget.customerName.isEmpty ? 'Rider' : widget.customerName,
         'contact': _contact10,
