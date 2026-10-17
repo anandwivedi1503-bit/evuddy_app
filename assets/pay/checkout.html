@@ -58,7 +58,7 @@
       });
       rzp.open();
     }
-    // Live Book EV payWithRazorpay: create-order then Razorpay.open even if alreadyCaptured.
+    // Same as live Book EV: POST create-order, then Razorpay.open with order_id.
     async function payLikeBookEv(n) {
       hint("Creating Razorpay order...");
       try {
@@ -79,9 +79,33 @@
         post({ type: "failed", message: i.message || "Unable to create Razorpay order." });
         return;
       }
+      if (i.paidWithWallet) {
+        post({ type: "wallet" });
+        return;
+      }
+      var remaining = Number(i.remainingAmount || i.pendingAmount || 0);
       var key = i.keyId || n.key;
       var amount = i.amount || n.amount || Math.round(Number(n.rupees) * 100);
-      var orderId = i.orderId || n.order_id;
+      var orderId = i.orderId || n.order_id || "";
+      var hasOrder = String(orderId).indexOf("order_") === 0;
+      if (!hasOrder) {
+        if (i.alreadyCaptured && remaining <= 0.009) {
+          post({ type: "already_paid", message: i.message || "" });
+          return;
+        }
+        post({
+          type: "failed",
+          message:
+            "evuddy.com did not create a Razorpay order for this amount (alreadyCaptured, remaining ₹" +
+            remaining +
+            "). Live create-order must mint a new order after the first ₹1 — then tap Pay again."
+        });
+        return;
+      }
+      if (!key || String(key).indexOf("rzp_") !== 0) {
+        post({ type: "failed", message: "evuddy.com did not return a Razorpay key." });
+        return;
+      }
       var options = {
         key: key,
         amount: amount,
@@ -89,6 +113,7 @@
         name: i.name || "EVUDDY",
         image: i.image || "https://www.evuddy.com/Evuddy-logo-dark-E.png",
         description: "Booking Payment - " + (n.bookingId || ""),
+        order_id: orderId,
         prefill: n.prefill || {},
         notes: n.notes || {},
         theme: { color: "#18B368" },
@@ -107,7 +132,6 @@
           });
         }
       };
-      if (orderId) options.order_id = orderId;
       sheet(options);
       } catch (e) {
         post({ type: "failed", message: String(e.message || e) });

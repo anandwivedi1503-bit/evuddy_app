@@ -381,7 +381,7 @@ void main() {
   });
 
   test('alreadyCaptured of the first rupee is not remaining-pay success', () {
-    final firstRupee = PaymentStart.settled(
+    final firstRupee = PaymentStart.bookEv(
       booking: RiderBooking.fromJson({
         'bookingId': 'BK-000001',
         'receivedAmount': 1,
@@ -389,9 +389,26 @@ void main() {
         'pickupOTP': '1234',
         'rideStatus': 'In Ride',
       }),
+      order: const RazorpayOrder(
+        keyId: 'rzp_live_x',
+        orderId: '',
+        amount: 274900,
+        currency: 'INR',
+      ),
     );
     expect(firstRupee.booking!.due, 2749);
     expect(firstRupee.needsCheckout, isFalse);
+    expect(firstRupee.shouldOpenCheckoutSheet, isTrue);
+    expect(
+      PaymentStart.settled(
+        booking: RiderBooking.fromJson({
+          'bookingId': 'BK-000001',
+          'receivedAmount': 1,
+          'pendingAmount': 2749,
+        }),
+      ).shouldOpenCheckoutSheet,
+      isTrue,
+    );
     final remainingOrder = RazorpayOrder.fromJson({
       'keyId': 'rzp_live_x',
       'orderId': 'order_remaining',
