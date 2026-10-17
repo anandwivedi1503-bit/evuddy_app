@@ -440,24 +440,23 @@ void main() {
     expect(capturedPayload.orderId, isEmpty);
     expect(
       PaymentStart.checkout(
-        RazorpayOrder(
+        const RazorpayOrder(
           keyId: 'rzp_live_x',
           orderId: '',
           amount: 274900,
           currency: 'INR',
         ),
       ).needsCheckout,
-      isTrue,
+      isFalse,
     );
     expect(
       PaymentStart.checkout(
         const RazorpayOrder(
-          keyId: '',
-          orderId: '',
+          keyId: 'rzp_live_x',
+          orderId: 'order_remaining',
           amount: 274900,
           currency: 'INR',
         ),
-        bookEvFlow: true,
       ).needsCheckout,
       isTrue,
     );

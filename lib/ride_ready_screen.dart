@@ -482,7 +482,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       error = null;
     });
     try {
-      final started = await _withToken(
+      var started = await _withToken(
         (t) => EvuddyApi.startPayment(
           idToken: t,
           bookingMongoId: b.mongoId,
@@ -495,6 +495,23 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         return;
       }
       token = registrationDraft.firebaseIdToken ?? token;
+      // Book EV attaches an already-captured ₹1, then create-order can mint a
+      // new remaining order (superseded unpaid orders are cancelled on the site).
+      if (!useWallet &&
+          !started.needsCheckout &&
+          started.booking != null &&
+          started.booking!.due > 0.009) {
+        final again = await _withToken(
+          (t) => EvuddyApi.startPayment(
+            idToken: t,
+            bookingMongoId: b.mongoId,
+            amountRupees: pay,
+          ),
+        );
+        if (again != null && again.needsCheckout) {
+          started = again;
+        }
+      }
       if (!mounted) return;
       Map<String, String>? result;
       RiderBooking? recovered;
@@ -611,6 +628,12 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         } catch (_) {}
       }
       var noteText = verified.message;
+      if (verified.due > 0.009 &&
+          (noteText.toLowerCase().contains('already verified') ||
+              noteText.toLowerCase().contains('already captured'))) {
+        noteText =
+            '₹${verified.receivedAmount.round()} is saved on this booking. Remaining ${CatalogRates.inr(verified.due)} — tap Pay remaining for Razorpay.';
+      }
       if (noteText.isEmpty) {
         if (verified.due > 0.009 && verified.hasPickupOtp) {
           noteText =
