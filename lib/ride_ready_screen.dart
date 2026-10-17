@@ -494,9 +494,13 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         return;
       }
       token = registrationDraft.firebaseIdToken ?? token;
+      final attached = started.booking;
+      // Book EV: if create-order attached a capture, try once more so a new
+      // remaining order (unpaid order cancelled, or remaining mint) can open.
       if (!useWallet &&
           !started.needsCheckout &&
-          started.shouldOpenCheckoutSheet) {
+          attached != null &&
+          attached.due > 0.009) {
         final again = await _withToken(
           (t) => EvuddyApi.startPayment(
             idToken: t,
@@ -504,40 +508,20 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             amountRupees: pay,
           ),
         );
-        if (again != null &&
-            (again.needsCheckout || again.shouldOpenCheckoutSheet)) {
+        if (again != null && again.needsCheckout) {
           started = again;
         }
       }
       if (!mounted) return;
       Map<String, String>? result;
       RiderBooking? recovered;
-      if (!useWallet && started.shouldOpenCheckoutSheet) {
+      if (!useWallet && started.needsCheckout && started.order != null) {
         setState(() => busy = false);
         if (!mounted) return;
-        final cachedKey = await EvuddyApi.cachedRazorpayKey();
-        final order = started.order ??
-            RazorpayOrder(
-              keyId: cachedKey,
-              orderId: '',
-              amount: (pay * 100).roundToDouble(),
-              currency: 'INR',
-            );
         result = await Navigator.of(context, rootNavigator: true).push<Map<String, String>>(
           evuddyRoute(
             RazorpayCheckoutPage(
-              order: order.keyId.startsWith('rzp_')
-                  ? order
-                  : RazorpayOrder(
-                      keyId: cachedKey,
-                      orderId: order.orderId,
-                      amount: order.amount > 0
-                          ? order.amount
-                          : (pay * 100).roundToDouble(),
-                      currency: order.currency.isEmpty ? 'INR' : order.currency,
-                      name: order.name,
-                      image: order.image,
-                    ),
+              order: started.order!,
               bookingId: b.bookingId,
               contact: registrationDraft.phone,
               customerName: registrationDraft.fullName,
@@ -551,6 +535,19 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         );
         if (result != null && result['cancelled'] == 'true') {
           if (!mounted) return;
+          if (attached != null && attached.hasPickupOtp) {
+            registrationDraft.applyActiveBooking(attached);
+            setState(() {
+              booking = attached;
+              busy = false;
+              error =
+                  'Payment cancelled. Pickup OTP is still ${attached.pickupOtp}. Tap Pay remaining to open Razorpay again.';
+              note =
+                  'Pickup OTP ${attached.pickupOtp}. Tell this to the yard. Remaining ${CatalogRates.inr(attached.due)} must be paid before ride-end OTP.';
+              _fillAmount(attached);
+            });
+            return;
+          }
           setState(() {
             busy = false;
             error =
@@ -595,8 +592,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       RiderBooking verified;
       if (recovered != null) {
         verified = recovered;
-      } else if (started.booking != null && result == null) {
-        verified = started.booking!;
+      } else if ((started.booking ?? attached) != null && result == null) {
+        verified = (started.booking ?? attached)!;
       } else {
         final paid = await _withToken(
           (t) => EvuddyApi.verifyPayment(

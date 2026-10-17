@@ -366,48 +366,20 @@ class EvuddyApi {
       );
     }
     final booking = RiderBooking.fromJson(j);
-    var order = RazorpayOrder.fromJson(j);
+    final order = RazorpayOrder.fromJson(j);
     if (order.keyId.isNotEmpty) await _rememberRzpKey(order.keyId);
-    if (order.keyId.isEmpty) {
-      final cached = await cachedRazorpayKey();
-      if (cached.startsWith('rzp_')) {
-        order = RazorpayOrder(
-          keyId: cached,
-          orderId: order.orderId,
-          amount: order.amount,
-          currency: order.currency,
-          name: order.name,
-          image: order.image,
-        );
-      }
-    }
-    final fullyPaid = booking.due <= 0.009;
-    // Wallet or a fully paid booking can attach without Checkout. Remaining
-    // due after a captured ₹1 must still open the pay screen — create-order
-    // may return alreadyCaptured with no orderId until evuddy.com mints the
-    // remaining order; checkout.js will call create-order again.
-    if (fullyPaid &&
-        (j['alreadyCaptured'] == true || order.orderId.isEmpty)) {
+    // Live Book EV (kebuone-website BikeBooking after PR #154):
+    // alreadyCaptured / wallet / missing orderId → applyPaidResult (pickup OTP).
+    // Razorpay.open only when create-order returned orderId + key.
+    if (j['alreadyCaptured'] == true || order.orderId.isEmpty) {
       return PaymentStart.settled(booking: booking);
     }
-    if (order.orderId.startsWith('order_') && order.keyId.startsWith('rzp_')) {
-      await _rememberRzpKey(order.keyId);
-      return PaymentStart.checkout(
-        RazorpayOrder(
-          keyId: order.keyId,
-          orderId: order.orderId,
-          amount: order.amount > 0
-              ? order.amount
-              : (amountRupees * 100).roundToDouble(),
-          currency: order.currency.isEmpty ? 'INR' : order.currency,
-          name: order.name,
-          image: order.image,
-        ),
-      );
+    if (order.keyId.isEmpty) {
+      throw ApiException('evuddy.com did not return a Razorpay key or order id.');
     }
-    return PaymentStart.bookEv(
-      booking: booking,
-      order: RazorpayOrder(
+    await _rememberRzpKey(order.keyId);
+    return PaymentStart.checkout(
+      RazorpayOrder(
         keyId: order.keyId,
         orderId: order.orderId,
         amount: order.amount > 0
@@ -625,13 +597,16 @@ class EvuddyApi {
       throw ApiException(_message(j, 'Unable to update ride.'));
     }
     final booking = RiderBooking.fromJson(j);
+    final topEnd = (j['rideEndOTP'] ?? j['rideEndOtp'])?.toString().trim() ?? '';
     return RideActionResult(
       message: j['message']?.toString() ??
           (start
               ? 'Ride started. Pay any remaining amount before you return.'
               : 'Ride end OTP is ready. Tell this to the yard to return the scooter.'),
-      rideEndOtp: booking.rideEndOtp,
-      rideStatus: booking.rideStatus,
+      rideEndOtp: topEnd.isNotEmpty ? topEnd : booking.rideEndOtp,
+      rideStatus: (j['rideStatus']?.toString() ?? '').trim().isNotEmpty
+          ? j['rideStatus'].toString()
+          : booking.rideStatus,
     );
   }
 
@@ -914,9 +889,8 @@ class PaymentStart {
       order!.keyId.startsWith('rzp_') &&
       order!.orderId.startsWith('order_');
 
-  /// Open the in-app Razorpay screen. Remaining due after ₹1 is not "paid".
-  bool get shouldOpenCheckoutSheet =>
-      !wallet && (needsCheckout || bookEvFlow || (booking != null && booking!.due > 0.009));
+  /// Same as Book EV: open Checkout only with a real Razorpay order_id.
+  bool get shouldOpenCheckoutSheet => !wallet && needsCheckout;
 }
 
 class SupportTicket {
