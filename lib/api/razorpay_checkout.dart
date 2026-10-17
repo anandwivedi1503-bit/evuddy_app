@@ -91,6 +91,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       },
       'notes': {
         'bookingId': widget.bookingId,
+        if (widget.bookingMongoId.isNotEmpty) 'bookingMongoId': widget.bookingMongoId,
         if (widget.vehicleId != null && widget.vehicleId!.isNotEmpty)
           'vehicleId': widget.vehicleId,
       },
@@ -125,19 +126,32 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       _web = null;
       _opened = false;
     });
-    // Book EV uses checkout.js. Use that when create-order omitted a new key
-    // (remaining due after the first ₹1), otherwise native SDK first.
-    if ((_androidHost || _iosSdk) && widget.order.keyId.startsWith('rzp_')) {
+    final hasOrder = widget.order.orderId.startsWith('order_');
+    final hasKey = widget.order.keyId.startsWith('rzp_');
+    final bookEv = widget.idToken.isNotEmpty && widget.bookingMongoId.isNotEmpty;
+    // Native Checkout.open only with a real order_id. Remaining due after the
+    // captured ₹1 often has no order yet — checkout.js must POST create-order
+    // first (same as Book EV), then open.
+    if (hasOrder && hasKey && (_androidHost || _iosSdk)) {
       await Future<void>.delayed(const Duration(milliseconds: 80));
       if (!mounted || _settled) return;
       _openSdk();
       return;
     }
-    if (_androidHost) {
+    if (bookEv && _androidHost) {
       final overlay = await _openAndroidCheckoutJs();
       if (overlay || !mounted || _settled) return;
     }
-    await _initFlutterWeb();
+    if (bookEv || hasKey) {
+      await _initFlutterWeb();
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _error =
+          'evuddy.com did not return a Razorpay order. Tap Pay securely with Razorpay again after a new order is created.';
+    });
   }
 
   Future<bool> _openAndroidCheckoutJs() async {
@@ -184,6 +198,18 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
         data['razorpay_payment_id']?.toString() ?? '',
         data['razorpay_signature']?.toString() ?? '',
       );
+      return true;
+    }
+    if (type == 'already_paid') {
+      if (!mounted || _settled) return true;
+      _settled = true;
+      Navigator.pop(context, {'alreadyPaid': 'true'});
+      return true;
+    }
+    if (type == 'wallet') {
+      if (!mounted || _settled) return true;
+      _settled = true;
+      Navigator.pop(context, {'alreadyPaid': 'true', 'wallet': 'true'});
       return true;
     }
     setState(() {
@@ -301,6 +327,11 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
             raw['razorpay_payment_id']?.toString() ?? '',
             raw['razorpay_signature']?.toString() ?? '',
           );
+        } else if ((type == 'already_paid' || type == 'wallet') && mounted) {
+          if (!_settled) {
+            _settled = true;
+            Navigator.pop(context, {'alreadyPaid': 'true'});
+          }
         } else if (type == 'dismiss' && mounted) {
           setState(() {
             _busy = false;

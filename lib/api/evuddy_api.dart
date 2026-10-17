@@ -26,7 +26,7 @@ class EvuddyApi {
     } catch (_) {}
   }
 
-  static Future<String> _rzpKeyId() async {
+  static Future<String> cachedRazorpayKey() async {
     if (_rzpKey != null && _rzpKey!.startsWith('rzp_')) return _rzpKey!;
     try {
       final p = await SharedPreferences.getInstance();
@@ -366,27 +366,53 @@ class EvuddyApi {
       );
     }
     final booking = RiderBooking.fromJson(j);
-    final order = RazorpayOrder.fromJson(j);
+    var order = RazorpayOrder.fromJson(j);
     if (order.keyId.isNotEmpty) await _rememberRzpKey(order.keyId);
-    // Live Book EV (PR #154): attach capture / wallet; open Checkout only when
-    // create-order returned a real orderId. Never treat that as a pay error.
-    if (j['alreadyCaptured'] == true ||
-        j['paidWithWallet'] == true ||
-        order.orderId.isEmpty) {
-      return PaymentStart.settled(
-        booking: booking,
-        wallet: j['paidWithWallet'] == true,
+    if (order.keyId.isEmpty) {
+      final cached = await cachedRazorpayKey();
+      if (cached.startsWith('rzp_')) {
+        order = RazorpayOrder(
+          keyId: cached,
+          orderId: order.orderId,
+          amount: order.amount,
+          currency: order.currency,
+          name: order.name,
+          image: order.image,
+        );
+      }
+    }
+    final fullyPaid = booking.due <= 0.009;
+    // Wallet or a fully paid booking can attach without Checkout. Remaining
+    // due after a captured ₹1 must still open the pay screen — create-order
+    // may return alreadyCaptured with no orderId until evuddy.com mints the
+    // remaining order; checkout.js will call create-order again.
+    if (fullyPaid &&
+        (j['alreadyCaptured'] == true || order.orderId.isEmpty)) {
+      return PaymentStart.settled(booking: booking);
+    }
+    if (order.orderId.startsWith('order_') && order.keyId.startsWith('rzp_')) {
+      await _rememberRzpKey(order.keyId);
+      return PaymentStart.checkout(
+        RazorpayOrder(
+          keyId: order.keyId,
+          orderId: order.orderId,
+          amount: order.amount > 0
+              ? order.amount
+              : (amountRupees * 100).roundToDouble(),
+          currency: order.currency.isEmpty ? 'INR' : order.currency,
+          name: order.name,
+          image: order.image,
+        ),
       );
     }
-    if (order.keyId.isEmpty) {
-      throw ApiException('evuddy.com did not return a Razorpay key or order id.');
-    }
-    await _rememberRzpKey(order.keyId);
-    return PaymentStart.checkout(
-      RazorpayOrder(
+    return PaymentStart.bookEv(
+      booking: booking,
+      order: RazorpayOrder(
         keyId: order.keyId,
         orderId: order.orderId,
-        amount: order.amount > 0 ? order.amount : (amountRupees * 100).roundToDouble(),
+        amount: order.amount > 0
+            ? order.amount
+            : (amountRupees * 100).roundToDouble(),
         currency: order.currency.isEmpty ? 'INR' : order.currency,
         name: order.name,
         image: order.image,
@@ -404,7 +430,7 @@ class EvuddyApi {
       bookingMongoId: bookingMongoId,
       amountRupees: amountRupees,
     );
-    if (started.order == null) {
+    if (started.order == null || !started.order!.orderId.startsWith('order_')) {
       throw ApiException('This amount is already settled on the booking.');
     }
     return started.order!;
@@ -874,6 +900,9 @@ class PaymentStart {
   const PaymentStart.settled({required this.booking, this.wallet = false})
       : order = null,
         bookEvFlow = false;
+  const PaymentStart.bookEv({this.order, this.booking})
+      : wallet = false,
+        bookEvFlow = true;
 
   final RazorpayOrder? order;
   final RiderBooking? booking;
@@ -884,6 +913,10 @@ class PaymentStart {
       order != null &&
       order!.keyId.startsWith('rzp_') &&
       order!.orderId.startsWith('order_');
+
+  /// Open the in-app Razorpay screen. Remaining due after ₹1 is not "paid".
+  bool get shouldOpenCheckoutSheet =>
+      !wallet && (needsCheckout || bookEvFlow || (booking != null && booking!.due > 0.009));
 }
 
 class SupportTicket {

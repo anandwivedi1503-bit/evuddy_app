@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
 import 'api/firebase_phone.dart';
-import 'api/in_app_razorpay.dart';
 import 'api/razorpay_checkout.dart';
 import 'confirm_mobile_screen.dart';
 import 'open_link.dart';
@@ -495,12 +494,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         return;
       }
       token = registrationDraft.firebaseIdToken ?? token;
-      // Book EV attaches an already-captured ₹1, then create-order can mint a
-      // new remaining order (superseded unpaid orders are cancelled on the site).
       if (!useWallet &&
           !started.needsCheckout &&
-          started.booking != null &&
-          started.booking!.due > 0.009) {
+          started.shouldOpenCheckoutSheet) {
         final again = await _withToken(
           (t) => EvuddyApi.startPayment(
             idToken: t,
@@ -508,53 +504,68 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             amountRupees: pay,
           ),
         );
-        if (again != null && again.needsCheckout) {
+        if (again != null &&
+            (again.needsCheckout || again.shouldOpenCheckoutSheet)) {
           started = again;
         }
       }
       if (!mounted) return;
       Map<String, String>? result;
       RiderBooking? recovered;
-      if (started.needsCheckout) {
+      if (!useWallet && started.shouldOpenCheckoutSheet) {
         setState(() => busy = false);
         if (!mounted) return;
-        if (started.order!.keyId.startsWith('rzp_')) {
-          result = await InAppRazorpay.open(
-            order: started.order!,
-            rupees: pay,
-            bookingId: b.bookingId,
-            contact: registrationDraft.phone,
-            customerName: registrationDraft.fullName,
-            email: registrationDraft.email,
-            vehicleId: selected?.vehicleId ?? b.vehicleId,
-          );
-        }
+        final cachedKey = await EvuddyApi.cachedRazorpayKey();
+        final order = started.order ??
+            RazorpayOrder(
+              keyId: cachedKey,
+              orderId: '',
+              amount: (pay * 100).roundToDouble(),
+              currency: 'INR',
+            );
+        result = await Navigator.of(context, rootNavigator: true).push<Map<String, String>>(
+          evuddyRoute(
+            RazorpayCheckoutPage(
+              order: order.keyId.startsWith('rzp_')
+                  ? order
+                  : RazorpayOrder(
+                      keyId: cachedKey,
+                      orderId: order.orderId,
+                      amount: order.amount > 0
+                          ? order.amount
+                          : (pay * 100).roundToDouble(),
+                      currency: order.currency.isEmpty ? 'INR' : order.currency,
+                      name: order.name,
+                      image: order.image,
+                    ),
+              bookingId: b.bookingId,
+              contact: registrationDraft.phone,
+              customerName: registrationDraft.fullName,
+              email: registrationDraft.email,
+              rupees: pay,
+              vehicleId: selected?.vehicleId ?? b.vehicleId,
+              bookingMongoId: b.mongoId,
+              idToken: token,
+            ),
+          ),
+        );
         if (result != null && result['cancelled'] == 'true') {
           if (!mounted) return;
           setState(() {
             busy = false;
-            error = 'Payment cancelled. Tap Pay remaining to open GPay / PhonePe / UPI again.';
+            error =
+                'Payment cancelled. Tap Pay securely with Razorpay again to open GPay / PhonePe / UPI.';
           });
           return;
         }
-        if ((result == null || (result['paymentId'] ?? '').isEmpty) && mounted) {
-          result = await Navigator.of(context, rootNavigator: true).push<Map<String, String>>(
-            evuddyRoute(
-              RazorpayCheckoutPage(
-                order: started.order!,
-                bookingId: b.bookingId,
-                contact: registrationDraft.phone,
-                customerName: registrationDraft.fullName,
-                email: registrationDraft.email,
-                rupees: pay,
-                vehicleId: selected?.vehicleId ?? b.vehicleId,
-                bookingMongoId: b.mongoId,
-                idToken: token,
-              ),
-            ),
-          );
-        }
-        if (result == null) {
+        if (result != null && result['alreadyPaid'] == 'true') {
+          try {
+            recovered = await EvuddyApi.myBooking(token);
+          } catch (_) {
+            recovered = started.booking;
+          }
+          result = null;
+        } else if (result == null || (result['paymentId'] ?? '').isEmpty) {
           try {
             recovered = await EvuddyApi.verifyPayment(
               idToken: token,
@@ -567,10 +578,10 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           } catch (_) {
             recovered = null;
           }
-          if (recovered == null) {
+          if (recovered == null && (result == null || (result['paymentId'] ?? '').isEmpty)) {
             if (!mounted) return;
             const closed =
-                'Razorpay closed without a payment. Tap Pay remaining again and choose GPay, PhonePe, UPI or card.';
+                'Razorpay closed without a payment. Tap Pay securely with Razorpay again and choose GPay, PhonePe, UPI or card.';
             setState(() {
               busy = false;
               error = closed;
