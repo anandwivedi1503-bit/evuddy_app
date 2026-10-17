@@ -380,8 +380,25 @@ void main() {
     );
   });
 
+  test('ride-end OTP is read from the rider-end API top-level field', () {
+    final fromSwipe = RiderBooking.fromJson({
+      'success': true,
+      'rideEndOTP': '654321',
+      'rideStatus': 'In Ride',
+      'message': 'Ride end OTP is ready. Tell this to the yard to return the scooter.',
+      'data': {
+        'bookingId': 'BK-000001',
+        'rideStatus': 'In Ride',
+        'pendingAmount': 0,
+        'receivedAmount': 2750,
+      },
+    });
+    expect(fromSwipe.rideEndOtp, '654321');
+    expect(fromSwipe.bookingId, 'BK-000001');
+  });
+
   test('alreadyCaptured of the first rupee is not remaining-pay success', () {
-    final firstRupee = PaymentStart.bookEv(
+    final firstRupee = PaymentStart.settled(
       booking: RiderBooking.fromJson({
         'bookingId': 'BK-000001',
         'receivedAmount': 1,
@@ -389,23 +406,18 @@ void main() {
         'pickupOTP': '1234',
         'rideStatus': 'In Ride',
       }),
-      order: const RazorpayOrder(
-        keyId: 'rzp_live_x',
-        orderId: '',
-        amount: 274900,
-        currency: 'INR',
-      ),
     );
     expect(firstRupee.booking!.due, 2749);
     expect(firstRupee.needsCheckout, isFalse);
-    expect(firstRupee.shouldOpenCheckoutSheet, isTrue);
+    expect(firstRupee.shouldOpenCheckoutSheet, isFalse);
     expect(
-      PaymentStart.settled(
-        booking: RiderBooking.fromJson({
-          'bookingId': 'BK-000001',
-          'receivedAmount': 1,
-          'pendingAmount': 2749,
-        }),
+      PaymentStart.checkout(
+        const RazorpayOrder(
+          keyId: 'rzp_live_x',
+          orderId: 'order_remaining',
+          amount: 274900,
+          currency: 'INR',
+        ),
       ).shouldOpenCheckoutSheet,
       isTrue,
     );
