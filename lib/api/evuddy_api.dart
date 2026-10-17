@@ -366,48 +366,20 @@ class EvuddyApi {
       );
     }
     final booking = RiderBooking.fromJson(j);
-    var order = RazorpayOrder.fromJson(j);
+    final order = RazorpayOrder.fromJson(j);
     if (order.keyId.isNotEmpty) await _rememberRzpKey(order.keyId);
-    final remaining = booking.due > 0.009
-        ? booking.due
-        : (_asDouble(j['remainingAmount'] ?? j['pendingAmount']) ?? 0);
-    // Website: if success, always `new window.Razorpay({ key, amount, order_id }).open()`.
-    // alreadyCaptured with remaining ₹0 is fully paid — do not open checkout.
-    if (j['alreadyCaptured'] == true && remaining <= 0.009) {
-      return PaymentStart.settled(booking: booking);
-    }
-    if (order.keyId.isEmpty) {
-      final cached = await _rzpKeyId();
-      if (cached.isNotEmpty) {
-        order = RazorpayOrder(
-          keyId: cached,
-          orderId: order.orderId,
-          amount: (amountRupees * 100).roundToDouble(),
-          currency: order.currency.isEmpty ? 'INR' : order.currency,
-          name: order.name,
-          image: order.image,
-        );
-      }
-    }
-    if (order.keyId.isEmpty) {
-      // Same as Book EV: success + remaining due still opens checkout.js.
-      // "Payment already verified" is only the first ₹1, not remaining rent.
-      if (remaining > 0.009) {
-        return PaymentStart.checkout(
-          RazorpayOrder(
-            keyId: '',
-            orderId: order.orderId,
-            amount: (amountRupees * 100).roundToDouble(),
-            currency: 'INR',
-            name: 'EVUDDY',
-            image: order.image,
-          ),
-          bookEvFlow: true,
-        );
-      }
-      throw ApiException(
-        _message(j, 'Unable to create Razorpay order.'),
+    // Live Book EV (PR #154): attach capture / wallet; open Checkout only when
+    // create-order returned a real orderId. Never treat that as a pay error.
+    if (j['alreadyCaptured'] == true ||
+        j['paidWithWallet'] == true ||
+        order.orderId.isEmpty) {
+      return PaymentStart.settled(
+        booking: booking,
+        wallet: j['paidWithWallet'] == true,
       );
+    }
+    if (order.keyId.isEmpty) {
+      throw ApiException('evuddy.com did not return a Razorpay key or order id.');
     }
     await _rememberRzpKey(order.keyId);
     return PaymentStart.checkout(
@@ -909,7 +881,9 @@ class PaymentStart {
   final bool bookEvFlow;
 
   bool get needsCheckout =>
-      order != null && (order!.keyId.isNotEmpty || bookEvFlow);
+      order != null &&
+      order!.keyId.startsWith('rzp_') &&
+      order!.orderId.startsWith('order_');
 }
 
 class SupportTicket {
