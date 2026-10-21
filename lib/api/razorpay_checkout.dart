@@ -116,20 +116,20 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     final hasOrder = widget.order.orderId.startsWith('order_');
     final hasKey = widget.order.keyId.startsWith('rzp_');
     final bookEv = widget.idToken.isNotEmpty && widget.bookingMongoId.isNotEmpty;
-    // Official Razorpay Android/iOS Checkout (UPI QR, GPay, PhonePe). The
-    // website uses the same order_id + checkout.js in Chrome; WebView's
-    // Continue button does not open that UPI sheet.
-    if (hasOrder && hasKey && (_androidHost || _iosSdk)) {
-      await Future<void>.delayed(const Duration(milliseconds: 80));
-      if (!mounted || _settled) return;
-      if (_openSdk()) return;
-    }
+    // Same checkout.js as evuddy.com Book EV (UPI QR + GPay / PhonePe). Desktop
+    // Chrome UA makes Razorpay show that QR panel instead of a dead Continue sheet.
     if (_androidHost && (bookEv || (hasOrder && hasKey))) {
       final overlay = await _openAndroidCheckoutJs();
       if (overlay || !mounted || _settled) return;
     }
     if (bookEv || hasKey) {
       await _initFlutterWeb();
+      return;
+    }
+    if (hasOrder && hasKey && (_androidHost || _iosSdk)) {
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      if (!mounted || _settled) return;
+      _openSdk();
       return;
     }
     if (!mounted) return;
@@ -338,6 +338,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     if (web.platform is AndroidWebViewController) {
       final android = web.platform as AndroidWebViewController;
       await android.setMixedContentMode(MixedContentMode.alwaysAllow);
+      await android.setUserAgent(RazorpayWebHost.chromeDesktopUa);
     }
     if (!mounted) return;
     final html = await bundle.loadString('assets/pay/checkout.html');

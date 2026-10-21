@@ -5,6 +5,14 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 import 'evuddy_api.dart';
 
+/// Chrome desktop UA so checkout.js shows the same UPI QR panel as evuddy.com.
+class RazorpayWebHost {
+  RazorpayWebHost._();
+
+  static const chromeDesktopUa =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+}
+
 /// Official `Razorpay.open` — same CheckoutActivity that captured the first ₹1
 /// on GPay / PhonePe. Remaining due uses this, not a WebView toast.
 class InAppRazorpay {

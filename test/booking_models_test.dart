@@ -518,6 +518,8 @@ void main() {
     expect(native.containsKey('token'), isFalse);
     expect(native.containsKey('rupees'), isFalse);
     expect(native.containsKey('bookingMongoId'), isFalse);
+    expect(RazorpayWebHost.chromeDesktopUa.contains('Windows NT 10.0'), isTrue);
+    expect(RazorpayWebHost.chromeDesktopUa.contains('Chrome/'), isTrue);
     final remainingSheet = InAppRazorpay.optionsFor(
       order: const RazorpayOrder(
         keyId: 'rzp_live_x',

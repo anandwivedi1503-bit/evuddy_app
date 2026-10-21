@@ -158,12 +158,13 @@ class RazorpayWebActivity : Activity() {
         settings.cacheMode = WebSettings.LOAD_DEFAULT
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
-        settings.builtInZoomControls = false
+        settings.builtInZoomControls = true
         settings.displayZoomControls = false
         settings.mediaPlaybackRequiresUserGesture = false
         settings.allowContentAccess = true
-        val ua = settings.userAgentString ?: ""
-        settings.userAgentString = ua.replace("; wv", "").replace("Version/4.0 ", "")
+        // Same Chrome desktop checkout as evuddy.com — UPI QR on the right.
+        settings.userAgentString =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
         web.setBackgroundColor(Color.WHITE)
         return web
