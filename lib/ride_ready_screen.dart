@@ -479,6 +479,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     setState(() {
       busy = true;
       error = null;
+      note = useWallet ? 'Applying wallet…' : 'Creating Razorpay order...';
     });
     try {
       var started = await _withToken(
@@ -495,8 +496,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       }
       token = registrationDraft.firebaseIdToken ?? token;
       final attached = started.booking;
-      // Book EV: if create-order attached a capture, try once more so a new
-      // remaining order (unpaid order cancelled, or remaining mint) can open.
+      // After the captured ₹1, create-order mints a new remaining order. If
+      // this call only attached that first rupee, ask once more like a second
+      // Pay remaining tap on evuddy.com.
       if (!useWallet &&
           !started.needsCheckout &&
           attached != null &&
@@ -592,8 +594,27 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       RiderBooking verified;
       if (recovered != null) {
         verified = recovered;
-      } else if ((started.booking ?? attached) != null && result == null) {
+      } else if (useWallet ||
+          ((started.booking ?? attached) != null &&
+              result == null &&
+              (started.booking ?? attached)!.due <= 0.009)) {
         verified = (started.booking ?? attached)!;
+      } else if ((started.booking ?? attached) != null &&
+          result == null &&
+          !started.needsCheckout) {
+        final leftover = started.booking ?? attached;
+        if (!mounted) return;
+        setState(() {
+          booking = leftover;
+          busy = false;
+          error = 'Could not open Razorpay. Please try again.';
+          note = leftover != null && leftover.hasPickupOtp
+              ? 'Pickup OTP ${leftover.pickupOtp}. Remaining ${CatalogRates.inr(leftover.due)} — tap Pay remaining.'
+              : null;
+          if (leftover != null) _fillAmount(leftover);
+        });
+        await _payAlert('Razorpay did not open', 'Could not open Razorpay. Please try again.');
+        return;
       } else {
         final paid = await _withToken(
           (t) => EvuddyApi.verifyPayment(

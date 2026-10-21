@@ -96,7 +96,6 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
           'vehicleId': widget.vehicleId,
       },
       'theme': {'color': '#18B368'},
-      'retry': {'enabled': true, 'max_count': 4},
     };
   }
 
@@ -129,21 +128,20 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     final hasOrder = widget.order.orderId.startsWith('order_');
     final hasKey = widget.order.keyId.startsWith('rzp_');
     final bookEv = widget.idToken.isNotEmpty && widget.bookingMongoId.isNotEmpty;
-    // Native Checkout.open only with a real order_id. Remaining due after the
-    // captured ₹1 often has no order yet — checkout.js must POST create-order
-    // first (same as Book EV), then open.
-    if (hasOrder && hasKey && (_androidHost || _iosSdk)) {
-      await Future<void>.delayed(const Duration(milliseconds: 80));
-      if (!mounted || _settled) return;
-      _openSdk();
-      return;
-    }
-    if (bookEv && _androidHost) {
+    // Same as evuddy.com Book EV: Standard Checkout (checkout.js) with the
+    // order_id create-order just minted — including remaining fare after ₹1.
+    if (_androidHost && (bookEv || (hasOrder && hasKey))) {
       final overlay = await _openAndroidCheckoutJs();
       if (overlay || !mounted || _settled) return;
     }
     if (bookEv || hasKey) {
       await _initFlutterWeb();
+      return;
+    }
+    if (hasOrder && hasKey && (_androidHost || _iosSdk)) {
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      if (!mounted || _settled) return;
+      _openSdk();
       return;
     }
     if (!mounted) return;
@@ -235,6 +233,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     try {
       _sdk ??= Razorpay();
       _sdk!.open(Map<String, dynamic>.from(_options));
+      if (mounted) setState(() => _busy = false);
     } catch (e) {
       if (!mounted) return;
       setState(() {
