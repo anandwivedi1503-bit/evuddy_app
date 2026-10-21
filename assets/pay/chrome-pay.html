@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EVUDDY Razorpay</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+  <p>Opening the same Razorpay checkout as evuddy.com…</p>
+  <script>
+    function payload() {
+      var raw = (location.hash || "").replace(/^#/, "");
+      if (!raw) return {};
+      try { return JSON.parse(decodeURIComponent(raw)); } catch (e) {
+        try { return JSON.parse(raw); } catch (e2) { return {}; }
+      }
+    }
+    function openCheckout() {
+      var n = payload();
+      if (typeof Razorpay === "undefined" || !n.key || !n.order_id) return;
+      var rzp = new Razorpay({
+        key: n.key,
+        amount: n.amount,
+        currency: n.currency || "INR",
+        name: n.name || "EVUDDY",
+        image: n.image || "https://www.evuddy.com/Evuddy-logo-dark-E.png",
+        description: n.description || ("Booking Payment - " + (n.bookingId || "")),
+        order_id: n.order_id,
+        prefill: n.prefill || {},
+        notes: n.notes || {},
+        theme: { color: "#18B368" },
+        handler: function (response) {
+          fetch("https://www.evuddy.com/api/razorpay/verify-payment", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + (n.token || "")
+            },
+            body: JSON.stringify({
+              bookingMongoId: n.bookingMongoId,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              firebaseIdToken: n.token
+            })
+          }).finally(function () {
+            window.location.href = "evuddy://razorpay?type=success&paymentId=" +
+              encodeURIComponent(response.razorpay_payment_id || "");
+          });
+        },
+        modal: { ondismiss: function () { window.location.href = "evuddy://razorpay?type=dismiss"; } }
+      });
+      rzp.open();
+    }
+    window.addEventListener("load", openCheckout);
+  </script>
+</body>
+</html>

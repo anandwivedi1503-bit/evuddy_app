@@ -137,15 +137,16 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage>
     });
     final hasOrder = widget.order.orderId.startsWith('order_');
     final hasKey = widget.order.keyId.startsWith('rzp_');
-    // Real Chrome (same as evuddy.com). In-app WebView is what shows Continue
-    // and that button cannot open UPI QR / GPay.
-    if (hasOrder && hasKey) {
-      if (await _openChromeCheckout()) return;
-    }
+    // Never use in-app WebView. That is the Continue button the website does
+    // not have. Native Checkout has UPI / GPay / PhonePe. Chrome opens the
+    // same checkout.js as evuddy.com Book EV.
     if (hasOrder && hasKey && (_androidHost || _iosSdk)) {
       await Future<void>.delayed(const Duration(milliseconds: 80));
       if (!mounted || _settled) return;
       if (_openSdk()) return;
+    }
+    if (hasOrder && hasKey) {
+      if (await _openChromeCheckout()) return;
     }
     if (!mounted) return;
     setState(() {
@@ -509,7 +510,13 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage>
                     const SizedBox(height: 8),
                     EvuddyGhostButton(
                       label: 'Open Razorpay in Chrome again',
-                      onPressed: _start,
+                      onPressed: _openChromeCheckout,
+                    ),
+                  ] else if (!_busy) ...[
+                    const SizedBox(height: 12),
+                    EvuddyGhostButton(
+                      label: 'Website QR checkout in Chrome',
+                      onPressed: _openChromeCheckout,
                     ),
                   ],
                 ],
