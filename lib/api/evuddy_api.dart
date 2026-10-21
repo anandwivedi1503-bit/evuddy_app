@@ -667,7 +667,7 @@ class EvuddyApi {
     );
   }
 
-  static String _message(Map<String, dynamic> j, String fallback) {
+  static String _message(Map j, String fallback) {
     final errors = j['errors'];
     if (errors is List && errors.isNotEmpty) {
       return errors.map((e) => e.toString()).join(' ');
