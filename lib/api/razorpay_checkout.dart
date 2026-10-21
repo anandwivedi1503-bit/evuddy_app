@@ -12,6 +12,7 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import '../theme/evuddy.dart';
 import '../widgets/chrome.dart';
 import 'evuddy_api.dart';
+import 'in_app_razorpay.dart';
 
 /// Official Razorpay Standard Checkout — same `checkout.js` as evuddy.com Book EV.
 class RazorpayCheckoutPage extends StatefulWidget {
@@ -65,37 +66,24 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   }
 
   /// Same fields as kebuone-website Book EV `new window.Razorpay({...})`.
+  /// Native CheckoutActivity rejects extra keys (token, rupees, bookingMongoId).
+  Map<String, dynamic> get _nativeOptions => InAppRazorpay.optionsFor(
+        order: widget.order,
+        rupees: widget.rupees,
+        bookingId: widget.bookingId,
+        contact: widget.contact,
+        customerName: widget.customerName,
+        email: widget.email,
+        vehicleId: widget.vehicleId,
+      );
+
   Map<String, dynamic> get _options {
-    final name =
-        widget.order.name.trim().isEmpty ? 'EVUDDY' : widget.order.name.trim();
-    final image = (widget.order.image ?? '').trim().isEmpty
-        ? 'https://www.evuddy.com/Evuddy-logo-dark-E.png'
-        : widget.order.image!.trim();
     return {
-      'key': widget.order.keyId,
-      'amount': widget.order.amountPaise(widget.rupees),
-      'currency': widget.order.currency.isEmpty ? 'INR' : widget.order.currency,
-      'name': name,
-      'image': image,
-      'description': 'Booking Payment - ${widget.bookingId}',
+      ..._nativeOptions,
       'rupees': widget.rupees,
       if (widget.idToken.isNotEmpty) 'token': widget.idToken,
       if (widget.bookingMongoId.isNotEmpty) 'bookingMongoId': widget.bookingMongoId,
       if (widget.bookingId.isNotEmpty) 'bookingId': widget.bookingId,
-      if (widget.order.orderId.startsWith('order_'))
-        'order_id': widget.order.orderId,
-      'prefill': {
-        'name': widget.customerName.isEmpty ? 'Rider' : widget.customerName,
-        'contact': _contact10,
-        if (widget.email.contains('@')) 'email': widget.email,
-      },
-      'notes': {
-        'bookingId': widget.bookingId,
-        if (widget.bookingMongoId.isNotEmpty) 'bookingMongoId': widget.bookingMongoId,
-        if (widget.vehicleId != null && widget.vehicleId!.isNotEmpty)
-          'vehicleId': widget.vehicleId,
-      },
-      'theme': {'color': '#18B368'},
     };
   }
 
@@ -128,20 +116,20 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     final hasOrder = widget.order.orderId.startsWith('order_');
     final hasKey = widget.order.keyId.startsWith('rzp_');
     final bookEv = widget.idToken.isNotEmpty && widget.bookingMongoId.isNotEmpty;
-    // Same as evuddy.com Book EV: Standard Checkout (checkout.js) with the
-    // order_id create-order just minted — including remaining fare after ₹1.
+    // Official Razorpay Android/iOS Checkout (UPI QR, GPay, PhonePe). The
+    // website uses the same order_id + checkout.js in Chrome; WebView's
+    // Continue button does not open that UPI sheet.
+    if (hasOrder && hasKey && (_androidHost || _iosSdk)) {
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      if (!mounted || _settled) return;
+      if (_openSdk()) return;
+    }
     if (_androidHost && (bookEv || (hasOrder && hasKey))) {
       final overlay = await _openAndroidCheckoutJs();
       if (overlay || !mounted || _settled) return;
     }
     if (bookEv || hasKey) {
       await _initFlutterWeb();
-      return;
-    }
-    if (hasOrder && hasKey && (_androidHost || _iosSdk)) {
-      await Future<void>.delayed(const Duration(milliseconds: 80));
-      if (!mounted || _settled) return;
-      _openSdk();
       return;
     }
     if (!mounted) return;
@@ -229,17 +217,20 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
     });
   }
 
-  void _openSdk() {
+  bool _openSdk() {
     try {
       _sdk ??= Razorpay();
-      _sdk!.open(Map<String, dynamic>.from(_options));
+      _sdk!.open(Map<String, dynamic>.from(_nativeOptions));
       if (mounted) setState(() => _busy = false);
+      return true;
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _busy = false;
-        _error = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = e.toString();
+        });
+      }
+      return false;
     }
   }
 
