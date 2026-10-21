@@ -160,6 +160,23 @@ void main() {
       }).remainingPayLocked,
       isFalse,
     );
+    expect(
+      RiderBooking.fromJson({
+        'rentalMode': 'Daily',
+        'receivedAmount': 0,
+        'pendingAmount': 2750,
+      }).suggestedPayRupees,
+      1,
+    );
+    expect(
+      RiderBooking.fromJson({
+        'rentalMode': 'Daily',
+        'receivedAmount': 1,
+        'pendingAmount': 2749,
+        'pickupOTP': '1234',
+      }).suggestedPayRupees,
+      2749,
+    );
   });
 
   test('parses wallet from rider lookup and PaymentStart flags', () {
@@ -498,6 +515,9 @@ void main() {
     expect(native['key'], 'rzp_live_x');
     expect(native['order_id'], 'order_remaining');
     expect(native['amount'], 274900);
+    expect(native.containsKey('token'), isFalse);
+    expect(native.containsKey('rupees'), isFalse);
+    expect(native.containsKey('bookingMongoId'), isFalse);
     final remainingSheet = InAppRazorpay.optionsFor(
       order: const RazorpayOrder(
         keyId: 'rzp_live_x',

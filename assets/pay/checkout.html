@@ -30,15 +30,27 @@
         window.PayBridge.postMessage(msg);
       }
     }
-    window.open = function (url) {
-      if (url) post({ type: "open", url: String(url) });
-      return {
-        closed: false,
-        close: function () {},
-        focus: function () {},
-        location: { href: url || "" }
+    (function () {
+      var nativeOpen = window.open.bind(window);
+      window.open = function (url, target, features) {
+        var u = url == null ? "" : String(url);
+        var lower = u.toLowerCase();
+        if (
+          lower.indexOf("upi:") === 0 ||
+          lower.indexOf("tez:") === 0 ||
+          lower.indexOf("gpay:") === 0 ||
+          lower.indexOf("phonepe:") === 0 ||
+          lower.indexOf("paytmmp:") === 0 ||
+          lower.indexOf("bhim:") === 0 ||
+          lower.indexOf("intent:") === 0
+        ) {
+          post({ type: "open", url: u });
+        }
+        // Continue / 3DS / QR use a real window (about:blank or https).
+        // A fake window makes Razorpay's Continue button do nothing.
+        return nativeOpen(url, target, features);
       };
-    };
+    })();
     function hint(text) {
       var el = document.getElementById("hint");
       if (el) el.textContent = text;

@@ -1225,6 +1225,12 @@ class RiderBooking {
   /// Website locks remaining amount after first pay, and always for Rent to Own.
   bool get remainingPayLocked => isRentToOwn || isRemainingPayment;
 
+  /// First Razorpay tap is ₹1 (pickup OTP). After that, Checkout is remaining due.
+  double get suggestedPayRupees {
+    if (remainingPayLocked) return due > 0.009 ? due : 0;
+    return 1;
+  }
+
   bool get completed {
     final s = rideStatus.toLowerCase();
     return s == 'completed' || s.contains('complete');

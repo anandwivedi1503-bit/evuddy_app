@@ -108,16 +108,14 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
 
   void _fillAmount(RiderBooking? b) {
     if (b == null) {
-      amount.text = _moneyInput(catalogPayable.toDouble());
+      amount.text = '1';
       return;
     }
     if (b.remainingPayLocked) {
       amount.text = _moneyInput(_remainingCharge(b));
-    } else if (b.due > 0.009) {
-      amount.text = _moneyInput(b.due);
-    } else {
-      amount.text = _moneyInput(catalogPayable.toDouble());
+      return;
     }
+    amount.text = '1';
   }
 
   @override
@@ -1248,7 +1246,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         else
           EvuddyField(
             label: 'PAY AMOUNT',
-            hint: '₹1 to remaining due',
+            hint: 'Starts at ₹1 for pickup OTP — same as evuddy.com',
             controller: amount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],

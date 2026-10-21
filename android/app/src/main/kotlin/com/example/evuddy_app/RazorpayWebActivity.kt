@@ -162,6 +162,8 @@ class RazorpayWebActivity : Activity() {
         settings.displayZoomControls = false
         settings.mediaPlaybackRequiresUserGesture = false
         settings.allowContentAccess = true
+        val ua = settings.userAgentString ?: ""
+        settings.userAgentString = ua.replace("; wv", "").replace("Version/4.0 ", "")
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
         web.setBackgroundColor(Color.WHITE)
         return web
