@@ -43,7 +43,8 @@ class RazorpayCheckoutPage extends StatefulWidget {
   State<RazorpayCheckoutPage> createState() => _RazorpayCheckoutPageState();
 }
 
-class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
+class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage>
+    with WidgetsBindingObserver {
   static const _channel = MethodChannel('evuddy/razorpay');
 
   Razorpay? _sdk;
@@ -52,6 +53,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   bool _opened = false;
   bool _busy = true;
   bool _settled = false;
+  bool _waitingChrome = false;
 
   bool get _androidHost =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -90,6 +92,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (_androidHost || _iosSdk) {
       _sdk = Razorpay();
       _sdk!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSdkSuccess);
@@ -101,8 +104,26 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _sdk?.clear();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _waitingChrome && !_settled) {
+      _recoverAfterChrome();
+    }
+  }
+
+  Map<String, dynamic> get _chromePayload {
+    final native = _nativeOptions;
+    return {
+      ...native,
+      if (widget.idToken.isNotEmpty) 'token': widget.idToken,
+      if (widget.bookingMongoId.isNotEmpty) 'bookingMongoId': widget.bookingMongoId,
+      if (widget.bookingId.isNotEmpty) 'bookingId': widget.bookingId,
+    };
   }
 
   Future<void> _start() async {
@@ -112,32 +133,70 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
       _error = null;
       _web = null;
       _opened = false;
+      _waitingChrome = false;
     });
     final hasOrder = widget.order.orderId.startsWith('order_');
     final hasKey = widget.order.keyId.startsWith('rzp_');
-    final bookEv = widget.idToken.isNotEmpty && widget.bookingMongoId.isNotEmpty;
-    // Same checkout.js as evuddy.com Book EV (UPI QR + GPay / PhonePe). Desktop
-    // Chrome UA makes Razorpay show that QR panel instead of a dead Continue sheet.
-    if (_androidHost && (bookEv || (hasOrder && hasKey))) {
-      final overlay = await _openAndroidCheckoutJs();
-      if (overlay || !mounted || _settled) return;
-    }
-    if (bookEv || hasKey) {
-      await _initFlutterWeb();
-      return;
+    // Real Chrome (same as evuddy.com). In-app WebView is what shows Continue
+    // and that button cannot open UPI QR / GPay.
+    if (hasOrder && hasKey) {
+      if (await _openChromeCheckout()) return;
     }
     if (hasOrder && hasKey && (_androidHost || _iosSdk)) {
       await Future<void>.delayed(const Duration(milliseconds: 80));
       if (!mounted || _settled) return;
-      _openSdk();
-      return;
+      if (_openSdk()) return;
     }
     if (!mounted) return;
     setState(() {
       _busy = false;
       _error =
-          'evuddy.com did not return a Razorpay order. Tap Pay securely with Razorpay again after a new order is created.';
+          'Could not open Razorpay in Chrome. Check internet and tap Pay securely with Razorpay again.';
     });
+  }
+
+  Future<bool> _openChromeCheckout() async {
+    final uri = RazorpayWebHost.chromePayUri(_chromePayload);
+    try {
+      var ok = false;
+      try {
+        ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+      } catch (_) {
+        ok = false;
+      }
+      if (!ok) {
+        ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+      if (!ok || !mounted) return ok;
+      setState(() {
+        _busy = false;
+        _waitingChrome = true;
+        _error = null;
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _recoverAfterChrome() async {
+    if (!mounted || _settled || widget.bookingMongoId.isEmpty) return;
+    try {
+      final token = widget.idToken;
+      if (token.isEmpty) return;
+      final booking = await EvuddyApi.verifyPayment(
+        idToken: token,
+        bookingMongoId: widget.bookingMongoId,
+        recover: true,
+      );
+      if (booking.receivedAmount >= widget.rupees - 0.009 ||
+          booking.hasPickupOtp ||
+          booking.due + 0.009 < widget.rupees) {
+        if (!mounted || _settled) return;
+        _settled = true;
+        Navigator.pop(context, {'alreadyPaid': 'true'});
+      }
+    } catch (_) {}
   }
 
   Future<bool> _openAndroidCheckoutJs() async {
@@ -422,34 +481,38 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage> {
                   const SizedBox(height: 12),
                   EvuddyButton(
                     sun: true,
-                    label: 'Pay securely with Razorpay',
+                    label: 'Pay in Chrome — same as website',
                     onPressed: _start,
                   ),
-                  if (_androidHost) ...[
-                    const SizedBox(height: 8),
-                    EvuddyGhostButton(
-                      label: 'Open full-screen Razorpay',
-                      onPressed: () => _openAndroidCheckoutJs(),
-                    ),
-                  ],
                 ],
-              ),
-            )
-          else if (_androidHost)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
-              child: EvuddyGhostButton(
-                label: 'Open full-screen Razorpay',
-                onPressed: () => _openAndroidCheckoutJs(),
               ),
             )
           else
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-              child: InfoNote(
-                text: _busy
-                    ? 'Razorpay is opening. Choose UPI, card or netbanking — same as evuddy.com.'
-                    : 'Complete UPI, card or netbanking in the Razorpay sheet. EVUDDY never sees your PIN or card number.',
+              child: Column(
+                children: [
+                  InfoNote(
+                    text: _busy
+                        ? 'Opening the same Razorpay checkout as evuddy.com in Chrome…'
+                        : _waitingChrome
+                            ? 'Finish UPI QR / GPay / PhonePe in Chrome, then return here. There is no Continue button on the website checkout.'
+                            : 'Complete UPI, card or netbanking in Razorpay. EVUDDY never sees your PIN or card number.',
+                  ),
+                  if (_waitingChrome) ...[
+                    const SizedBox(height: 12),
+                    EvuddyButton(
+                      sun: true,
+                      label: 'I have paid',
+                      onPressed: _recoverAfterChrome,
+                    ),
+                    const SizedBox(height: 8),
+                    EvuddyGhostButton(
+                      label: 'Open Razorpay in Chrome again',
+                      onPressed: _start,
+                    ),
+                  ],
+                ],
               ),
             ),
           Expanded(

@@ -520,6 +520,14 @@ void main() {
     expect(native.containsKey('bookingMongoId'), isFalse);
     expect(RazorpayWebHost.chromeDesktopUa.contains('Windows NT 10.0'), isTrue);
     expect(RazorpayWebHost.chromeDesktopUa.contains('Chrome/'), isTrue);
+    final pay = RazorpayWebHost.chromePayUri({
+      'key': 'rzp_live_x',
+      'order_id': 'order_remaining',
+      'amount': 274900,
+    });
+    expect(pay.origin, 'https://www.evuddy.com');
+    expect(pay.path, '/app-pay.html');
+    expect(pay.fragment.contains('order_remaining'), isTrue);
     final remainingSheet = InAppRazorpay.optionsFor(
       order: const RazorpayOrder(
         keyId: 'rzp_live_x',

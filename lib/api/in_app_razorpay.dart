@@ -1,16 +1,25 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 import 'evuddy_api.dart';
 
-/// Chrome desktop UA so checkout.js shows the same UPI QR panel as evuddy.com.
+/// Live evuddy.com Book EV checkout — opened in real Chrome, not an app WebView.
 class RazorpayWebHost {
   RazorpayWebHost._();
 
   static const chromeDesktopUa =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
+  static const payPath = '/app-pay.html';
+
+  static Uri chromePayUri(Map<String, dynamic> payload) {
+    return Uri.parse('${EvuddyApi.origin}$payPath').replace(
+      fragment: Uri.encodeComponent(jsonEncode(payload)),
+    );
+  }
 }
 
 /// Official `Razorpay.open` — same CheckoutActivity that captured the first ₹1
