@@ -397,6 +397,67 @@ void main() {
     expect(fromSwipe.bookingId, 'BK-000001');
   });
 
+  test('remaining create-order opens Standard Checkout with a new order id', () {
+    final remaining = EvuddyApi.parseCreateOrder({
+      'success': true,
+      'keyId': 'rzp_live_x',
+      'orderId': 'order_remaining',
+      'amount': 274900,
+      'currency': 'INR',
+      'name': 'EVUDDY',
+      'remainingAmount': 2749,
+      'receivedAmount': 1,
+    }, amountRupees: 2749);
+    expect(remaining.needsCheckout, isTrue);
+    expect(remaining.shouldOpenCheckoutSheet, isTrue);
+    expect(remaining.order!.orderId, 'order_remaining');
+    expect(remaining.order!.amountPaise(2749), 274900);
+    final captured = EvuddyApi.parseCreateOrder({
+      'success': true,
+      'alreadyCaptured': true,
+      'remainingAmount': 0,
+      'receivedAmount': 2750,
+      'pickupOTP': '4321',
+      'data': {
+        'bookingId': 'BK-000001',
+        'pendingAmount': 0,
+        'receivedAmount': 2750,
+        'pickupOTP': '4321',
+      },
+    });
+    expect(captured.needsCheckout, isFalse);
+    expect(captured.booking!.hasPickupOtp, isTrue);
+    expect(captured.booking!.due, 0);
+    final firstRupeeAttached = EvuddyApi.parseCreateOrder({
+      'success': true,
+      'alreadyCaptured': true,
+      'remainingAmount': 2749,
+      'receivedAmount': 1,
+      'data': {
+        'bookingId': 'BK-000001',
+        'razorpayOrderId': 'order_old_rupee',
+        'pendingAmount': 2749,
+        'receivedAmount': 1,
+        'pickupOTP': '1111',
+      },
+    });
+    expect(firstRupeeAttached.needsCheckout, isFalse);
+    expect(firstRupeeAttached.order, isNull);
+    expect(firstRupeeAttached.booking!.due, 2749);
+    expect(
+      () => EvuddyApi.parseCreateOrder({
+        'success': true,
+        'remainingAmount': 2749,
+        'receivedAmount': 1,
+        'data': {
+          'bookingId': 'BK-000001',
+          'pendingAmount': 2749,
+        },
+      }),
+      throwsA(isA<ApiException>()),
+    );
+  });
+
   test('alreadyCaptured of the first rupee is not remaining-pay success', () {
     final firstRupee = PaymentStart.settled(
       booking: RiderBooking.fromJson({

@@ -220,7 +220,7 @@ class RazorpayWebActivity : Activity() {
                             }
                         }
                     }
-                    "success", "failed", "dismiss" -> finishWith(msg)
+                    "success", "failed", "dismiss", "already_paid", "wallet" -> finishWith(msg)
                     else -> {}
                 }
             }

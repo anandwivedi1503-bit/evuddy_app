@@ -58,70 +58,20 @@
       });
       rzp.open();
     }
-    // Same as live Book EV: POST create-order, then Razorpay.open with order_id.
-    async function payLikeBookEv(n) {
-      hint("Creating Razorpay order...");
-      try {
-      var r = await fetch("https://www.evuddy.com/api/razorpay/create-order", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + n.token
-        },
-        body: JSON.stringify({
-          bookingMongoId: n.bookingMongoId,
-          amount: n.rupees,
-          firebaseIdToken: n.token
-        })
-      });
-      var i = await r.json();
-      if (!i.success) {
-        post({ type: "failed", message: i.message || "Unable to create Razorpay order." });
-        return;
-      }
-      if (i.paidWithWallet) {
-        post({ type: "wallet" });
-        return;
-      }
-      var remaining = Number(i.remainingAmount || i.pendingAmount || 0);
-      var key = i.keyId || n.key;
-      var amount = i.amount || n.amount || Math.round(Number(n.rupees) * 100);
-      var orderId = i.orderId || n.order_id || "";
-      var hasOrder = String(orderId).indexOf("order_") === 0;
-      if (!hasOrder) {
-        if (i.alreadyCaptured && remaining <= 0.009) {
-          post({ type: "already_paid", message: i.message || "" });
-          return;
-        }
-        post({
-          type: "failed",
-          message:
-            "evuddy.com did not create a Razorpay order for this amount (alreadyCaptured, remaining ₹" +
-            remaining +
-            "). Live create-order must mint a new order after the first ₹1 — then tap Pay again."
-        });
-        return;
-      }
-      if (!key || String(key).indexOf("rzp_") !== 0) {
-        post({ type: "failed", message: "evuddy.com did not return a Razorpay key." });
-        return;
-      }
+    function checkoutOptions(n, extra) {
+      extra = extra || {};
       var options = {
-        key: key,
-        amount: amount,
-        currency: i.currency || n.currency || "INR",
-        name: i.name || "EVUDDY",
-        image: i.image || "https://www.evuddy.com/Evuddy-logo-dark-E.png",
+        key: extra.key || n.key,
+        amount: extra.amount || n.amount,
+        currency: extra.currency || n.currency || "INR",
+        name: extra.name || n.name || "EVUDDY",
+        image: extra.image || n.image || "https://www.evuddy.com/Evuddy-logo-dark-E.png",
         description: "Booking Payment - " + (n.bookingId || ""),
-        order_id: orderId,
         prefill: n.prefill || {},
         notes: n.notes || {},
         theme: { color: "#18B368" },
-        retry: { enabled: true, max_count: 4 },
         modal: {
-          ondismiss: function () { post({ type: "dismiss" }); },
-          confirm_close: true,
-          animation: true
+          ondismiss: function () { post({ type: "dismiss" }); }
         },
         handler: function (response) {
           post({
@@ -132,45 +82,85 @@
           });
         }
       };
-      sheet(options);
+      var orderId = extra.order_id || extra.orderId || n.order_id || n.orderId || "";
+      if (String(orderId).indexOf("order_") === 0) options.order_id = orderId;
+      return options;
+    }
+    // Fallback only: POST create-order, then Razorpay.open — same as Book EV.
+    async function payLikeBookEv(n) {
+      hint("Creating Razorpay order...");
+      try {
+        var ac = typeof AbortController !== "undefined" ? new AbortController() : null;
+        var timer = ac ? setTimeout(function () { ac.abort(); }, 25000) : null;
+        var r = await fetch("https://www.evuddy.com/api/razorpay/create-order", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + n.token
+          },
+          body: JSON.stringify({
+            bookingMongoId: n.bookingMongoId,
+            amount: n.rupees,
+            firebaseIdToken: n.token
+          }),
+          signal: ac ? ac.signal : undefined
+        });
+        if (timer) clearTimeout(timer);
+        var i = await r.json();
+        if (!i.success) {
+          post({ type: "failed", message: i.message || "Unable to create Razorpay order." });
+          return;
+        }
+        if (i.paidWithWallet) {
+          post({ type: "wallet" });
+          return;
+        }
+        var remaining = Number(i.remainingAmount || i.pendingAmount || 0);
+        var key = i.keyId || n.key;
+        var amount = i.amount || n.amount || Math.round(Number(n.rupees) * 100);
+        var orderId = i.orderId || "";
+        var hasOrder = String(orderId).indexOf("order_") === 0;
+        if (!hasOrder) {
+          if (i.alreadyCaptured && remaining <= 0.009) {
+            post({ type: "already_paid", message: i.message || "" });
+            return;
+          }
+          post({
+            type: "failed",
+            message: i.message || "Could not open Razorpay. Please try again."
+          });
+          return;
+        }
+        if (!key || String(key).indexOf("rzp_") !== 0) {
+          post({ type: "failed", message: "evuddy.com did not return a Razorpay key." });
+          return;
+        }
+        sheet(checkoutOptions(n, {
+          key: key,
+          amount: amount,
+          currency: i.currency,
+          name: i.name,
+          image: i.image,
+          order_id: orderId
+        }));
       } catch (e) {
-        post({ type: "failed", message: String(e.message || e) });
+        post({ type: "failed", message: String((e && e.message) || e || "Could not open Razorpay. Please try again.") });
       }
     }
     function openPay(raw) {
       var n = typeof raw === "string" ? JSON.parse(raw) : raw;
       try {
+        var existing = n.order_id || n.orderId || "";
+        // Website Book EV: create-order already ran. Open Standard Checkout with that order_id.
+        if (String(existing).indexOf("order_") === 0 && n.key && String(n.key).indexOf("rzp_") === 0) {
+          sheet(checkoutOptions(n, { order_id: existing }));
+          return;
+        }
         if (n.token && n.bookingMongoId) {
           payLikeBookEv(n);
           return;
         }
-        var options = {
-          key: n.key,
-          amount: n.amount,
-          currency: n.currency || "INR",
-          name: n.name || "EVUDDY",
-          description: n.description || "Booking Payment",
-          image: n.image || "https://www.evuddy.com/Evuddy-logo-dark-E.png",
-          prefill: n.prefill || {},
-          notes: n.notes || {},
-          theme: { color: "#18B368" },
-          retry: { enabled: true, max_count: 4 },
-          modal: {
-            ondismiss: function () { post({ type: "dismiss" }); },
-            confirm_close: true,
-            animation: true
-          },
-          handler: function (response) {
-            post({
-              type: "success",
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature
-            });
-          }
-        };
-        if (n.order_id) options.order_id = n.order_id;
-        sheet(options);
+        sheet(checkoutOptions(n, {}));
       } catch (e) {
         post({ type: "failed", message: String(e.message || e) });
       }

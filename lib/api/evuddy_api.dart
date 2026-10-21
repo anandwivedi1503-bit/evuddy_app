@@ -64,21 +64,24 @@ class EvuddyApi {
     required Map<String, String> headers,
     required Object body,
     Duration timeout = const Duration(seconds: 20),
+    int attempts = 2,
   }) async {
     Object? last;
-    for (var i = 0; i < 2; i++) {
+    for (var i = 0; i < attempts; i++) {
       try {
         final r = await _http
             .post(uri, headers: headers, body: body)
             .timeout(timeout);
-        if (r.statusCode == 429 && i == 0) {
+        if (r.statusCode == 429 && i + 1 < attempts) {
           await Future<void>.delayed(const Duration(milliseconds: 900));
           continue;
         }
         return r;
       } catch (e) {
         last = e;
-        await Future<void>.delayed(Duration(milliseconds: 400 * (i + 1)));
+        if (i + 1 < attempts) {
+          await Future<void>.delayed(Duration(milliseconds: 400 * (i + 1)));
+        }
       }
     }
     throw ApiException(last?.toString() ?? 'Could not reach evuddy.com.');
@@ -338,26 +341,66 @@ class EvuddyApi {
     required double amountRupees,
     bool useWallet = false,
   }) async {
-    // Same body as live Book EV `payWithRazorpay` on evuddy.com.
-    final r = await _post(
-      _u('/api/razorpay/create-order'),
-      headers: _auth(idToken),
-      body: jsonEncode({
-        'bookingMongoId': bookingMongoId,
-        'amount': amountRupees,
-        'firebaseIdToken': idToken,
-        if (useWallet) 'useWallet': true,
-        if (useWallet) 'paymentMethod': 'wallet',
-      }),
-    );
-    final j = _json(r);
-    if (j['success'] != true) {
-      throw ApiException(
-        _message(
-          j,
-          useWallet ? 'Wallet payment failed.' : 'Unable to create Razorpay order.',
-        ),
+    // Same body + 25s abort as live Book EV `payWithRazorpay` on evuddy.com.
+    // Remaining fare must mint a new order (kebuone-website create-order) —
+    // do not retry this POST or two Razorpay orders can be created.
+    http.Response r;
+    try {
+      r = await _post(
+        _u('/api/razorpay/create-order'),
+        headers: _auth(idToken),
+        body: jsonEncode({
+          'bookingMongoId': bookingMongoId,
+          'amount': amountRupees,
+          'firebaseIdToken': idToken,
+          if (useWallet) 'useWallet': true,
+          if (useWallet) 'paymentMethod': 'wallet',
+        }),
+        timeout: const Duration(seconds: 25),
+        attempts: 1,
       );
+    } catch (_) {
+      throw ApiException('Could not open Razorpay. Please try again.');
+    }
+    final j = _json(r);
+    var parsed = parseCreateOrder(j, amountRupees: amountRupees);
+    var key = parsed.order?.keyId ?? '';
+    if (key.startsWith('rzp_')) await _rememberRzpKey(key);
+    if (!parsed.needsCheckout &&
+        parsed.order != null &&
+        parsed.order!.orderId.startsWith('order_')) {
+      key = await cachedRazorpayKey();
+      if (key.startsWith('rzp_')) {
+        parsed = PaymentStart.checkout(
+          RazorpayOrder(
+            keyId: key,
+            orderId: parsed.order!.orderId,
+            amount: parsed.order!.amount,
+            currency: parsed.order!.currency,
+            name: parsed.order!.name,
+            image: parsed.order!.image,
+          ),
+        );
+      }
+    }
+    if (parsed.order != null &&
+        parsed.order!.orderId.startsWith('order_') &&
+        !parsed.needsCheckout) {
+      throw ApiException('evuddy.com did not return a Razorpay key or order id.');
+    }
+    return parsed;
+  }
+
+  /// Live Book EV after kebuone-website remaining-pay fix: open Checkout only
+  /// when create-order returned `orderId` + `keyId`. A captured ₹1 must not
+  /// reuse that order — remaining rupees come back as a new `order_`.
+  static PaymentStart parseCreateOrder(
+    Map j, {
+    double amountRupees = 0,
+    String fallbackKey = '',
+  }) {
+    if (j['success'] != true) {
+      throw ApiException(_message(j, 'Unable to create Razorpay order.'));
     }
     if (j['paidWithWallet'] == true) {
       return PaymentStart.settled(
@@ -367,28 +410,42 @@ class EvuddyApi {
     }
     final booking = RiderBooking.fromJson(j);
     final order = RazorpayOrder.fromJson(j);
-    if (order.keyId.isNotEmpty) await _rememberRzpKey(order.keyId);
-    // Live Book EV (kebuone-website BikeBooking after PR #154):
-    // alreadyCaptured / wallet / missing orderId → applyPaidResult (pickup OTP).
-    // Razorpay.open only when create-order returned orderId + key.
-    if (j['alreadyCaptured'] == true || order.orderId.isEmpty) {
+    final key = order.keyId.startsWith('rzp_')
+        ? order.keyId
+        : (fallbackKey.startsWith('rzp_') ? fallbackKey : '');
+    if (order.orderId.startsWith('order_') && key.startsWith('rzp_')) {
+      return PaymentStart.checkout(
+        RazorpayOrder(
+          keyId: key,
+          orderId: order.orderId,
+          amount: order.amount > 0
+              ? order.amount
+              : (amountRupees * 100).roundToDouble(),
+          currency: order.currency.isEmpty ? 'INR' : order.currency,
+          name: order.name,
+          image: order.image,
+        ),
+      );
+    }
+    if (order.orderId.startsWith('order_')) {
+      return PaymentStart.checkout(
+        RazorpayOrder(
+          keyId: key,
+          orderId: order.orderId,
+          amount: order.amount > 0
+              ? order.amount
+              : (amountRupees * 100).roundToDouble(),
+          currency: order.currency.isEmpty ? 'INR' : order.currency,
+          name: order.name,
+          image: order.image,
+        ),
+      );
+    }
+    if (j['alreadyCaptured'] == true || booking.due <= 0.009) {
       return PaymentStart.settled(booking: booking);
     }
-    if (order.keyId.isEmpty) {
-      throw ApiException('evuddy.com did not return a Razorpay key or order id.');
-    }
-    await _rememberRzpKey(order.keyId);
-    return PaymentStart.checkout(
-      RazorpayOrder(
-        keyId: order.keyId,
-        orderId: order.orderId,
-        amount: order.amount > 0
-            ? order.amount
-            : (amountRupees * 100).roundToDouble(),
-        currency: order.currency.isEmpty ? 'INR' : order.currency,
-        name: order.name,
-        image: order.image,
-      ),
+    throw ApiException(
+      _message(j, 'Unable to create Razorpay order.'),
     );
   }
 

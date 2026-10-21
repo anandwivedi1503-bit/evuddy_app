@@ -44,7 +44,6 @@ class InAppRazorpay {
         if (vehicleId != null && vehicleId.isNotEmpty) 'vehicleId': vehicleId,
       },
       'theme': {'color': '#18B368'},
-      'retry': {'enabled': true, 'max_count': 4},
     };
   }
 
