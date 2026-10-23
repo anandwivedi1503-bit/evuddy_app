@@ -180,7 +180,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
-    if (canBook && registrationDraft.hasLiveBooking) {
+    if (canBook && registrationDraft.showRideWorkspace) {
       return RideReadyScreen(showBack: widget.showBack);
     }
     final plan = registrationDraft.chosenPlan;

@@ -45,6 +45,7 @@ class RegistrationDraft {
   String otpGate = 'register'; // register | book
   int shellTab = 0;
   int? _tabJump;
+  bool dismissedCompleted = false;
   double depositHeld = 0;
   String depositStatus = 'none'; // none | held | refund_pending | released
   String? depositBookingId;
@@ -136,10 +137,7 @@ class RegistrationDraft {
   bool get hasLiveBooking {
     final b = activeBooking;
     if (b == null || b.bookingId.isEmpty) return false;
-    if (b.completed) return false;
-    final status = b.rideStatus.toLowerCase();
-    if (status.contains('cancel')) return false;
-    if (status.contains('complete')) return false;
+    if (b.completed || b.cancelled) return false;
     if (b.inRide || b.readyForPickup || b.hasPickupOtp || b.pickupOtpVerified) {
       return true;
     }
@@ -147,16 +145,43 @@ class RegistrationDraft {
     if (pay == 'pending' || pay == 'partial' || pay.contains('pending')) {
       return true;
     }
+    final status = b.rideStatus.toLowerCase();
     if (status.isEmpty && b.mongoId.isEmpty) return false;
     return status.isNotEmpty;
   }
 
+  /// Keep the thank-you workspace until the rider starts a new Normal / RTO booking.
+  bool get showRideWorkspace {
+    if (hasLiveBooking) return true;
+    final b = activeBooking;
+    return b != null && b.completed && !dismissedCompleted;
+  }
+
+  /// After a closed ride, return to Normal / Rent to Own instead of the last page.
+  Future<void> startFreshBooking() async {
+    dismissedCompleted = true;
+    activeBooking = null;
+    chosenPlan = null;
+    chosenDuration = null;
+    await persist();
+    riderSessionTick.value++;
+  }
+
   void applyActiveBooking(RiderBooking? mine) {
+    if (mine != null && (mine.completed || mine.cancelled) && dismissedCompleted) {
+      activeBooking = null;
+      persist();
+      riderSessionTick.value++;
+      return;
+    }
     activeBooking = mine;
     if (mine == null || mine.bookingId.isEmpty) {
       persist();
       riderSessionTick.value++;
       return;
+    }
+    if (!mine.completed && !mine.cancelled) {
+      dismissedCompleted = false;
     }
     if (mine.isRentToOwn) {
       chosenPlan = 'rto';
@@ -250,7 +275,7 @@ class RegistrationDraft {
       await EvuddyFirebase.ensure();
       await EvuddyFirebase.signOut();
     } catch (_) {}
-    clearSession();
+    await clearSession();
   }
 
   Future<RiderLookup?> refreshFromServer({bool forceToken = false}) async {
@@ -276,7 +301,7 @@ class RegistrationDraft {
     }
   }
 
-  void clearSession() {
+  Future<void> clearSession() async {
     phone = '';
     phoneVerified = false;
     firebaseIdToken = null;
@@ -301,7 +326,8 @@ class RegistrationDraft {
     rtoAddress = '';
     rtoOccupation = '';
     rtoAgreed = false;
-    persist();
+    dismissedCompleted = false;
+    await persist();
     riderSessionTick.value++;
   }
 
@@ -334,6 +360,7 @@ class RegistrationDraft {
       rtoAddress = m['rtoAddress']?.toString() ?? rtoAddress;
       rtoOccupation = m['rtoOccupation']?.toString() ?? rtoOccupation;
       rtoAgreed = m['rtoAgreed'] == true;
+      dismissedCompleted = m['dismissedCompleted'] == true;
       depositHeld = (m['depositHeld'] is num)
           ? (m['depositHeld'] as num).toDouble()
           : depositHeld;
@@ -384,6 +411,7 @@ class RegistrationDraft {
           'rtoAddress': rtoAddress,
           'rtoOccupation': rtoOccupation,
           'rtoAgreed': rtoAgreed,
+          'dismissedCompleted': dismissedCompleted,
           'depositHeld': depositHeld,
           'depositStatus': depositStatus,
           'depositBookingId': depositBookingId,

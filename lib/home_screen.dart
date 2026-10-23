@@ -63,18 +63,27 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _book({FareOffer? fare}) {
-    if (fare != null) {
-      registrationDraft.chosenPlan = fare.plan;
-      registrationDraft.chosenDuration = fare.plan == 'rto' ? 'Rent to Own' : fare.id;
-    }
+  Future<void> _book({FareOffer? fare}) async {
     if (registrationDraft.phoneVerified && registrationDraft.canBook) {
       if (registrationDraft.hasLiveBooking) {
         Navigator.push(context, evuddyRoute(const RideReadyScreen()));
         return;
       }
+      if (registrationDraft.showRideWorkspace) {
+        await registrationDraft.startFreshBooking();
+      }
+      if (fare != null) {
+        registrationDraft.chosenPlan = fare.plan;
+        registrationDraft.chosenDuration = fare.plan == 'rto' ? 'Rent to Own' : fare.id;
+        await registrationDraft.persist();
+      }
+      if (!mounted) return;
       Navigator.push(context, evuddyRoute(const BookEvScreen()));
       return;
+    }
+    if (fare != null) {
+      registrationDraft.chosenPlan = fare.plan;
+      registrationDraft.chosenDuration = fare.plan == 'rto' ? 'Rent to Own' : fare.id;
     }
     if (registrationDraft.isPendingKyc) {
       Navigator.push(context, evuddyRoute(const SubmittedScreen()));
@@ -147,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontSize: 14,
                       ),
                     ),
-                    if (d.activeBooking != null) ...[
+                    if (d.hasLiveBooking && d.activeBooking != null) ...[
                       const SizedBox(height: 14),
                       _LiveTripBanner(
                         booking: d.activeBooking!,

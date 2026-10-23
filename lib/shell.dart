@@ -63,18 +63,29 @@ class _RiderShellState extends State<RiderShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final session = registrationDraft;
+    final bookChild = !session.phoneVerified
+        ? const ConfirmMobileScreen()
+        : (session.showRideWorkspace
+            ? RideReadyScreen(
+                key: ValueKey('live-${session.activeBooking?.bookingId}'),
+                showBack: false,
+              )
+            : BookEvScreen(
+                key: ValueKey('plans-${session.phone}'),
+                showBack: false,
+              ));
     return Scaffold(
       backgroundColor: Colors.white,
       body: IndexedStack(
         index: index,
         children: [
           const HomeScreen(),
-          registrationDraft.phoneVerified
-              ? (registrationDraft.hasLiveBooking
-                  ? const RideReadyScreen(showBack: false)
-                  : const BookEvScreen(showBack: false))
-              : const ConfirmMobileScreen(),
-          AccountScreen(onLoggedOut: () => setState(() => index = 0)),
+          bookChild,
+          AccountScreen(
+            key: ValueKey('acct-${session.phoneVerified}-${session.phone}'),
+            onLoggedOut: () => setState(() => index = 0),
+          ),
         ],
       ),
       bottomNavigationBar: NavigationBar(

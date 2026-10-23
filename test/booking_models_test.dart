@@ -330,6 +330,41 @@ void main() {
     expect(registrationDraft.isAuthError(ApiException('Booking not found.')), isFalse);
   });
 
+  test('cash or Paid with no leftover pending is treated as ₹0 due', () {
+    expect(
+      RiderBooking.fromJson({
+        'bookingId': 'BK-CASH',
+        'paymentStatus': 'Paid',
+        'paymentMode': 'Cash',
+        'pendingAmount': 0,
+        'paymentDue': 2750,
+        'receivedAmount': 0,
+        'rideStatus': 'Ready For Pickup',
+        'pickupOTPVerified': true,
+      }).due,
+      0,
+    );
+    expect(
+      RiderBooking.fromJson({
+        'bookingId': 'BK-UPI',
+        'paymentStatus': 'Paid',
+        'paymentMode': 'UPI',
+        'pendingAmount': 0,
+        'receivedAmount': 2750,
+        'rideStatus': 'In Ride',
+      }).due,
+      0,
+    );
+    expect(
+      RiderBooking.fromJson({
+        'rideStatus': 'Ride Ended',
+        'bookingId': 'BK-END',
+        'pickupOTP': '1111',
+      }).completed,
+      isTrue,
+    );
+  });
+
   test('completed and cancelled bookings are not live', () {
     expect(
       RiderBooking.fromJson({'bookingId': 'BK-1', 'rideStatus': 'Completed'}).completed,
@@ -607,7 +642,7 @@ void main() {
         'bookingId': 'BK-000001',
         'rideStatus': 'In Ride',
       });
-    draft.clearSession();
+    draft.clearSession(); // ignore: discarded_futures
     expect(draft.phone, isEmpty);
     expect(draft.fullName, isEmpty);
     expect(draft.email, isEmpty);
@@ -615,6 +650,26 @@ void main() {
     expect(draft.riderId, isNull);
     expect(draft.activeBooking, isNull);
     expect(draft.canBook, isFalse);
+  });
+
+  test('closed bookings do not skip Normal / Rent to Own', () async {
+    final draft = RegistrationDraft()
+      ..phone = '9876543210'
+      ..phoneVerified = true
+      ..bookingEnabled = true
+      ..chosenPlan = 'rto'
+      ..activeBooking = RiderBooking.fromJson({
+        'bookingId': 'BK-OLD',
+        'rideStatus': 'Completed',
+        'pickupOTP': '4321',
+        'rideEndOTP': '9999',
+      });
+    expect(draft.hasLiveBooking, isFalse);
+    expect(draft.showRideWorkspace, isTrue);
+    await draft.startFreshBooking();
+    expect(draft.showRideWorkspace, isFalse);
+    expect(draft.activeBooking, isNull);
+    expect(draft.chosenPlan, isNull);
   });
 
   test('Rent to Own agreement matches website booking POST fields', () {

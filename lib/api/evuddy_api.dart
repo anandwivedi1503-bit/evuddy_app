@@ -505,6 +505,9 @@ class EvuddyApi {
         'vehicleStars': stars,
         'hubStars': stars,
         'comment': comment,
+        'reply': comment,
+        'riderReply': comment,
+        'reviewComment': comment,
         'wouldRecommend': wouldRecommend,
         'firebaseIdToken': idToken,
       }),
@@ -632,6 +635,91 @@ class EvuddyApi {
       headers: _auth(idToken),
       body: jsonEncode({'bookingId': bookingId}),
       timeout: const Duration(seconds: 15),
+    );
+  }
+
+  static Future<RefundStart> requestDepositRefund({
+    required String idToken,
+    required String bookingId,
+    String bookingMongoId = '',
+    String paymentId = '',
+    double amountRupees = 2500,
+  }) async {
+    Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body) async {
+      final r = await _post(
+        _u(path),
+        headers: _auth(idToken),
+        body: jsonEncode(body),
+        timeout: const Duration(seconds: 20),
+        attempts: 1,
+      );
+      return _json(r);
+    }
+
+    final payload = {
+      'bookingId': bookingId,
+      if (bookingMongoId.isNotEmpty) 'bookingMongoId': bookingMongoId,
+      'firebaseIdToken': idToken,
+      'amount': amountRupees,
+      'type': 'security_deposit',
+      'reason': 'Security deposit refund after scooter return',
+      if (paymentId.isNotEmpty) 'razorpay_payment_id': paymentId,
+      if (paymentId.isNotEmpty) 'paymentId': paymentId,
+    };
+    Map<String, dynamic> j = {};
+    for (final path in [
+      '/api/refunds',
+      '/api/bookings/refund',
+      '/api/razorpay/refund',
+    ]) {
+      try {
+        j = await post(path, payload);
+      } catch (_) {
+        continue;
+      }
+      if (j['success'] == true) break;
+      final msg = _message(j, '').toLowerCase();
+      if (msg.contains('unauthorized') || msg.contains('sign in')) continue;
+      if (j.isNotEmpty) break;
+    }
+    if (j['success'] == true) {
+      RazorpayOrder? order;
+      try {
+        order = RazorpayOrder.fromJson(j);
+      } catch (_) {
+        order = null;
+      }
+      if (order != null &&
+          !(order.orderId.startsWith('order_') && order.keyId.startsWith('rzp_'))) {
+        order = null;
+      }
+      return RefundStart(
+        ok: true,
+        message: _message(j, 'Deposit refund queued on Razorpay to the original UPI / card.'),
+        order: order,
+        refundId: (j['refundId'] ?? j['id'] ?? j['razorpayRefundId'])?.toString() ?? '',
+      );
+    }
+    try {
+      await createTicket(
+        idToken: idToken,
+        bookingId: bookingId,
+        userId: bookingId,
+        category: 'REFUND_REQUEST',
+        description:
+            'Please refund security deposit ${CatalogRates.inr(amountRupees)} for booking $bookingId to the original Razorpay payment.',
+      );
+      return const RefundStart(
+        ok: true,
+        message:
+            'Razorpay Checkout opens when finance returns an order. A deposit refund ticket was sent to the yard so the hold can be released to the original UPI / card.',
+      );
+    } catch (_) {}
+    throw ApiException(
+      _message(
+        j,
+        'Could not open Razorpay refund automatically. Open Command center again after the yard marks the scooter returned.',
+      ),
     );
   }
 
@@ -867,7 +955,10 @@ class RideHistoryItem {
       hub: (e['pickupHubName'] ?? e['startHub'])?.toString() ?? '',
       city: (e['pickupCity'] ?? e['city'])?.toString() ?? '',
       receivedAmount: _asDouble(e['receivedAmount']) ?? 0,
-      canReview: e['canReview'] == true,
+      canReview: e['canReview'] == true ||
+          ((e['reviewStars'] == null) &&
+              (e['rideStatus']?.toString().toLowerCase().contains('complete') ==
+                  true)),
       reviewStars: (e['reviewStars'] is num) ? (e['reviewStars'] as num).toInt() : null,
     );
   }
@@ -948,6 +1039,25 @@ class PaymentStart {
 
   /// Same as Book EV: open Checkout only with a real Razorpay order_id.
   bool get shouldOpenCheckoutSheet => !wallet && needsCheckout;
+}
+
+class RefundStart {
+  const RefundStart({
+    required this.ok,
+    required this.message,
+    this.order,
+    this.refundId = '',
+  });
+
+  final bool ok;
+  final String message;
+  final RazorpayOrder? order;
+  final String refundId;
+
+  bool get needsCheckout =>
+      order != null &&
+      order!.keyId.startsWith('rzp_') &&
+      order!.orderId.startsWith('order_');
 }
 
 class SupportTicket {
@@ -1043,6 +1153,8 @@ class EvuddyVehicle {
     this.hourlyRate,
     this.dailyRate,
     this.vehicleStatus = 'Available',
+    this.latitude,
+    this.longitude,
   });
 
   factory EvuddyVehicle.fromJson(Map e) {
@@ -1060,6 +1172,12 @@ class EvuddyVehicle {
       hourlyRate: _asDouble(e['hourlyRate']),
       dailyRate: _asDouble(e['dailyRate']),
       vehicleStatus: e['vehicleStatus']?.toString() ?? 'Available',
+      latitude: _asDouble(
+        e['latitude'] ?? e['gpsLat'] ?? e['lat'] ?? e['lastLatitude'],
+      ),
+      longitude: _asDouble(
+        e['longitude'] ?? e['gpsLng'] ?? e['lng'] ?? e['lastLongitude'],
+      ),
     );
   }
 
@@ -1072,6 +1190,19 @@ class EvuddyVehicle {
   final double? hourlyRate;
   final double? dailyRate;
   final String vehicleStatus;
+  final double? latitude;
+  final double? longitude;
+
+  bool get hasGps {
+    final lat = latitude;
+    final lng = longitude;
+    return lat != null &&
+        lng != null &&
+        lat >= 6 &&
+        lat <= 37 &&
+        lng >= 68 &&
+        lng <= 98;
+  }
 
   /// Same as evuddy.com Book EV: Available, or blank from a public list.
   bool get isBookable {
@@ -1108,6 +1239,7 @@ class RiderBooking {
     this.bookingId = '',
     this.rentalMode = '',
     this.paymentStatus = '',
+    this.paymentMode = '',
     this.rideStatus = '',
     this.pendingAmount = 0,
     this.receivedAmount = 0,
@@ -1122,6 +1254,9 @@ class RiderBooking {
     this.pickupHubName = '',
     this.city = '',
     this.securityDeposit = 0,
+    this.latitude,
+    this.longitude,
+    this.razorpayPaymentId = '',
     this.message = '',
   });
 
@@ -1146,6 +1281,20 @@ class RiderBooking {
         ) ??
         0;
     final billed = _asDouble(m['paymentDue'] ?? e['paymentDue']) ?? 0;
+    final lat = _asDouble(
+          m['latitude'] ??
+              m['gpsLat'] ??
+              m['lat'] ??
+              e['latitude'] ??
+              e['gpsLat'],
+        );
+    final lng = _asDouble(
+          m['longitude'] ??
+              m['gpsLng'] ??
+              m['lng'] ??
+              e['longitude'] ??
+              e['gpsLng'],
+        );
     return RiderBooking(
       mongoId: m['_id']?.toString() ??
           m['id']?.toString() ??
@@ -1155,6 +1304,9 @@ class RiderBooking {
       bookingId: m['bookingId']?.toString() ?? e['bookingId']?.toString() ?? '',
       rentalMode: m['rentalMode']?.toString() ?? '',
       paymentStatus: (m['paymentStatus'] ?? e['paymentStatus'])?.toString() ?? '',
+      paymentMode: (m['paymentMode'] ?? e['paymentMode'] ?? m['paymentMethod'] ?? e['paymentMethod'])
+              ?.toString() ??
+          '',
       rideStatus: (m['rideStatus'] ?? e['rideStatus'])?.toString() ?? '',
       pendingAmount: pending,
       receivedAmount: received,
@@ -1180,6 +1332,14 @@ class RiderBooking {
       city: (m['pickupCity'] ?? m['city'])?.toString() ?? '',
       securityDeposit: _asDouble(m['securityDeposit'] ?? e['securityDeposit']) ??
           CatalogRates.securityDeposit.toDouble(),
+      latitude: lat,
+      longitude: lng,
+      razorpayPaymentId: (m['razorpayPaymentId'] ??
+              m['razorpay_payment_id'] ??
+              e['razorpayPaymentId'] ??
+              e['razorpay_payment_id'])
+          ?.toString() ??
+          '',
       message: e['message']?.toString() ?? '',
     );
   }
@@ -1188,6 +1348,7 @@ class RiderBooking {
   final String bookingId;
   final String rentalMode;
   final String paymentStatus;
+  final String paymentMode;
   final String rideStatus;
   final double pendingAmount;
   final double receivedAmount;
@@ -1202,15 +1363,50 @@ class RiderBooking {
   final String pickupHubName;
   final String city;
   final double securityDeposit;
+  final double? latitude;
+  final double? longitude;
+  final String razorpayPaymentId;
   final String message;
+
+  bool get markedFullyPaid {
+    final p = paymentStatus.toLowerCase();
+    final m = paymentMode.toLowerCase();
+    if (p.contains('pending') || p.contains('partial') || p.contains('unpaid')) {
+      return false;
+    }
+    if (p == 'paid' ||
+        p.contains('captured') ||
+        p.contains('success') ||
+        p.contains('settled') ||
+        p.contains('complete')) {
+      return true;
+    }
+    if (m.contains('cash') &&
+        (p.contains('paid') || p.contains('cash') || p.contains('complete') || p.isEmpty)) {
+      return pendingAmount <= 0.009;
+    }
+    return false;
+  }
+
+  bool get paidWithCash {
+    final blob = '$paymentMode $paymentStatus'.toLowerCase();
+    return blob.contains('cash');
+  }
 
   /// Remaining Razorpay due — same rules as evuddy.com (`pendingAmount` /
   /// `remainingAmount`, else `paymentDue` minus already received).
+  /// Cash / Paid with no leftover pending is treated as ₹0 so the start/end
+  /// slider and ride-end OTP can appear after yard or UPI settlement.
   double get due {
+    if (markedFullyPaid && pendingAmount <= 0.009) return 0;
     if (pendingAmount > 0.009) return pendingAmount;
     if (paymentDue > 0.009) {
       if (receivedAmount > 0.009 && paymentDue > receivedAmount + 0.009) {
         return paymentDue - receivedAmount;
+      }
+      if (markedFullyPaid) return 0;
+      if (receivedAmount > 0.009 && (paymentDue - receivedAmount).abs() <= 0.009) {
+        return 0;
       }
       return paymentDue;
     }
@@ -1233,7 +1429,16 @@ class RiderBooking {
 
   bool get completed {
     final s = rideStatus.toLowerCase();
-    return s == 'completed' || s.contains('complete');
+    return s.contains('complete') ||
+        s.contains('ended') ||
+        s.contains('returned') ||
+        s.contains('closed') ||
+        s.contains('finish');
+  }
+
+  bool get cancelled {
+    final s = rideStatus.toLowerCase();
+    return s.contains('cancel');
   }
 
   /// Yard has accepted pickup OTP. Rider still swipes start (same as evuddy.com).
@@ -1245,7 +1450,11 @@ class RiderBooking {
   }
 
   /// Live ride only after rider-start — pickup verified is not In Ride.
-  bool get inRide => rideStatus.toLowerCase() == 'in ride';
+  bool get inRide {
+    final s = rideStatus.toLowerCase().trim();
+    if (completed || cancelled) return false;
+    return s == 'in ride' || s == 'ongoing' || s == 'started' || s.contains('in-ride');
+  }
 
   bool get isRentToOwn {
     final m = rentalMode.toLowerCase();
@@ -1263,6 +1472,7 @@ class RiderBooking {
       bookingId: bookingId,
       rentalMode: rentalMode,
       paymentStatus: paymentStatus,
+      paymentMode: paymentMode,
       rideStatus: rideStatus ?? this.rideStatus,
       pendingAmount: pendingAmount,
       receivedAmount: receivedAmount,
@@ -1277,6 +1487,9 @@ class RiderBooking {
       pickupHubName: pickupHubName,
       city: city,
       securityDeposit: securityDeposit,
+      latitude: latitude,
+      longitude: longitude,
+      razorpayPaymentId: razorpayPaymentId,
       message: message ?? this.message,
     );
   }
@@ -1287,6 +1500,7 @@ class RiderBooking {
         'bookingId': bookingId,
         'rentalMode': rentalMode,
         'paymentStatus': paymentStatus,
+        'paymentMode': paymentMode,
         'rideStatus': rideStatus,
         'pendingAmount': pendingAmount,
         'receivedAmount': receivedAmount,
@@ -1301,6 +1515,9 @@ class RiderBooking {
         'pickupHubName': pickupHubName,
         'city': city,
         'securityDeposit': securityDeposit,
+        'latitude': latitude,
+        'longitude': longitude,
+        'razorpayPaymentId': razorpayPaymentId,
         'message': message,
       };
 
@@ -1312,6 +1529,7 @@ class RiderBooking {
       rentalMode: live.rentalMode.isNotEmpty ? live.rentalMode : rentalMode,
       paymentStatus:
           live.paymentStatus.isNotEmpty ? live.paymentStatus : paymentStatus,
+      paymentMode: live.paymentMode.isNotEmpty ? live.paymentMode : paymentMode,
       rideStatus: live.rideStatus.isNotEmpty ? live.rideStatus : rideStatus,
       pendingAmount: preferLive ? live.pendingAmount : pendingAmount,
       receivedAmount: preferLive ? live.receivedAmount : receivedAmount,
@@ -1329,6 +1547,11 @@ class RiderBooking {
       city: live.city.isNotEmpty ? live.city : city,
       securityDeposit:
           live.securityDeposit > 0.009 ? live.securityDeposit : securityDeposit,
+      latitude: live.latitude ?? latitude,
+      longitude: live.longitude ?? longitude,
+      razorpayPaymentId: live.razorpayPaymentId.isNotEmpty
+          ? live.razorpayPaymentId
+          : razorpayPaymentId,
       message: message.isNotEmpty ? message : live.message,
     );
   }
