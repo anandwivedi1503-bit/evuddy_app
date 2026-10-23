@@ -128,44 +128,62 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
   }
 
   Future<void> _routeAfterOtp() async {
-    final token = await registrationDraft.freshToken(force: true) ??
+    var token = await registrationDraft.freshToken(force: true) ??
         registrationDraft.firebaseIdToken;
     if (token == null) return;
+    RiderLookup? lookup;
     try {
-      final lookup = await EvuddyApi.lookupRider(
+      lookup = await EvuddyApi.lookupRider(
         phone: registrationDraft.phone,
         idToken: token,
       );
-      if (!mounted) return;
-      if (lookup.found) {
-        registrationDraft.applyLookup(lookup);
-        if (registrationDraft.isRejected) {
-          setState(() {
-            verifying = false;
-            error = 'This number was rejected. Contact EVUDDY support.';
-          });
-          return;
-        }
-        if (registrationDraft.canBook) {
-          await registrationDraft.refreshFromServer(forceToken: true);
-          registrationDraft.jumpToTab(1);
-          await registrationDraft.persist();
-          if (!mounted) return;
-          Navigator.of(context).popUntil((r) => r.isFirst);
-          return;
-        }
-        Navigator.pushReplacement(context, evuddyRoute(const SubmittedScreen()));
-        return;
+      if (!lookup.found) {
+        token = await registrationDraft.freshToken(force: true) ?? token;
+        lookup = await EvuddyApi.lookupRider(
+          phone: registrationDraft.phone,
+          idToken: token,
+        );
       }
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         verifying = false;
-        error = 'Could not reach evuddy.com after OTP. Check the network and verify again.';
+        error = registrationDraft.isAuthError(e)
+            ? 'OTP worked. Sign-in token expired — tap Verify OTP again.'
+            : 'Could not reach evuddy.com after OTP. Check the network and verify again.';
       });
       return;
     }
     if (!mounted) return;
+    if (lookup.found) {
+      registrationDraft.applyLookup(lookup);
+      if (registrationDraft.isRejected) {
+        setState(() {
+          verifying = false;
+          error = 'This number was rejected. Contact EVUDDY support.';
+        });
+        return;
+      }
+      if (registrationDraft.canBook) {
+        await registrationDraft.refreshFromServer(forceToken: true);
+        registrationDraft.jumpToTab(1);
+        await registrationDraft.persist();
+        if (!mounted) return;
+        Navigator.of(context).popUntil((r) => r.isFirst);
+        return;
+      }
+      Navigator.pushReplacement(context, evuddyRoute(const SubmittedScreen()));
+      return;
+    }
+    final msg = (lookup.message ?? '').toLowerCase();
+    if (msg.contains('rider not found') && registrationDraft.riderId != null) {
+      setState(() {
+        verifying = false;
+        error =
+            'This registered number did not load. Tap Verify OTP again — do not fill KYC a second time.';
+      });
+      return;
+    }
     if (registrationDraft.shouldCollectPersonalAfterOtp) {
       Navigator.pushReplacement(context, evuddyRoute(const LoginScreen()));
       return;
