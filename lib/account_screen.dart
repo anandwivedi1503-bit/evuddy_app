@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'api/evuddy_api.dart';
 import 'api/fleet_calculator.dart';
 import 'confirm_mobile_screen.dart';
+import 'dashboards/command_center_screen.dart';
 import 'deposit_wallet_screen.dart';
 import 'fleet_calculator_screen.dart';
 import 'invest_screen.dart';
@@ -58,6 +59,7 @@ class _AccountScreenState extends State<AccountScreen> {
   Future<void> _logout() async {
     final ok = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text('Log out?'),
         content: const Text(
@@ -65,27 +67,27 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Stay')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Log out')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Log out'),
+          ),
         ],
       ),
     );
     if (ok != true) return;
     await registrationDraft.logout();
+    if (!mounted) return;
     widget.onLoggedOut?.call();
-    if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+    Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
+    if (mounted) setState(() {});
   }
 
   Widget _logoutButton({bool compact = false}) {
     if (compact) {
-      return TextButton(
+      return IconButton(
+        tooltip: 'Log out',
         onPressed: _logout,
-        child: Text(
-          'Log out',
-          style: GoogleFonts.plusJakartaSans(
-            color: Evuddy.magenta,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
+        icon: const Icon(Icons.logout_rounded, color: Evuddy.magenta),
       );
     }
     return SizedBox(
@@ -116,7 +118,7 @@ class _AccountScreenState extends State<AccountScreen> {
         onPressed: () => Navigator.push(context, evuddyRoute(const ConfirmMobileScreen())),
       );
     }
-    if (d.activeBooking != null) {
+    if (d.hasLiveBooking) {
       return EvuddyButton(
         label: 'Open booking ${d.activeBooking!.bookingId}',
         onPressed: () => Navigator.push(context, evuddyRoute(const RideReadyScreen())),
@@ -205,7 +207,7 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
         ),
         const SizedBox(height: 14),
-        if (d.activeBooking != null) ...[
+        if (d.hasLiveBooking && d.activeBooking != null) ...[
           SurfaceCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,6 +266,38 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                       Text(
                         'Rate completed rides. Razorpay receipts stay on the shared database.',
+                        style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: Evuddy.muted),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        GestureDetector(
+          onTap: d.phoneVerified
+              ? () => Navigator.push(context, evuddyRoute(const CommandCenterScreen()))
+              : null,
+          child: SurfaceCard(
+            child: Row(
+              children: [
+                const Icon(Icons.space_dashboard_outlined, color: Evuddy.greenDeep),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('RIDE COMMAND CENTER', style: Theme.of(context).textTheme.labelSmall),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Live CRM · IoT GPS · refunds · reviews · team desks',
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+                      ),
+                      Text(
+                        'Realtime numbers from the same evuddy.com database.',
                         style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
                       ),
                     ],

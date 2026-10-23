@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
+import 'dashboards/command_center_screen.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
@@ -19,7 +20,10 @@ class DepositWalletScreen extends StatelessWidget {
           'Same as evuddy.com: bookings hold ${CatalogRates.inr(CatalogRates.securityDeposit)} refundable deposit. This is not UPI. EVUDDY wallet credit is separate and can pay Book EV when the balance covers the amount.',
       footer: EvuddyButton(
         label: 'Open refunds',
-        onPressed: () => Navigator.push(context, evuddyRoute(const RefundDashboardScreen())),
+        onPressed: () => Navigator.push(
+          context,
+          evuddyRoute(const CommandCenterScreen(initialTab: 2)),
+        ),
       ),
       children: [
         SurfaceCard(
@@ -70,47 +74,7 @@ class RefundDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final d = registrationDraft;
-    final pending = d.depositStatus == 'refund_pending';
-    final released = d.depositStatus == 'released';
-    return AuthScreen(
-      kicker: 'Refunds',
-      title: 'Deposit release',
-      subtitle: 'Admin-friendly view of the hold. Same booking the website sees after Razorpay.',
-      children: [
-        SurfaceCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                pending
-                    ? 'Refund queued'
-                    : released
-                        ? 'Released to source'
-                        : d.depositHeld > 0
-                            ? 'On hold'
-                            : 'Nothing to refund',
-                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Amount ${CatalogRates.inr(d.depositHeld > 0 ? d.depositHeld : CatalogRates.securityDeposit)}',
-                style: GoogleFonts.plusJakartaSans(color: Evuddy.muted),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                pending
-                    ? 'Scooter is back. Finance can refund the hold on Razorpay / the same bank path.'
-                    : released
-                        ? 'Hold is marked released on this phone. Bank timing follows Razorpay.'
-                        : 'Refunds start only after ride-end OTP. There is no recharge balance.',
-                style: GoogleFonts.plusJakartaSans(height: 1.45),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+    return const CommandCenterScreen(initialTab: 2);
   }
 }
 

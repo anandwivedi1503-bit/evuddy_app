@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <style>
+      html, body, #map { height: 100%; width: 100%; margin: 0; background: #eef2ef; }
+      .ev-pin { font: 700 12px/1.2 Plus Jakarta Sans, sans-serif; }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      var map, layer;
+      function renderMap(raw) {
+        var data = typeof raw === "string" ? JSON.parse(raw) : raw;
+        var lat = data.lat || 26.8467;
+        var lng = data.lng || 80.9462;
+        if (!map) {
+          map = L.map("map", { zoomControl: true }).setView([lat, lng], 14);
+          L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap",
+          }).addTo(map);
+        }
+        if (layer) map.removeLayer(layer);
+        layer = L.layerGroup().addTo(map);
+        var bounds = [];
+        (data.points || []).forEach(function (p) {
+          if (typeof p.lat !== "number" || typeof p.lng !== "number") return;
+          bounds.push([p.lat, p.lng]);
+          var color = p.kind === "rider" ? "#e11d8f" : p.kind === "vehicle" ? "#16a34a" : "#1c1917";
+          L.circleMarker([p.lat, p.lng], {
+            radius: p.kind === "rider" ? 11 : 8,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.9,
+            weight: 2,
+          })
+            .bindPopup("<b>" + (p.label || "EVUDDY") + "</b>")
+            .addTo(layer);
+        });
+        if (bounds.length === 1) map.setView(bounds[0], 15);
+        else if (bounds.length > 1) map.fitBounds(bounds, { padding: [36, 36], maxZoom: 16 });
+        else map.setView([lat, lng], 13);
+      }
+      window.renderMap = renderMap;
+    </script>
+  </body>
+</html>

@@ -147,9 +147,14 @@ class AuthScreen extends StatelessWidget {
                           ),
                   ),
                   if (footer != null)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(22, 4, 22, 18),
-                      child: footer,
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.sizeOf(context).height * 0.36,
+                      ),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(22, 4, 22, 18),
+                        child: footer,
+                      ),
                     ),
                 ],
               ),
@@ -1204,31 +1209,37 @@ class _RideSwipeBarState extends State<RideSwipeBar> {
         ],
         LayoutBuilder(
           builder: (context, box) {
-            final max = (box.maxWidth - 64).clamp(120.0, 400.0);
+            final width = box.maxWidth.isFinite && box.maxWidth > 0
+                ? box.maxWidth
+                : MediaQuery.sizeOf(context).width - 40;
+            final max = (width - 72).clamp(140.0, 520.0);
             return Container(
-              height: 64,
+              height: 72,
               decoration: BoxDecoration(
-                color: const Color(0xFFECFDF3),
+                color: Evuddy.ink,
                 borderRadius: BorderRadius.circular(99),
-                border: Border.all(color: const Color(0xFFBBF7D0)),
               ),
               child: Stack(
                 alignment: Alignment.centerLeft,
                 children: [
                   Center(
-                    child: Text(
-                      widget.busy ? 'Please wait…' : widget.label,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13,
-                        letterSpacing: 0.8,
-                        color: Evuddy.greenDeep,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 64),
+                      child: Text(
+                        widget.busy ? 'Please wait…' : widget.label,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          letterSpacing: 0.4,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                   Positioned(
-                    left: 6 + _x,
-                    top: 6,
+                    left: 8 + _x,
+                    top: 8,
                     child: GestureDetector(
                       onHorizontalDragUpdate: widget.busy
                           ? null
@@ -1240,7 +1251,7 @@ class _RideSwipeBarState extends State<RideSwipeBar> {
                       onHorizontalDragEnd: widget.busy
                           ? null
                           : (_) async {
-                              final done = _x >= max * 0.82;
+                              final done = _x >= max * 0.72;
                               setState(() => _x = 0);
                               if (done) {
                                 HapticFeedback.mediumImpact();
@@ -1248,22 +1259,17 @@ class _RideSwipeBarState extends State<RideSwipeBar> {
                               }
                             },
                       child: Container(
-                        width: 52,
-                        height: 52,
+                        width: 56,
+                        height: 56,
                         decoration: const BoxDecoration(
-                          color: Evuddy.green,
+                          color: Evuddy.rapidoYellow,
                           shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0x3316A34A),
-                              blurRadius: 10,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
                         ),
-                        child: const Icon(
-                          Icons.chevron_right_rounded,
-                          color: Colors.white,
+                        child: Icon(
+                          widget.busy
+                              ? Icons.hourglass_top_rounded
+                              : Icons.chevron_right_rounded,
+                          color: Evuddy.ink,
                           size: 32,
                         ),
                       ),
