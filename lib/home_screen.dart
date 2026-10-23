@@ -65,11 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _book({FareOffer? fare}) async {
     if (registrationDraft.phoneVerified && registrationDraft.canBook) {
-      if (registrationDraft.hasLiveBooking) {
-        Navigator.push(context, evuddyRoute(const RideReadyScreen()));
-        return;
-      }
-      if (registrationDraft.showRideWorkspace) {
+      if (registrationDraft.showRideWorkspace || registrationDraft.activeBooking != null) {
         await registrationDraft.startFreshBooking();
       }
       if (fare != null) {

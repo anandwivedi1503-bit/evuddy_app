@@ -665,7 +665,9 @@ void main() {
         'rideEndOTP': '9999',
       });
     expect(draft.hasLiveBooking, isFalse);
-    expect(draft.showRideWorkspace, isTrue);
+    draft.applyActiveBooking(draft.activeBooking);
+    expect(draft.chosenPlan, 'rto');
+    expect(draft.hasLiveBooking, isFalse);
     await draft.startFreshBooking();
     expect(draft.showRideWorkspace, isFalse);
     expect(draft.activeBooking, isNull);

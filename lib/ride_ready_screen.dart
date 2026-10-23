@@ -15,8 +15,10 @@ import 'widgets/booking_ui.dart';
 import 'widgets/chrome.dart';
 
 class RideReadyScreen extends StatefulWidget {
-  const RideReadyScreen({super.key, this.showBack = true});
+  const RideReadyScreen({super.key, this.showBack = true, this.startNew = false});
   final bool showBack;
+  /// From Normal / Rent to Own — do not reopen the previous booking.
+  final bool startNew;
 
   @override
   State<RideReadyScreen> createState() => _RideReadyScreenState();
@@ -122,14 +124,22 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   @override
   void initState() {
     super.initState();
-    booking = registrationDraft.activeBooking;
+    booking = widget.startNew ? null : registrationDraft.activeBooking;
+    if (booking != null && (booking!.completed || booking!.cancelled)) {
+      booking = null;
+    }
     final d = registrationDraft;
     rtoNominee = TextEditingController(text: d.rtoNomineeName);
     rtoGuardian = TextEditingController(text: d.rtoGuardianName);
     rtoEmergency = TextEditingController(text: d.rtoEmergencyPhone);
     rtoAddress = TextEditingController(text: d.rtoAddress);
     rtoOccupation = TextEditingController(text: d.rtoOccupation);
-    if (booking != null && booking!.bookingId.isNotEmpty) wizard = 4;
+    if (!widget.startNew &&
+        booking != null &&
+        booking!.bookingId.isNotEmpty &&
+        !booking!.completed) {
+      wizard = 4;
+    }
     _load();
     _poll = Timer.periodic(const Duration(seconds: 5), (_) {
       final b = booking;
@@ -211,6 +221,31 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     });
   }
 
+  RiderBooking? _attachMine(RiderBooking? latest) {
+    if (latest == null || latest.bookingId.isEmpty) {
+      if (!widget.startNew) registrationDraft.applyActiveBooking(null);
+      if (widget.startNew &&
+          booking != null &&
+          booking!.bookingId.isNotEmpty &&
+          !booking!.completed) {
+        return booking;
+      }
+      return null;
+    }
+    if (latest.completed || latest.cancelled) {
+      if (widget.startNew) return null;
+      registrationDraft.applyActiveBooking(latest);
+      return latest;
+    }
+    if (widget.startNew) {
+      final current = booking;
+      if (current == null || current.bookingId.isEmpty) return null;
+      if (current.bookingId != latest.bookingId) return current;
+    }
+    registrationDraft.applyActiveBooking(latest);
+    return latest;
+  }
+
   Future<void> _load({bool silent = false}) async {
     if (!silent) {
       setState(() {
@@ -251,15 +286,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       if (token != null) {
         try {
           final latest = await EvuddyApi.myBooking(token);
-          if (latest != null) {
-            mine = latest;
-            registrationDraft.applyActiveBooking(latest);
-          } else {
-            registrationDraft.applyActiveBooking(null);
-            mine = null;
-          }
+          mine = _attachMine(latest);
         } catch (_) {
-          if (mine != null) registrationDraft.applyActiveBooking(mine);
+          if (mine != null && !widget.startNew) {
+            registrationDraft.applyActiveBooking(mine);
+          }
         }
         try {
           tickets = await EvuddyApi.myTickets(token);
@@ -276,11 +307,15 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             !atHub.any((v) => v.vehicleId == selected!.vehicleId)) {
           selected = atHub.isEmpty ? null : atHub.first;
         }
+        final jumpPay = mine != null &&
+            mine.bookingId.isNotEmpty &&
+            !mine.completed &&
+            !mine.cancelled &&
+            (!widget.startNew ||
+                (booking != null && booking!.bookingId == mine.bookingId));
         booking = mine;
         loading = false;
-        if (mine != null && mine.bookingId.isNotEmpty && !mine.completed) {
-          wizard = 4;
-        }
+        if (jumpPay) wizard = 4;
         _fillAmount(mine);
       });
     } catch (e) {
