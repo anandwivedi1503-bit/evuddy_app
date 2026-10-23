@@ -179,6 +179,14 @@ void main() {
     );
   });
 
+  test('rider lookup tries 10-digit and +91 forms', () {
+    expect(
+      EvuddyApi.riderPhoneKeys('9876543210'),
+      ['9876543210', '+919876543210', '919876543210'],
+    );
+    expect(EvuddyApi.riderPhoneKeys('+91 98765 43210').first, '9876543210');
+  });
+
   test('parses wallet from rider lookup and PaymentStart flags', () {
     final lookup = RiderLookup.fromData({
       'riderId': 'R1',
@@ -665,7 +673,9 @@ void main() {
         'rideEndOTP': '9999',
       });
     expect(draft.hasLiveBooking, isFalse);
-    expect(draft.showRideWorkspace, isTrue);
+    draft.applyActiveBooking(draft.activeBooking);
+    expect(draft.chosenPlan, 'rto');
+    expect(draft.hasLiveBooking, isFalse);
     await draft.startFreshBooking();
     expect(draft.showRideWorkspace, isFalse);
     expect(draft.activeBooking, isNull);

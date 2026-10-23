@@ -107,29 +107,83 @@ class EvuddyApi {
     }
   }
 
-  static Future<RiderLookup> lookupRider({
-    required String phone,
-    required String idToken,
-  }) async {
-    final r = await _get(
-      _u('/api/riders', {'phone': phone}),
-      headers: {'Authorization': 'Bearer $idToken'},
-      timeout: const Duration(seconds: 15),
-    );
+  static List<String> riderPhoneKeys(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    final ten = digits.length >= 10 ? digits.substring(digits.length - 10) : digits;
+    if (ten.isEmpty) return const [];
+    return [ten, '+91$ten', '91$ten'];
+  }
+
+  static RiderLookup? _parseRiderLookup(http.Response r) {
     final j = _json(r);
-    if (r.statusCode == 404 || j['errorCode'] == 'RIDER_NOT_FOUND') {
-      return const RiderLookup.missing();
+    if (r.statusCode == 401) {
+      throw ApiException(_message(j, 'Sign in again with your registered mobile.'));
     }
     if (j['success'] == true && j['data'] is Map) {
       return RiderLookup.fromData(j['data'] as Map, message: j['message']?.toString());
     }
+    if (j['success'] == true && j['data'] is List) {
+      final rows = (j['data'] as List).whereType<Map>();
+      if (rows.isNotEmpty) {
+        return RiderLookup.fromData(rows.first, message: j['message']?.toString());
+      }
+    }
     if (j['success'] == true && (j['riderId'] != null || j['approvalStatus'] != null)) {
       return RiderLookup.fromData(j, message: j['message']?.toString());
     }
-    return RiderLookup(
-      found: false,
-      message: j['message']?.toString() ?? 'Could not look up this number.',
-    );
+    if (r.statusCode == 404 || j['errorCode'] == 'RIDER_NOT_FOUND') {
+      return RiderLookup(found: false, message: j['message']?.toString() ?? 'Rider not found.');
+    }
+    return null;
+  }
+
+  static Future<RiderLookup> lookupRider({
+    required String phone,
+    required String idToken,
+  }) async {
+    final headers = _auth(idToken);
+    RiderLookup? missing;
+    for (final key in riderPhoneKeys(phone)) {
+      for (var attempt = 0; attempt < 3; attempt++) {
+        final r = await _get(
+          _u('/api/riders', {
+            'phone': key,
+            'firebaseIdToken': idToken,
+          }),
+          headers: headers,
+          timeout: const Duration(seconds: 15),
+        );
+        final parsed = _parseRiderLookup(r);
+        if (parsed != null && parsed.found) return parsed;
+        if (parsed != null && !parsed.found) missing = parsed;
+        if (attempt < 2) {
+          await Future<void>.delayed(Duration(milliseconds: 400 * (attempt + 1)));
+        }
+      }
+    }
+    try {
+      final mine = await myBooking(idToken);
+      if (mine != null && mine.bookingId.isNotEmpty) {
+        return RiderLookup(
+          found: true,
+          approvalStatus: 'Approved',
+          bookingEnabled: true,
+          message: 'Loaded from your open booking ${mine.bookingId}.',
+        );
+      }
+    } catch (_) {}
+    try {
+      final history = await bookingHistory(idToken);
+      if (history.isNotEmpty) {
+        return const RiderLookup(
+          found: true,
+          approvalStatus: 'Approved',
+          bookingEnabled: true,
+          message: 'Loaded from your ride history on evuddy.com.',
+        );
+      }
+    } catch (_) {}
+    return missing ?? const RiderLookup.missing();
   }
 
   static Future<String> uploadFile({

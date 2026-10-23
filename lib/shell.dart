@@ -4,7 +4,6 @@ import 'account_screen.dart';
 import 'book_ev_screen.dart';
 import 'confirm_mobile_screen.dart';
 import 'home_screen.dart';
-import 'ride_ready_screen.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 
@@ -66,15 +65,10 @@ class _RiderShellState extends State<RiderShell> with WidgetsBindingObserver {
     final session = registrationDraft;
     final bookChild = !session.phoneVerified
         ? const ConfirmMobileScreen()
-        : (session.showRideWorkspace
-            ? RideReadyScreen(
-                key: ValueKey('live-${session.activeBooking?.bookingId}'),
-                showBack: false,
-              )
-            : BookEvScreen(
-                key: ValueKey('plans-${session.phone}'),
-                showBack: false,
-              ));
+        : BookEvScreen(
+            key: ValueKey('plans-${session.phone}'),
+            showBack: false,
+          );
     return Scaffold(
       backgroundColor: Colors.white,
       body: IndexedStack(

@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
 import 'confirm_mobile_screen.dart';
 import 'ride_ready_screen.dart';
 import 'state/registration_draft.dart';
 import 'submitted_screen.dart';
+import 'theme/evuddy.dart';
 import 'widgets/booking_ui.dart';
 import 'widgets/chrome.dart';
 
@@ -148,12 +150,22 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
       return;
     }
     setState(() => error = null);
+    final plan = registrationDraft.chosenPlan ?? 'rental';
+    final duration = registrationDraft.chosenDuration;
+    if (!registrationDraft.hasLiveBooking) {
+      await registrationDraft.startFreshBooking();
+    }
     await (registrationDraft
+          ..chosenPlan = plan
+          ..chosenDuration = duration
           ..chosenCity = city
           ..chosenHubId = hubId)
         .persist();
     if (!mounted) return;
-    Navigator.push(context, evuddyRoute(const RideReadyScreen()));
+    Navigator.push(
+      context,
+      evuddyRoute(const RideReadyScreen(startNew: true)),
+    );
   }
 
   void _pickPlan(String plan) {
@@ -180,9 +192,6 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
-    if (canBook && registrationDraft.showRideWorkspace) {
-      return RideReadyScreen(showBack: widget.showBack);
-    }
     final plan = registrationDraft.chosenPlan;
     return BookStage(
       showBack: widget.showBack,
@@ -206,6 +215,34 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
             phone: registrationDraft.phoneDisplay,
             riderId: registrationDraft.riderId,
             email: registrationDraft.email,
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (registrationDraft.hasLiveBooking &&
+            registrationDraft.activeBooking != null) ...[
+          SurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Open trip ${registrationDraft.activeBooking!.bookingId}',
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'This number still has a trip on file. Resume it, or pick Normal / Rent to Own below for a new booking.',
+                  style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, height: 1.4),
+                ),
+                const SizedBox(height: 10),
+                EvuddyGhostButton(
+                  label: 'Resume last trip',
+                  onPressed: () => Navigator.push(
+                    context,
+                    evuddyRoute(const RideReadyScreen()),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
         ],

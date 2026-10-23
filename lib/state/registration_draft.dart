@@ -138,16 +138,17 @@ class RegistrationDraft {
     final b = activeBooking;
     if (b == null || b.bookingId.isEmpty) return false;
     if (b.completed || b.cancelled) return false;
-    if (b.inRide || b.readyForPickup || b.hasPickupOtp || b.pickupOtpVerified) {
+    if (b.inRide || b.readyForPickup || b.pickupOtpVerified) {
+      return true;
+    }
+    if (b.hasPickupOtp && !b.completed && !b.cancelled) {
       return true;
     }
     final pay = b.paymentStatus.toLowerCase();
     if (pay == 'pending' || pay == 'partial' || pay.contains('pending')) {
       return true;
     }
-    final status = b.rideStatus.toLowerCase();
-    if (status.isEmpty && b.mongoId.isEmpty) return false;
-    return status.isNotEmpty;
+    return false;
   }
 
   /// Keep the thank-you workspace until the rider starts a new Normal / RTO booking.
@@ -182,6 +183,10 @@ class RegistrationDraft {
     }
     if (!mine.completed && !mine.cancelled) {
       dismissedCompleted = false;
+    } else {
+      persist();
+      riderSessionTick.value++;
+      return;
     }
     if (mine.isRentToOwn) {
       chosenPlan = 'rto';
