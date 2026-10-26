@@ -47,8 +47,13 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   bool rtoAgreed = registrationDraft.rtoAgreed;
   String helpCategory = 'BOOKING_ISSUE';
   int reviewStars = 5;
+  int vehicleReviewStars = 5;
+  int hubReviewStars = 5;
+  bool wouldRecommendReview = true;
   final reviewComment = TextEditingController();
   String? reviewStatus;
+  RideReview? savedReview;
+  bool _recoverPayAttempted = false;
   String? helpStatus;
   List<SupportTicket> tickets = [];
   Timer? _poll;
@@ -246,6 +251,69 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     return latest;
   }
 
+  RiderBooking? _resolveMine(MineBookings snap) {
+    final active = snap.active;
+    if (active != null && active.isOpenRide) {
+      return _attachMine(active);
+    }
+    final last = snap.lastCompleted;
+    if (last != null && RiderBooking.isRecentCompleted(last)) {
+      final same = booking != null &&
+          (booking!.mongoId == last.mongoId || booking!.bookingId == last.bookingId);
+      if (registrationDraft.dismissedCompleted && !same) {
+        return _attachMine(null);
+      }
+      if (widget.startNew && !same) return null;
+      registrationDraft.applyActiveBooking(last);
+      return last;
+    }
+    return _attachMine(active);
+  }
+
+  Future<void> _loadReviews(String token, String bookingId) async {
+    try {
+      final rows = await EvuddyApi.myReviews(token);
+      RideReview? hit;
+      for (final row in rows) {
+        if (row.bookingId == bookingId) {
+          hit = row;
+          break;
+        }
+      }
+      if (hit == null) return;
+      savedReview = hit;
+      reviewStars = hit.stars;
+      vehicleReviewStars = hit.vehicleStars;
+      hubReviewStars = hit.hubStars;
+      wouldRecommendReview = hit.wouldRecommend;
+      if (hit.comment.isNotEmpty) reviewComment.text = hit.comment;
+    } catch (_) {}
+  }
+
+  Future<void> _maybeRecoverPayment(String token, RiderBooking b) async {
+    if (_recoverPayAttempted) return;
+    if (b.receivedAmount > 0.009 || b.pendingAmount <= 0.009) return;
+    if (!b.isOpenRide) return;
+    _recoverPayAttempted = true;
+    try {
+      final recovered = await EvuddyApi.verifyPayment(
+        idToken: token,
+        bookingMongoId: b.mongoId,
+        recover: true,
+      );
+      registrationDraft.applyActiveBooking(recovered);
+      if (mounted) {
+        setState(() {
+          booking = recovered;
+          note = recovered.message.isNotEmpty
+              ? recovered.message
+              : 'Payment found on Razorpay and attached to this booking.';
+          _fillAmount(recovered);
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> _load({bool silent = false}) async {
     if (!silent) {
       setState(() {
@@ -285,8 +353,14 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       final token = await _token(force: !silent, prompt: false);
       if (token != null) {
         try {
-          final latest = await EvuddyApi.myBooking(token);
-          mine = _attachMine(latest);
+          final snap = await EvuddyApi.fetchMine(token);
+          mine = _resolveMine(snap);
+          if (mine != null) {
+            await _maybeRecoverPayment(token, mine!);
+            if (mine!.completed) {
+              await _loadReviews(token, mine!.bookingId);
+            }
+          }
         } catch (_) {
           if (mine != null && !widget.startNew) {
             registrationDraft.applyActiveBooking(mine);
@@ -316,6 +390,10 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         booking = mine;
         loading = false;
         if (jumpPay) wizard = 4;
+        if (mine != null && mine.completed) {
+          note =
+              'Thank you for riding with EVUDDY. The yard has taken the scooter back.';
+        }
         _fillAmount(mine);
       });
     } catch (e) {
@@ -352,18 +430,24 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       reviewStatus = null;
     });
     try {
-      await _withToken(
+      final saved = await _withToken(
         (token) => EvuddyApi.submitReview(
           idToken: token,
           bookingId: id,
           stars: reviewStars,
+          vehicleStars: vehicleReviewStars,
+          hubStars: hubReviewStars,
           comment: comment,
+          wouldRecommend: wouldRecommendReview,
         ),
       );
       if (!mounted) return;
       setState(() {
         busy = false;
-        reviewStatus = 'Review saved on evuddy.com. Thank you.';
+        savedReview = saved;
+        reviewStatus = saved?.status == 'Published'
+            ? 'Published on evuddy.com. Thank you.'
+            : 'Review saved on evuddy.com. Thank you.';
       });
     } catch (e) {
       if (!mounted) return;
@@ -664,7 +748,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         verified = paid;
       }
       token = registrationDraft.firebaseIdToken ?? token;
-      final mine = await EvuddyApi.myBooking(token);
+      final snap = await EvuddyApi.fetchMine(token);
+      final mine = snap.active ?? snap.lastCompleted;
       if (mine != null) verified = verified.mergedWith(mine);
       registrationDraft.applyActiveBooking(verified);
       if (pay >= 1) {
@@ -823,6 +908,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           rideEndOtp: ended.rideEndOtp.isNotEmpty ? ended.rideEndOtp : null,
           rideStatus: ended.rideStatus.isNotEmpty ? ended.rideStatus : null,
           message: ended.message,
+          pickupOtp: start ? '' : null,
+          pickupOtpVerified: start ? true : null,
         );
         registrationDraft.applyActiveBooking(mine);
       }
@@ -835,7 +922,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       setState(() {
         booking = mine ?? booking;
         busy = false;
-        note = ended.message;
+        note = start
+            ? 'Ride started. Pay any remaining amount before you return.'
+            : (ended.message.isNotEmpty
+                ? ended.message
+                : 'Ride end OTP is ready. Tell this to the yard to return the scooter.');
         _fillAmount(mine ?? booking);
       });
     } catch (e) {
@@ -906,25 +997,35 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       step: b != null && b.bookingId.isNotEmpty ? null : step,
       of: 4,
       kicker: b != null && b.bookingId.isNotEmpty
-          ? (b.bookingId.isEmpty ? 'BOOKING' : b.bookingId)
+          ? (b.completed
+              ? 'RIDE COMPLETE'
+              : b.paymentSettled
+                  ? 'BOOKING CONFIRMED'
+                  : remainingPay
+                      ? 'REMAINING PAYMENT'
+                      : 'SECURE PAYMENT')
           : (wizard == 3 ? 'BOOKING REVIEW' : (rental ? 'CHOOSE SCOOTER' : 'RENT TO OWN')),
       title: b != null && b.bookingId.isNotEmpty
           ? (b.completed
-              ? 'Ride complete'
-              : remainingPay
-                  ? 'Pay remaining'
-                  : (b.due <= 0.009 && b.hasPickupOtp
-                      ? "You're booked"
-                      : 'Pay to confirm'))
+              ? 'Thank you for riding with EVUDDY'
+              : b.paymentSettled
+                  ? "You're booked"
+                  : remainingPay
+                      ? 'Pay the remaining amount'
+                      : 'Complete your payment')
           : (wizard == 3
               ? 'Review your booking'
               : (rental ? 'Pick duration and scooter' : '${CatalogRates.rtoMonths}-month ownership')),
       subtitle: b != null && b.bookingId.isNotEmpty
-          ? (b.pickupOtpVerified
-              ? 'Yard confirmed pickup. Slide to start, then pay any remaining on Razorpay.'
-              : (remainingPay
-                  ? 'Razorpay UPI or card. Same booking as evuddy.com.'
-                  : 'Pay from ₹1 for pickup OTP. Remaining can wait until return.'))
+          ? (b.completed
+              ? 'The yard has taken the scooter back. Rate this trip below. Book another ride when you are ready.'
+              : b.paymentSettled
+                  ? 'Payment is complete. Use the OTP below at the selected yard — same as evuddy.com/book-bike.'
+                  : remainingPay
+                      ? 'Pickup OTP is already issued. Razorpay will charge only the remaining due.'
+                      : (b.receivedAmount > 0.009
+                          ? 'Pay any remaining on Razorpay or as cash at the yard before ride-end OTP.'
+                          : 'Pay any amount from ₹1 with Razorpay to get pickup OTP. Remaining can wait until return.'))
           : (wizard == 3
               ? 'GST included fare + refundable deposit. Then Razorpay — same as evuddy.com.'
               : (rental
@@ -1133,8 +1234,55 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     );
   }
 
+  String _hubLabel(RiderBooking b) {
+    if (hub != null && hub!.name.isNotEmpty) return hub!.name;
+    if (b.pickupHubName.isNotEmpty) return b.pickupHubName;
+    if (b.startHub.isNotEmpty) return b.startHub;
+    return 'the yard';
+  }
+
+  Widget _ledgerTile(String label, String value, Color tone) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          color: tone.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: tone.withOpacity(0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label.toUpperCase(),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+                color: Evuddy.muted,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: tone,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   List<Widget> _bookingCards(RiderBooking b) {
     final due = _remainingCharge(b);
+    final payable = b.paymentDue > 0.009
+        ? b.paymentDue
+        : (catalogPayable.toDouble() > 0 ? catalogPayable.toDouble() : due + b.receivedAmount);
+    final pendingDisplay = due > 0.009 ? due : 0.0;
     return [
       Container(
         width: double.infinity,
@@ -1186,30 +1334,88 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           ],
         ),
       ),
-      if (b.hasPickupOtp && !b.pickupOtpVerified) ...[
+      if (b.receivedAmount > 0.009) ...[
         const SizedBox(height: 12),
-        OtpReveal(
-          label: 'PICKUP OTP',
-          code: b.pickupOtp,
-          hint: 'Show this at the hub. The yard enters it — same as evuddy.com.',
+        Row(
+          children: [
+            _ledgerTile('Total', CatalogRates.inr(payable), const Color(0xFF16A34A)),
+            const SizedBox(width: 8),
+            _ledgerTile('Paid', CatalogRates.inr(b.receivedAmount), const Color(0xFF16A34A)),
+            const SizedBox(width: 8),
+            _ledgerTile('Pending', CatalogRates.inr(pendingDisplay), const Color(0xFFF59E0B)),
+          ],
         ),
       ],
-      if (b.pickupOtpVerified && !b.inRide && !b.completed) ...[
+      if (!b.completed && b.receivedAmount > 0.009) ...[
+        if (b.hasPickupOtp && !b.pickupOtpVerified) ...[
+          const SizedBox(height: 12),
+          OtpReveal(
+            label: 'PICKUP OTP — tell this to the yard',
+            code: b.pickupOtp,
+            hint: 'Tell this OTP at ${_hubLabel(b)}. After the yard saves it, swipe Ride started below.',
+          ),
+          const SizedBox(height: 8),
+          EvuddyGhostButton(label: 'Resend pickup OTP SMS', onPressed: busy ? null : _resendOtp),
+        ] else if (b.pickupOtpVerified && !b.inRide) ...[
+          const SizedBox(height: 12),
+          const InfoNote(
+            text:
+                'Yard confirmed pickup and unlocked the scooter. Slide to start your ride.',
+          ),
+        ] else if (!b.hasPickupOtp && !b.pickupOtpVerified && b.receivedAmount > 0.009) ...[
+          const SizedBox(height: 12),
+          const InfoNote(
+            text:
+                'Pickup OTP is being prepared. Keep this page open — it appears here for the yard.',
+          ),
+        ],
+        if (b.pickupOtpVerified && !b.inRide) ...[
+          const SizedBox(height: 12),
+          RideSwipeBar(
+            label: 'Slide to start ride',
+            hint: 'Yard has saved your pickup OTP. Slide to mark the ride as started.',
+            busy: busy,
+            onConfirm: () => _ride(true),
+          ),
+        ],
+        if (b.inRide && due > 0.009) ...[
+          const SizedBox(height: 12),
+          InfoNote(
+            text: b.isRentToOwn
+                ? 'Today’s Rent to Own ${CatalogRates.inr(due)} (GST included) is due. Pay here or as cash at the yard. Keep the scooter — no ride-end OTP.'
+                : 'Remaining ${CatalogRates.inr(due)} must be paid here or as cash at the yard before you can swipe Ride end. Paying remaining does not create the OTP yet.',
+          ),
+        ],
+        if (b.rideEndOtp.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          OtpReveal(
+            label: 'RIDE END OTP — tell this to the yard on return',
+            code: b.rideEndOtp,
+            hint:
+                'Same as pickup: you generate it, the yard enters it, then the scooter is taken in.',
+          ),
+          const SizedBox(height: 8),
+          EvuddyGhostButton(label: 'Resend OTP SMS', onPressed: busy ? null : _resendOtp),
+        ] else if (b.inRide && due <= 0.009 && !b.isRentToOwn) ...[
+          const SizedBox(height: 12),
+          RideSwipeBar(
+            label: 'Slide to end ride',
+            hint:
+                'Remaining is ₹0. You are at the yard. Slide to generate ride-end OTP — same moment as pickup OTP after first pay.',
+            busy: busy,
+            onConfirm: () => _ride(false),
+          ),
+        ] else if (b.inRide && b.isRentToOwn && due <= 0.009) ...[
+          const SizedBox(height: 12),
+          const InfoNote(
+            text:
+                'Today’s Rent to Own day is paid. Keep the scooter. Tomorrow’s GST-included fare will appear here when due. No ride-end OTP.',
+          ),
+        ],
+      ] else if (!b.completed && b.receivedAmount <= 0.009) ...[
         const SizedBox(height: 12),
-        RideSwipeBar(
-          label: 'Slide to start ride',
-          hint: 'Yard accepted pickup OTP. Slide here after cash or UPI is saved.',
-          busy: busy,
-          onConfirm: () => _ride(true),
-        ),
-      ],
-      if (b.inRide && due <= 0.009 && b.rideEndOtp.isEmpty && !b.isRentToOwn) ...[
-        const SizedBox(height: 12),
-        RideSwipeBar(
-          label: 'Slide to end ride',
-          hint: 'Remaining is ₹0 after cash / UPI. Slide to generate ride-end OTP.',
-          busy: busy,
-          onConfirm: () => _ride(false),
+        const InfoNote(
+          text: 'Reserve is holding the scooter. Pay at least ₹1 to get pickup OTP.',
         ),
       ],
       if (b.completed) ...[
@@ -1219,63 +1425,23 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           depositLabel: registrationDraft.depositLabel,
         ),
         const SizedBox(height: 12),
-        SurfaceCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('RATE THIS RIDE', style: Theme.of(context).textTheme.labelSmall),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  for (var i = 1; i <= 5; i++)
-                    IconButton(
-                      onPressed: () => setState(() => reviewStars = i),
-                      icon: Icon(
-                        i <= reviewStars ? Icons.star_rounded : Icons.star_outline_rounded,
-                        color: const Color(0xFFF59E0B),
-                      ),
-                    ),
-                ],
-              ),
-              TextField(
-                controller: reviewComment,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'How was the scooter and hub? (optional, 8+ characters)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-              const SizedBox(height: 10),
-              EvuddyButton(
-                sun: true,
-                label: busy ? 'Saving…' : 'Save review',
-                onPressed: busy ? null : _submitReview,
-              ),
-              if (reviewStatus != null) ...[
-                const SizedBox(height: 8),
-                Text(reviewStatus!, style: GoogleFonts.plusJakartaSans(fontSize: 13)),
-              ],
-            ],
-          ),
+        _RideReviewPanel(
+          saved: savedReview,
+          busy: busy,
+          reviewStars: reviewStars,
+          vehicleStars: vehicleReviewStars,
+          hubStars: hubReviewStars,
+          wouldRecommend: wouldRecommendReview,
+          comment: reviewComment,
+          status: reviewStatus,
+          onOverall: (n) => setState(() => reviewStars = n),
+          onVehicle: (n) => setState(() => vehicleReviewStars = n),
+          onHub: (n) => setState(() => hubReviewStars = n),
+          onRecommend: (v) => setState(() => wouldRecommendReview = v),
+          onSubmit: _submitReview,
         ),
       ],
-      if (b.rideEndOtp.isNotEmpty) ...[
-        const SizedBox(height: 12),
-        OtpReveal(
-          label: 'RIDE END OTP',
-          code: b.rideEndOtp,
-          hint: 'Tell this to the yard to return the scooter. Keep this screen open.',
-        ),
-      ],
-      if (b.inRide && b.due > 0.009) ...[
-        const SizedBox(height: 12),
-        InfoNote(
-          text: b.isRentToOwn
-              ? 'Today’s Rent to Own ${CatalogRates.inr(b.due)} (GST included) is due. Pay here. Keep the scooter — no ride-end OTP.'
-              : 'Remaining ${CatalogRates.inr(b.due)} must be paid on Razorpay before you can slide to end the ride.',
-        ),
-      ],
-      if (b.due > 0.009 || remainingPay) ...[
+      if (!b.completed && (b.due > 0.009 || remainingPay)) ...[
         const SizedBox(height: 16),
         if (remainingPay)
           SurfaceCard(
@@ -1291,8 +1457,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                 const SizedBox(height: 6),
                 Text(
                   b.isRentToOwn
-                      ? 'Rent to Own must be paid in full. Razorpay UPI or card — same as the website.'
-                      : 'Loaded from this booking. Razorpay will charge only the remaining due.',
+                      ? 'Rent to Own must be paid in full. Razorpay UPI or card — same as evuddy.com.'
+                      : 'Remaining due only. This is the amount Razorpay will charge now.',
                   style: GoogleFonts.plusJakartaSans(
                     color: Evuddy.muted,
                     fontWeight: FontWeight.w600,
@@ -1426,18 +1592,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       );
     }
     final payDue = b.due > 0.009 || remainingPay;
-    final waitForStart = b.pickupOtpVerified && !b.inRide;
     return Column(
       children: [
-        if (waitForStart) ...[
-          RideSwipeBar(
-            label: 'Slide to start ride',
-            hint: 'Yard has saved your pickup OTP. Slide to start — then pay remaining on Razorpay.',
-            busy: busy,
-            onConfirm: () => _ride(true),
-          ),
-          const SizedBox(height: 10),
-        ] else if (b.hasPickupOtp && !b.pickupOtpVerified) ...[
+        if (b.hasPickupOtp && !b.pickupOtpVerified) ...[
           const SizedBox(height: 8),
           EvuddyGhostButton(label: 'Resend pickup OTP SMS', onPressed: _resendOtp),
           const SizedBox(height: 8),
@@ -1469,22 +1626,6 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             'Wallet is EVUDDY credit (returned deposits and admin top-ups), not UPI. Razorpay is the online path — same as the website. No PhonePe.',
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Evuddy.muted, height: 1.35),
-          ),
-        ],
-        if (b.inRide && b.due <= 0.009 && b.rideEndOtp.isEmpty && !b.isRentToOwn) ...[
-          const SizedBox(height: 12),
-          RideSwipeBar(
-            label: 'Slide to end ride',
-            hint: 'Remaining is ₹0. You are at the yard. Slide to generate ride-end OTP.',
-            busy: busy,
-            onConfirm: () => _ride(false),
-          ),
-        ],
-        if (b.inRide && b.isRentToOwn && b.due <= 0.009) ...[
-          const SizedBox(height: 8),
-          const InfoNote(
-            text:
-                'Today’s Rent to Own day is paid. Keep the scooter. No ride-end OTP.',
           ),
         ],
         if (!payDue && !b.hasPickupOtp && !b.readyForPickup && !b.inRide) ...[
@@ -1673,7 +1814,9 @@ class _ThankYouCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${booking.bookingId} is complete. ${booking.isRentToOwn ? "Keep the scooter — Rent to Own has no return OTP." : "The yard has your return. Deposit: $depositLabel."}',
+            booking.isRentToOwn
+                ? '${booking.bookingId} is complete. Keep the scooter — Rent to Own has no return OTP.'
+                : 'The yard has taken the scooter back. Your trip is closed on our books. Security deposit: $depositLabel — ops refunds it on the original Razorpay payment when due.',
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(
               color: Colors.white70,
@@ -1715,6 +1858,164 @@ class _ReviewRow extends StatelessWidget {
               style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RideReviewPanel extends StatelessWidget {
+  const _RideReviewPanel({
+    required this.saved,
+    required this.busy,
+    required this.reviewStars,
+    required this.vehicleStars,
+    required this.hubStars,
+    required this.wouldRecommend,
+    required this.comment,
+    required this.status,
+    required this.onOverall,
+    required this.onVehicle,
+    required this.onHub,
+    required this.onRecommend,
+    required this.onSubmit,
+  });
+
+  final RideReview? saved;
+  final bool busy;
+  final int reviewStars;
+  final int vehicleStars;
+  final int hubStars;
+  final bool wouldRecommend;
+  final TextEditingController comment;
+  final String? status;
+  final ValueChanged<int> onOverall;
+  final ValueChanged<int> onVehicle;
+  final ValueChanged<int> onHub;
+  final ValueChanged<bool> onRecommend;
+  final VoidCallback onSubmit;
+
+  Widget _stars(String label, int value, ValueChanged<int> onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.1,
+            color: Evuddy.muted,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            for (var i = 1; i <= 5; i++)
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                onPressed: () => onChanged(i),
+                icon: Icon(
+                  i <= value ? Icons.star_rounded : Icons.star_outline_rounded,
+                  color: const Color(0xFFF59E0B),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (saved != null && saved!.saved) {
+      final hit = saved!;
+      return SurfaceCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('YOUR EVUDDY RATING', style: Theme.of(context).textTheme.labelSmall),
+            const SizedBox(height: 8),
+            Text(
+              '★' * hit.stars,
+              style: GoogleFonts.plusJakartaSans(fontSize: 28, fontWeight: FontWeight.w800),
+            ),
+            Text(
+              hit.status == 'Published'
+                  ? 'Published on evuddy.com'
+                  : hit.status == 'Pending'
+                      ? 'With the yard team for a quick look'
+                      : (hit.status.isEmpty ? 'Saved' : hit.status),
+              style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
+            ),
+            if (hit.comment.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(hit.comment, style: GoogleFonts.plusJakartaSans(height: 1.45)),
+            ],
+            if (hit.staffReply.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF4FFF8),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  'EVUDDY · ${hit.staffReply}',
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('HOW WAS THIS RIDE?', style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 6),
+          Text(
+            'Rate the scooter and the yard. 4–5 star notes can appear on evuddy.com.',
+            style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, height: 1.4, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          _stars('Overall', reviewStars, onOverall),
+          const SizedBox(height: 8),
+          _stars('Scooter', vehicleStars, onVehicle),
+          const SizedBox(height: 8),
+          _stars('Hub / yard', hubStars, onHub),
+          const SizedBox(height: 10),
+          TextField(
+            controller: comment,
+            maxLines: 3,
+            maxLength: 500,
+            decoration: InputDecoration(
+              hintText: 'Optional: pickup, range, and how the yard treated you',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            value: wouldRecommend,
+            onChanged: onRecommend,
+            title: Text(
+              'I would recommend EVUDDY',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
+          ),
+          EvuddyButton(
+            sun: true,
+            label: busy ? 'Saving…' : 'Submit rating',
+            onPressed: busy ? null : onSubmit,
+          ),
+          if (status != null) ...[
+            const SizedBox(height: 8),
+            Text(status!, style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+          ],
         ],
       ),
     );

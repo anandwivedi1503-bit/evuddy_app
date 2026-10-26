@@ -315,7 +315,7 @@ class EvuddyApi {
         'Authorization': 'Bearer $idToken',
       };
 
-  static Future<RiderBooking?> myBooking(String idToken) async {
+  static Future<MineBookings> fetchMine(String idToken) async {
     final r = await _get(
       _u('/api/bookings/mine'),
       headers: _auth(idToken),
@@ -326,8 +326,28 @@ class EvuddyApi {
       throw ApiException(_message(j, 'Unable to load your booking.'));
     }
     final data = j['data'];
-    if (data is! Map) return null;
-    return RiderBooking.fromJson(data);
+    final last = j['lastCompleted'];
+    return MineBookings(
+      active: data is Map ? RiderBooking.fromJson(data) : null,
+      lastCompleted: last is Map ? RiderBooking.fromJson(last) : null,
+    );
+  }
+
+  static Future<RiderBooking?> myBooking(String idToken) async {
+    final mine = await fetchMine(idToken);
+    return mine.active;
+  }
+
+  static Future<List<RideReview>> myReviews(String idToken) async {
+    final r = await _get(
+      _u('/api/reviews/mine'),
+      headers: _auth(idToken),
+      timeout: const Duration(seconds: 15),
+    );
+    final j = _json(r);
+    final data = j['data'];
+    if (j['success'] != true || data is! List) return [];
+    return data.whereType<Map>().map(RideReview.fromJson).toList();
   }
 
   static Future<RiderBooking> createBooking({
@@ -543,21 +563,25 @@ class EvuddyApi {
     return data.whereType<Map>().map(PaymentReceipt.fromJson).toList();
   }
 
-  static Future<void> submitReview({
+  static Future<RideReview> submitReview({
     required String idToken,
     required String bookingId,
     required int stars,
+    int? vehicleStars,
+    int? hubStars,
     String comment = '',
     bool wouldRecommend = true,
   }) async {
+    final vehicle = vehicleStars ?? stars;
+    final hub = hubStars ?? stars;
     final r = await _post(
       _u('/api/reviews'),
       headers: _auth(idToken),
       body: jsonEncode({
         'bookingId': bookingId,
         'stars': stars,
-        'vehicleStars': stars,
-        'hubStars': stars,
+        'vehicleStars': vehicle,
+        'hubStars': hub,
         'comment': comment,
         'reply': comment,
         'riderReply': comment,
@@ -570,6 +594,9 @@ class EvuddyApi {
     if (j['success'] != true) {
       throw ApiException(_message(j, 'Could not save your review.'));
     }
+    final data = j['data'];
+    if (data is Map) return RideReview.fromJson(data);
+    return RideReview(bookingId: bookingId, stars: stars, comment: comment);
   }
 
   static Future<List<SupportTicket>> myTickets(String idToken) async {
@@ -1287,6 +1314,52 @@ bool hubMatches(String currentHub, EvuddyHub hub) {
   return false;
 }
 
+class MineBookings {
+  const MineBookings({this.active, this.lastCompleted});
+  final RiderBooking? active;
+  final RiderBooking? lastCompleted;
+}
+
+class RideReview {
+  const RideReview({
+    this.reviewId = '',
+    this.bookingId = '',
+    this.stars = 5,
+    this.vehicleStars = 5,
+    this.hubStars = 5,
+    this.comment = '',
+    this.status = '',
+    this.staffReply = '',
+    this.wouldRecommend = true,
+  });
+
+  factory RideReview.fromJson(Map e) {
+    return RideReview(
+      reviewId: e['reviewId']?.toString() ?? '',
+      bookingId: e['bookingId']?.toString() ?? '',
+      stars: (e['stars'] as num?)?.round() ?? 5,
+      vehicleStars: (e['vehicleStars'] as num?)?.round() ?? 5,
+      hubStars: (e['hubStars'] as num?)?.round() ?? 5,
+      comment: e['comment']?.toString() ?? '',
+      status: e['status']?.toString() ?? '',
+      staffReply: e['staffReply']?.toString() ?? '',
+      wouldRecommend: e['wouldRecommend'] != false,
+    );
+  }
+
+  final String reviewId;
+  final String bookingId;
+  final int stars;
+  final int vehicleStars;
+  final int hubStars;
+  final String comment;
+  final String status;
+  final String staffReply;
+  final bool wouldRecommend;
+
+  bool get saved => reviewId.isNotEmpty;
+}
+
 class RiderBooking {
   const RiderBooking({
     this.mongoId = '',
@@ -1312,6 +1385,7 @@ class RiderBooking {
     this.longitude,
     this.razorpayPaymentId = '',
     this.message = '',
+    this.completedAtMs = 0,
   });
 
   factory RiderBooking.fromJson(Map e) {
@@ -1349,6 +1423,9 @@ class RiderBooking {
               e['longitude'] ??
               e['gpsLng'],
         );
+    final completedAtMs = _bookingTimeMs(
+      m['completedAt'] ?? m['actualRideEnd'] ?? e['completedAt'] ?? e['actualRideEnd'],
+    );
     return RiderBooking(
       mongoId: m['_id']?.toString() ??
           m['id']?.toString() ??
@@ -1395,7 +1472,27 @@ class RiderBooking {
           ?.toString() ??
           '',
       message: e['message']?.toString() ?? '',
+      completedAtMs: completedAtMs > 0
+          ? completedAtMs
+          : _bookingTimeMs(m['updatedAt'] ?? e['updatedAt']),
     );
+  }
+
+  static int _bookingTimeMs(Object? raw) {
+    if (raw == null) return 0;
+    if (raw is int) return raw;
+    if (raw is num) return raw.round();
+    final parsed = DateTime.tryParse(raw.toString());
+    return parsed?.millisecondsSinceEpoch ?? 0;
+  }
+
+  static const _presentCompletedMs = 2 * 60 * 60 * 1000;
+
+  static bool isRecentCompleted(RiderBooking? booking) {
+    if (booking == null || !booking.completed) return false;
+    final at = booking.completedAtMs;
+    if (at <= 0) return true;
+    return DateTime.now().millisecondsSinceEpoch - at <= _presentCompletedMs;
   }
 
   final String mongoId;
@@ -1421,6 +1518,25 @@ class RiderBooking {
   final double? longitude;
   final String razorpayPaymentId;
   final String message;
+  final int completedAtMs;
+
+  bool get isOpenRide {
+    if (mongoId.isEmpty || bookingId.isEmpty || vehicleId.isEmpty) return false;
+    if (cancelled || completed) return false;
+    const liveRide = {
+      'booked',
+      'reserved',
+      'payment pending',
+      'ready for pickup',
+      'in ride',
+    };
+    final ride = rideStatus.trim().toLowerCase();
+    if (liveRide.contains(ride)) return true;
+    final pay = paymentStatus.toLowerCase();
+    return pay == 'pending' || pay == 'partial';
+  }
+
+  bool get paymentSettled => receivedAmount > 0.009 && due <= 0.009;
 
   bool get markedFullyPaid {
     final p = paymentStatus.toLowerCase();
@@ -1520,6 +1636,7 @@ class RiderBooking {
     String? rideStatus,
     String? pickupOtp,
     String? message,
+    bool? pickupOtpVerified,
   }) {
     return RiderBooking(
       mongoId: mongoId,
@@ -1533,7 +1650,7 @@ class RiderBooking {
       paymentDue: paymentDue,
       pickupOtp: pickupOtp ?? this.pickupOtp,
       rideEndOtp: rideEndOtp ?? this.rideEndOtp,
-      pickupOtpVerified: pickupOtpVerified,
+      pickupOtpVerified: pickupOtpVerified ?? this.pickupOtpVerified,
       vehicleId: vehicleId,
       vehicleModel: vehicleModel,
       vehicleNumber: vehicleNumber,
@@ -1545,6 +1662,7 @@ class RiderBooking {
       longitude: longitude,
       razorpayPaymentId: razorpayPaymentId,
       message: message ?? this.message,
+      completedAtMs: completedAtMs,
     );
   }
 
@@ -1607,6 +1725,7 @@ class RiderBooking {
           ? live.razorpayPaymentId
           : razorpayPaymentId,
       message: message.isNotEmpty ? message : live.message,
+      completedAtMs: live.completedAtMs > 0 ? live.completedAtMs : completedAtMs,
     );
   }
 }

@@ -1251,7 +1251,7 @@ class _RideSwipeBarState extends State<RideSwipeBar> {
                       onHorizontalDragEnd: widget.busy
                           ? null
                           : (_) async {
-                              final done = _x >= max * 0.72;
+                              final done = _x >= max * 0.82;
                               setState(() => _x = 0);
                               if (done) {
                                 HapticFeedback.mediumImpact();
