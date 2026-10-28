@@ -375,6 +375,15 @@ class _AccountScreenState extends State<AccountScreen> {
           text:
               'Same screens as evuddy.com Book EV: confirm mobile → OTP → book if approved. OTP uses Firebase. Helpdesk · helpdesk@kebuone.in · +91 8726006512',
         ),
+        const SizedBox(height: 10),
+        Text(
+          evuddyVersionLabel,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Evuddy.muted,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
       ],
     );
   }

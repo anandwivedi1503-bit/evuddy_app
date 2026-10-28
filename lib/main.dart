@@ -5,7 +5,6 @@ import 'api/evuddy_api.dart';
 import 'api/firebase_phone.dart';
 import 'services/security_alert_hub.dart';
 import 'services/rider_notifications.dart';
-import 'services/rider_safety_tracker.dart';
 import 'shell.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
