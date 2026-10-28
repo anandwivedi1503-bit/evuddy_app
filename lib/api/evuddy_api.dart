@@ -191,6 +191,9 @@ class EvuddyApi {
     required String riderId,
     required String fullName,
     required String email,
+    String? profilePhotoUrl,
+    String? instagramId,
+    String? facebookId,
   }) async {
     final r = await _post(
       _u('/api/riders/me'),
@@ -199,6 +202,10 @@ class EvuddyApi {
         'riderId': riderId,
         'fullName': fullName.trim(),
         'email': email.trim(),
+        if (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
+          'profilePhotoUrl': profilePhotoUrl,
+        if (instagramId != null) 'instagramId': instagramId.trim(),
+        if (facebookId != null) 'facebookId': facebookId.trim(),
         'firebaseIdToken': idToken,
       }),
       timeout: const Duration(seconds: 18),
@@ -1990,6 +1997,9 @@ class RiderLookup {
     this.bookingEnabled = false,
     this.fullName,
     this.email,
+    this.profilePhotoUrl,
+    this.instagramId,
+    this.facebookId,
     this.message,
     this.walletAvailable = 0,
     this.walletStatus = '',
@@ -2016,6 +2026,9 @@ class RiderLookup {
       bookingEnabled: enabled,
       fullName: (d['fullName'] ?? d['name'])?.toString(),
       email: d['email']?.toString(),
+      profilePhotoUrl: (d['profilePhotoUrl'] ?? d['profilePhoto'])?.toString(),
+      instagramId: d['instagramId']?.toString(),
+      facebookId: d['facebookId']?.toString(),
       message: message,
       walletAvailable: _asDouble(d['walletAvailable'] ?? d['walletBalance']) ?? 0,
       walletStatus: d['walletStatus']?.toString() ?? '',
@@ -2060,6 +2073,9 @@ class RiderLookup {
   final bool bookingEnabled;
   final String? fullName;
   final String? email;
+  final String? profilePhotoUrl;
+  final String? instagramId;
+  final String? facebookId;
   final String? message;
   final double walletAvailable;
   final String walletStatus;

@@ -7,6 +7,7 @@ import 'app_version.dart';
 import 'confirm_mobile_screen.dart';
 import 'deposit_wallet_screen.dart';
 import 'profile_edit_screen.dart';
+import 'rider_profile_screen.dart';
 import 'rider_refund_screen.dart';
 import 'security_alerts_screen.dart';
 import 'fleet_calculator_screen.dart';
@@ -205,8 +206,17 @@ class _AccountScreenState extends State<AccountScreen> {
               ],
               if (d.phoneVerified) ...[
                 const SizedBox(height: 12),
+                EvuddyButton(
+                  sun: true,
+                  label: 'My profile & rides',
+                  onPressed: () => Navigator.push(
+                    context,
+                    evuddyRoute(const RiderProfileScreen()),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 EvuddyGhostButton(
-                  label: 'Edit name & email',
+                  label: 'Edit photo, name & email',
                   onPressed: () => Navigator.push(
                     context,
                     evuddyRoute(const ProfileEditScreen()),
