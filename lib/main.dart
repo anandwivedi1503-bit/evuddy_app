@@ -5,6 +5,7 @@ import 'api/evuddy_api.dart';
 import 'api/firebase_phone.dart';
 import 'services/security_alert_hub.dart';
 import 'services/rider_notifications.dart';
+import 'services/trip_countdown_store.dart';
 import 'shell.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
@@ -15,6 +16,7 @@ Future<void> main() async {
   await registrationDraft.restore();
   await SecurityAlertHub.instance.restore();
   await RiderNotifications.instance.ensureReady();
+  await TripCountdownStore.instance.restore();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

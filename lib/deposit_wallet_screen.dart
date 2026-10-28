@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
-import 'dashboards/command_center_screen.dart';
+import 'rider_refund_screen.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
@@ -19,10 +19,10 @@ class DepositWalletScreen extends StatelessWidget {
       subtitle:
           'Same as evuddy.com: bookings hold ${CatalogRates.inr(CatalogRates.securityDeposit)} refundable deposit. This is not UPI. EVUDDY wallet credit is separate and can pay Book EV when the balance covers the amount.',
       footer: EvuddyButton(
-        label: 'Open refunds',
+        label: 'Request deposit refund',
         onPressed: () => Navigator.push(
           context,
-          evuddyRoute(const CommandCenterScreen(initialTab: 2)),
+          evuddyRoute(const RiderRefundScreen()),
         ),
       ),
       children: [
@@ -74,7 +74,7 @@ class RefundDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const CommandCenterScreen(initialTab: 2);
+    return const RiderRefundScreen();
   }
 }
 

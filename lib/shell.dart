@@ -5,6 +5,7 @@ import 'book_ev_screen.dart';
 import 'confirm_mobile_screen.dart';
 import 'home_screen.dart';
 import 'security_alerts_screen.dart';
+import 'widgets/rider_safety_pulse.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 
@@ -74,6 +75,14 @@ class _RiderShellState extends State<RiderShell> with WidgetsBindingObserver {
       backgroundColor: Colors.white,
       body: Column(
         children: [
+          RiderSafetyPulse(
+            onOpenAlerts: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute<void>(builder: (_) => const SecurityAlertsScreen()),
+              );
+            },
+          ),
           SecurityAlertBanner(
             onOpen: () {
               Navigator.push(
