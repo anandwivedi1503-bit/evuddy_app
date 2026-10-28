@@ -15,6 +15,7 @@ import 'services/rider_notifications.dart';
 import 'services/rider_safety_tracker.dart';
 import 'services/security_alert_hub.dart';
 import 'services/trip_countdown_store.dart';
+import 'services/user_facing_error.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 import 'widgets/booking_ui.dart';
@@ -220,6 +221,43 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     }
   }
 
+  Future<void> _scheduleReminders({
+    required String bookingId,
+    required String token,
+    DateTime? rideStartedAt,
+  }) async {
+    try {
+      await RiderNotifications.instance.scheduleRentalEndReminder(
+        bookingId: bookingId,
+        duration: duration,
+        units: rentalUnits,
+        phone: registrationDraft.phone,
+        idToken: token,
+        rideStartedAt: rideStartedAt,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _logoutCompletely() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log out?'),
+        content: const Text(
+          'You will need OTP on this registered mobile to sign in again.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Stay')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Log out')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await registrationDraft.logout();
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
+  }
+
   void _askReauth() {
     if (!mounted || _reauthOpen) return;
     _reauthOpen = true;
@@ -410,7 +448,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       if (!mounted) return;
       setState(() {
         loading = false;
-        error = e.toString();
+        error = userFacingError(e);
       });
     }
   }
@@ -538,13 +576,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       if (rental) {
         final token = registrationDraft.firebaseIdToken;
         if (token != null) {
-          await RiderNotifications.instance.scheduleRentalEndReminder(
-            bookingId: created.bookingId,
-            duration: duration,
-            units: rentalUnits,
-            phone: d.phone,
-            idToken: token,
-          );
+          await _scheduleReminders(bookingId: created.bookingId, token: token);
         }
       }
       if (!mounted) return;
@@ -563,7 +595,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       if (!mounted) return;
       setState(() {
         busy = false;
-        error = e.toString();
+        error = userFacingError(e);
       });
     }
   }
@@ -841,9 +873,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         _askReauth();
         return;
       }
-      final text = e.toString().replaceFirst('ApiException: ', '');
+      final text = userFacingError(e);
       setState(() => error = text);
-      await _payAlert('Razorpay did not open', text);
+      await _payAlert('Payment issue', text);
     }
   }
 
@@ -892,7 +924,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       if (!mounted) return;
       setState(() {
         busy = false;
-        error = e.toString();
+        error = userFacingError(e);
       });
     }
   }
@@ -966,12 +998,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       final active = mine ?? booking;
       final rideToken = registrationDraft.firebaseIdToken;
       if (start && active != null && rideToken != null) {
-        await RiderNotifications.instance.scheduleRentalEndReminder(
+        await _scheduleReminders(
           bookingId: active.bookingId,
-          duration: duration,
-          units: rentalUnits,
-          phone: registrationDraft.phone,
-          idToken: rideToken,
+          token: rideToken,
           rideStartedAt: DateTime.now(),
         );
         await RiderSafetyTracker.instance.start(
@@ -1668,10 +1697,23 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     if (b.completed) {
       return Column(
         children: [
-          EvuddyButton(
-            sun: true,
-            label: 'Book another ride',
-            onPressed: _bookAnother,
+          Row(
+            children: [
+              Expanded(
+                child: EvuddyButton(
+                  sun: true,
+                  label: 'Book another ride',
+                  onPressed: _bookAnother,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: EvuddyGhostButton(
+                  label: 'Log out',
+                  onPressed: _logoutCompletely,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           EvuddyGhostButton(label: 'Refresh this booking', onPressed: _load),

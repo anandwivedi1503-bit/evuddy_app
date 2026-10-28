@@ -24,8 +24,8 @@ class ReceiptDelivery {
       channels.addAll(result.channels);
     } catch (_) {}
     final summary = channels.isEmpty
-        ? 'Payment saved. Receipt will appear under Ride history when the server sends it.'
-        : 'Receipt sent via ${channels.join(' & ')}.';
+        ? 'Payment saved. Receipt email + SMS go to your profile email and registered mobile when evuddy.com is updated.'
+        : 'Receipt sent via ${channels.join(' & ')} (email + registered mobile SMS when enabled on server).';
     await SecurityAlertHub.instance.push(
       title: 'Payment receipt',
       body: summary,

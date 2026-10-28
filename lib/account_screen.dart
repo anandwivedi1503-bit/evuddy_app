@@ -6,6 +6,7 @@ import 'api/fleet_calculator.dart';
 import 'app_version.dart';
 import 'confirm_mobile_screen.dart';
 import 'deposit_wallet_screen.dart';
+import 'profile_edit_screen.dart';
 import 'rider_refund_screen.dart';
 import 'security_alerts_screen.dart';
 import 'fleet_calculator_screen.dart';
@@ -160,15 +161,12 @@ class _AccountScreenState extends State<AccountScreen> {
       title: d.fullName.isEmpty ? 'Your EVUDDY' : d.fullName,
       subtitle: status,
       headerTrailing: d.phoneVerified ? _logoutButton(compact: true) : null,
-      footer: Column(
-        children: [
-          _footer(d),
-          if (d.phoneVerified) ...[
-            const SizedBox(height: 10),
-            _logoutButton(),
-          ],
-        ],
-      ),
+      footer: d.phoneVerified
+          ? Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: _logoutButton(),
+            )
+          : _footer(d),
       children: [
         if (d.phoneVerified)
           Padding(
@@ -202,6 +200,16 @@ class _AccountScreenState extends State<AccountScreen> {
                     color: d.canBook ? Evuddy.greenDeep : Evuddy.muted,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
+                  ),
+                ),
+              ],
+              if (d.phoneVerified) ...[
+                const SizedBox(height: 12),
+                EvuddyGhostButton(
+                  label: 'Edit name & email',
+                  onPressed: () => Navigator.push(
+                    context,
+                    evuddyRoute(const ProfileEditScreen()),
                   ),
                 ),
               ],
@@ -391,6 +399,10 @@ class _AccountScreenState extends State<AccountScreen> {
                 fontWeight: FontWeight.w700,
               ),
         ),
+        if (d.phoneVerified) ...[
+          const SizedBox(height: 16),
+          _footer(d),
+        ],
       ],
     );
   }

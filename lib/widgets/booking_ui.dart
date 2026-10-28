@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../api/evuddy_api.dart';
 import '../theme/evuddy.dart';
+import '../services/user_facing_error.dart';
 import 'chrome.dart';
 
 /// Rapido-style booking canvas: yellow hero, cream body, sun CTA.
@@ -829,7 +830,9 @@ class _BookError extends StatelessWidget {
         border: Border.all(color: const Color(0xFFFECACA)),
       ),
       child: Text(
-        text,
+        userFacingError(text, fallback: text.length > 120 ? 'Could not complete this step. Try again or contact helpdesk.' : text),
+        maxLines: 4,
+        overflow: TextOverflow.ellipsis,
         style: GoogleFonts.plusJakartaSans(
           color: Evuddy.danger,
           fontWeight: FontWeight.w600,
