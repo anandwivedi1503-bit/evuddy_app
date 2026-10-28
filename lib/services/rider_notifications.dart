@@ -7,6 +7,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../api/evuddy_api.dart';
 import 'booking_end_schedule.dart';
 import 'security_alert_hub.dart';
+import 'trip_countdown_store.dart';
 
 /// Local + server nudges one hour before rental ends.
 class RiderNotifications {
@@ -79,16 +80,22 @@ class RiderNotifications {
         body,
         _details(),
       );
-      return;
+    } else {
+      await _plugin.zonedSchedule(
+        bookingId.hashCode,
+        title,
+        body,
+        tz.TZDateTime.from(remind, tz.local),
+        _details(),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      );
     }
-    await _plugin.zonedSchedule(
-      bookingId.hashCode,
-      title,
-      body,
-      tz.TZDateTime.from(remind, tz.local),
-      _details(),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+    await TripCountdownStore.instance.schedule(
+      bookingId: bookingId,
+      durationLabel: '$duration · $units ${BookingEndSchedule.unitLabel(duration)}',
+      tripEndsAt: end,
+      reminderAt: remind ?? end.subtract(const Duration(hours: 1)),
     );
     if (idToken != null && idToken.isNotEmpty && phone.isNotEmpty) {
       try {

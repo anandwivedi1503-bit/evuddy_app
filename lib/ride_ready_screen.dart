@@ -988,6 +988,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         await RiderSafetyTracker.instance.stop();
         if (active != null) {
           await RiderNotifications.instance.cancelForBooking(active.bookingId);
+          await TripCountdownStore.instance.clear();
         }
       }
     } catch (e) {

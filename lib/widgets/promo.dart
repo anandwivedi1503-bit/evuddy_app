@@ -66,7 +66,7 @@ class QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      (Icons.notifications_active_outlined, 'Alerts', onAlerts, Evuddy.green),
+      (Icons.emergency_outlined, 'Trip safety', onAlerts, Evuddy.magenta),
       (Icons.badge_outlined, registerLabel, onRegister, Evuddy.greenDeep),
       (Icons.trending_up_rounded, 'Calculator', onInvest, Evuddy.magenta),
       (Icons.phone_in_talk_outlined, 'Helpdesk', onHelp, const Color(0xFF0F766E)),

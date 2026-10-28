@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
+import 'receipt_detail_screen.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 import 'widgets/booking_ui.dart';
@@ -195,7 +196,7 @@ class _RideHistoryScreenState extends State<RideHistoryScreen> {
             ),
           ),
         if (receipts.isNotEmpty) ...[
-          const SectionLabel('Razorpay receipts'),
+          const SectionLabel('Payment receipts · download PDF'),
           const SizedBox(height: 10),
           for (final rec in receipts)
             Padding(
@@ -209,14 +210,25 @@ class _RideHistoryScreenState extends State<RideHistoryScreen> {
                       style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18),
                     ),
                     Text(
-                      '${rec.paymentMethod.isEmpty ? "Razorpay" : rec.paymentMethod} · ${rec.bookingId}',
-                      style: GoogleFonts.plusJakartaSans(color: Evuddy.muted),
+                      '${rec.paymentMethod.isEmpty ? "Razorpay UPI / card" : rec.paymentMethod} · Booking ${rec.bookingId}',
+                      style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontWeight: FontWeight.w600),
                     ),
                     if (rec.invoiceNumber.isNotEmpty || rec.transactionId.isNotEmpty)
                       Text(
-                        rec.invoiceNumber.isNotEmpty ? rec.invoiceNumber : rec.transactionId,
+                        [
+                          if (rec.invoiceNumber.isNotEmpty) 'Invoice ${rec.invoiceNumber}',
+                          if (rec.transactionId.isNotEmpty) 'Txn ${rec.transactionId}',
+                        ].join(' · '),
                         style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Evuddy.muted),
                       ),
+                    const SizedBox(height: 10),
+                    EvuddyGhostButton(
+                      label: 'View details & download PDF',
+                      onPressed: () => Navigator.push(
+                        context,
+                        evuddyRoute(ReceiptDetailScreen(receipt: rec)),
+                      ),
+                    ),
                   ],
                 ),
               ),

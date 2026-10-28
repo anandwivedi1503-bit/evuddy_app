@@ -5,8 +5,9 @@ import 'api/evuddy_api.dart';
 import 'api/fleet_calculator.dart';
 import 'app_version.dart';
 import 'confirm_mobile_screen.dart';
-import 'dashboards/command_center_screen.dart';
 import 'deposit_wallet_screen.dart';
+import 'rider_refund_screen.dart';
+import 'security_alerts_screen.dart';
 import 'fleet_calculator_screen.dart';
 import 'invest_screen.dart';
 import 'login_screen.dart';
@@ -266,7 +267,7 @@ class _AccountScreenState extends State<AccountScreen> {
                         style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
                       ),
                       Text(
-                        'Rate completed rides. Razorpay receipts stay on the shared database.',
+                        'Download PDF receipts, rate rides, same data as evuddy.com.',
                         style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
                       ),
                     ],
@@ -280,25 +281,25 @@ class _AccountScreenState extends State<AccountScreen> {
         const SizedBox(height: 14),
         GestureDetector(
           onTap: d.phoneVerified
-              ? () => Navigator.push(context, evuddyRoute(const CommandCenterScreen()))
+              ? () => Navigator.push(context, evuddyRoute(const SecurityAlertsScreen()))
               : null,
           child: SurfaceCard(
             child: Row(
               children: [
-                const Icon(Icons.space_dashboard_outlined, color: Evuddy.greenDeep),
+                const Icon(Icons.emergency_outlined, color: Evuddy.magenta),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('RIDE COMMAND CENTER', style: Theme.of(context).textTheme.labelSmall),
+                      Text('TRIP SAFETY & ALERTS', style: Theme.of(context).textTheme.labelSmall),
                       const SizedBox(height: 4),
                       Text(
-                        'Live CRM · IoT GPS · refunds · reviews · team desks',
+                        'Siren timer · GPS · booking end reminders',
                         style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
                       ),
                       Text(
-                        'Realtime numbers from the same evuddy.com database.',
+                        'For riders on this phone. Not the EVUDDY admin CRM.',
                         style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
                       ),
                     ],
@@ -308,6 +309,11 @@ class _AccountScreenState extends State<AccountScreen> {
               ],
             ),
           ),
+        ),
+        const SizedBox(height: 14),
+        const InfoNote(
+          text:
+              'EVUDDY admin CRM, live fleet IoT map, finance desks, and rider phone GPS tracking for ops are on evuddy.com admin — staff log in on the web, not through the rider app.',
         ),
         const SizedBox(height: 14),
         const TrustStrip(),
