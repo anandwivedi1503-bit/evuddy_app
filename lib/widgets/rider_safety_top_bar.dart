@@ -14,9 +14,13 @@ class RiderSafetyTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<int>(
-      valueListenable: SecurityAlertHub.instance.unread,
-      builder: (context, unread, _) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        SecurityAlertHub.instance.unread,
+        TripCountdownStore.instance.tick,
+      ]),
+      builder: (context, _) {
+        final unread = SecurityAlertHub.instance.unread.value;
         final store = TripCountdownStore.instance;
         if (!store.active && unread <= 0) return const SizedBox.shrink();
         return Padding(

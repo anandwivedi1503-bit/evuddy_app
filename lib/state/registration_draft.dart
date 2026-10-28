@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/trip_countdown_sync.dart';
 import '../api/evuddy_api.dart';
 import '../api/firebase_phone.dart';
 
@@ -203,6 +204,7 @@ class RegistrationDraft {
       }
     }
     if (mine.city.isNotEmpty) chosenCity = mine.city;
+    TripCountdownSync.apply(mine);
     persist();
     riderSessionTick.value++;
   }
@@ -389,7 +391,7 @@ class RegistrationDraft {
           : walletAvailable;
       walletStatus = m['walletStatus']?.toString() ?? walletStatus;
       final rawBooking = m['activeBooking'];
-      if (rawBooking is Map) {
+        if (rawBooking is Map) {
         activeBooking = RiderBooking.fromJson(rawBooking);
         if (activeBooking!.isRentToOwn) {
           chosenPlan = 'rto';
@@ -397,6 +399,7 @@ class RegistrationDraft {
         } else if (activeBooking!.rentalMode.isNotEmpty) {
           chosenPlan = 'rental';
         }
+        TripCountdownSync.apply(activeBooking);
       }
     } catch (_) {}
   }

@@ -1517,6 +1517,7 @@ class RiderBooking {
     this.razorpayPaymentId = '',
     this.message = '',
     this.completedAtMs = 0,
+    this.rentalEndDate,
   });
 
   factory RiderBooking.fromJson(Map e) {
@@ -1557,6 +1558,7 @@ class RiderBooking {
     final completedAtMs = _bookingTimeMs(
       m['completedAt'] ?? m['actualRideEnd'] ?? e['completedAt'] ?? e['actualRideEnd'],
     );
+    final rentalEndMs = _bookingTimeMs(m['rentalEndDate'] ?? e['rentalEndDate']);
     return RiderBooking(
       mongoId: m['_id']?.toString() ??
           m['id']?.toString() ??
@@ -1606,6 +1608,8 @@ class RiderBooking {
       completedAtMs: completedAtMs > 0
           ? completedAtMs
           : _bookingTimeMs(m['updatedAt'] ?? e['updatedAt']),
+      rentalEndDate:
+          rentalEndMs > 0 ? DateTime.fromMillisecondsSinceEpoch(rentalEndMs) : null,
     );
   }
 
@@ -1650,6 +1654,7 @@ class RiderBooking {
   final String razorpayPaymentId;
   final String message;
   final int completedAtMs;
+  final DateTime? rentalEndDate;
 
   bool get isOpenRide {
     if (mongoId.isEmpty || bookingId.isEmpty || vehicleId.isEmpty) return false;
