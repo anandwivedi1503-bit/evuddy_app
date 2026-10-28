@@ -8,6 +8,8 @@ import '../api/evuddy_api.dart';
 import 'booking_end_schedule.dart';
 import 'security_alert_hub.dart';
 import 'trip_countdown_store.dart';
+
+/// Local + server nudges one hour before rental ends.
 class RiderNotifications {
   RiderNotifications._();
   static final RiderNotifications instance = RiderNotifications._();

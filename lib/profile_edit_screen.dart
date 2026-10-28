@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'api/evuddy_api.dart';
 import 'api/firebase_phone.dart';
@@ -18,7 +21,12 @@ class ProfileEditScreen extends StatefulWidget {
 class _ProfileEditScreenState extends State<ProfileEditScreen> {
   late final TextEditingController name;
   late final TextEditingController email;
+  late final TextEditingController instagram;
+  late final TextEditingController facebook;
+  String? photoUrl;
+  String? localPhotoPath;
   bool saving = false;
+  bool uploading = false;
   String? error;
   String? ok;
 
@@ -28,13 +36,55 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final d = registrationDraft;
     name = TextEditingController(text: d.fullName);
     email = TextEditingController(text: d.email);
+    instagram = TextEditingController(text: d.instagramId);
+    facebook = TextEditingController(text: d.facebookId);
+    photoUrl = d.profilePhotoUrl.isNotEmpty ? d.profilePhotoUrl : null;
+    localPhotoPath = d.profilePhotoPath;
   }
 
   @override
   void dispose() {
     name.dispose();
     email.dispose();
+    instagram.dispose();
+    facebook.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickPhoto() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+    setState(() {
+      uploading = true;
+      error = null;
+      localPhotoPath = picked.path;
+    });
+    try {
+      final token = await registrationDraft.freshToken(force: true);
+      if (token == null) throw ApiException('Sign in again with OTP.');
+      final url = await EvuddyApi.uploadFile(
+        file: File(picked.path),
+        idToken: token,
+        filename: 'profile',
+      );
+      if (!mounted) return;
+      setState(() {
+        uploading = false;
+        photoUrl = url;
+        registrationDraft.profilePhotoUrl = url;
+        registrationDraft.profilePhotoPath = picked.path;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        uploading = false;
+        error = userFacingError(e, fallback: 'Could not upload photo.');
+      });
+    }
   }
 
   Future<void> _save() async {
@@ -72,15 +122,24 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         riderId: riderId,
         fullName: fullName,
         email: mail,
+        profilePhotoUrl: photoUrl,
+        instagramId: instagram.text.trim(),
+        facebookId: facebook.text.trim(),
       );
       registrationDraft
         ..fullName = fullName
-        ..email = mail;
+        ..email = mail
+        ..instagramId = instagram.text.trim()
+        ..facebookId = facebook.text.trim();
+      if (photoUrl != null && photoUrl!.isNotEmpty) {
+        registrationDraft.profilePhotoUrl = photoUrl!;
+      }
       await registrationDraft.persist();
       if (!mounted) return;
       setState(() {
         saving = false;
-        ok = 'Profile saved on evuddy.com. Receipts and SMS use this email and registered mobile.';
+        ok =
+            'Profile saved on evuddy.com. Receipts email this address; SMS goes to your registered mobile.';
       });
     } catch (e) {
       if (!mounted) return;
@@ -91,13 +150,63 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     }
   }
 
+  Widget _avatar() {
+    ImageProvider? img;
+    if (localPhotoPath != null && localPhotoPath!.isNotEmpty) {
+      img = FileImage(File(localPhotoPath!));
+    } else if (photoUrl != null && photoUrl!.startsWith('http')) {
+      img = NetworkImage(photoUrl!);
+    }
+    final initials = name.text.trim().isEmpty
+        ? '?'
+        : name.text.trim().substring(0, 1).toUpperCase();
+    return Stack(
+      alignment: Alignment.bottomRight,
+      children: [
+        CircleAvatar(
+          radius: 52,
+          backgroundColor: Evuddy.greenSoft,
+          backgroundImage: img,
+          child: img == null
+              ? Text(
+                  initials,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    color: Evuddy.greenDeep,
+                  ),
+                )
+              : null,
+        ),
+        Material(
+          color: Evuddy.rapidoYellow,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: uploading ? null : _pickPhoto,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: uploading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.camera_alt_rounded, size: 20, color: Evuddy.ink),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AuthScreen(
-      kicker: 'Your details',
-      title: 'Update profile',
+      kicker: 'Profile',
+      title: 'Edit your profile',
       subtitle:
-          'Name and email sync with evuddy.com CRM. Mobile number stays verified by OTP — change it only via helpdesk.',
+          'Photo, name, and email sync with evuddy.com CRM. Mobile stays OTP-verified — change number via helpdesk only.',
       error: error,
       footer: EvuddyButton(
         label: saving ? 'Saving…' : 'Save profile',
@@ -109,6 +218,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           InfoNote(text: ok!),
           const SizedBox(height: 14),
         ],
+        Center(child: _avatar()),
+        const SizedBox(height: 8),
+        Center(
+          child: Text(
+            'Tap camera to update photo',
+            style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
+          ),
+        ),
+        const SizedBox(height: 18),
         SurfaceCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,6 +237,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 registrationDraft.phoneDisplay,
                 style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 17),
               ),
+              const SizedBox(height: 4),
+              Text(
+                'Used for OTP login and payment SMS',
+                style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
+              ),
             ],
           ),
         ),
@@ -126,6 +249,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         TextField(
           controller: name,
           textCapitalization: TextCapitalization.words,
+          autofillHints: const [AutofillHints.name],
           decoration: const InputDecoration(labelText: 'Full name'),
         ),
         const SizedBox(height: 12),
@@ -133,7 +257,20 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           controller: email,
           keyboardType: TextInputType.emailAddress,
           autofillHints: const [AutofillHints.email],
-          decoration: const InputDecoration(labelText: 'Email for receipts'),
+          decoration: const InputDecoration(labelText: 'Email (receipts & updates)'),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: instagram,
+          decoration: const InputDecoration(
+            labelText: 'Instagram (optional)',
+            prefixText: '@',
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: facebook,
+          decoration: const InputDecoration(labelText: 'Facebook profile (optional)'),
         ),
       ],
     );
