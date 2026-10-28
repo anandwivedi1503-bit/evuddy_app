@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/trip_countdown_sync.dart';
 import '../api/evuddy_api.dart';
 import '../api/firebase_phone.dart';
+import '../services/rider_session_cleanup.dart';
 
 class RegistrationDraft {
   String phone = '';
@@ -130,6 +131,7 @@ class RegistrationDraft {
     licenseFrontPath = null;
     licenseBackPath = null;
     profilePhotoPath = null;
+    profilePhotoUrl = '';
     riderId = null;
     approvalStatus = '';
     bookingEnabled = false;
@@ -285,10 +287,12 @@ class RegistrationDraft {
   }
 
   Future<void> logout() async {
+    final notifyBookingId = activeBooking?.bookingId;
     try {
       await EvuddyFirebase.ensure();
       await EvuddyFirebase.signOut();
     } catch (_) {}
+    await clearRiderLocalTripState(bookingIdForNotifications: notifyBookingId);
     await clearSession();
   }
 
