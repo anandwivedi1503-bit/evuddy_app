@@ -191,6 +191,9 @@ class EvuddyApi {
     required String riderId,
     required String fullName,
     required String email,
+    String? profilePhotoUrl,
+    String? instagramId,
+    String? facebookId,
   }) async {
     final r = await _post(
       _u('/api/riders/me'),
@@ -199,6 +202,10 @@ class EvuddyApi {
         'riderId': riderId,
         'fullName': fullName.trim(),
         'email': email.trim(),
+        if (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
+          'profilePhotoUrl': profilePhotoUrl,
+        if (instagramId != null) 'instagramId': instagramId.trim(),
+        if (facebookId != null) 'facebookId': facebookId.trim(),
         'firebaseIdToken': idToken,
       }),
       timeout: const Duration(seconds: 18),
@@ -1510,6 +1517,7 @@ class RiderBooking {
     this.razorpayPaymentId = '',
     this.message = '',
     this.completedAtMs = 0,
+    this.rentalEndDate,
   });
 
   factory RiderBooking.fromJson(Map e) {
@@ -1550,6 +1558,7 @@ class RiderBooking {
     final completedAtMs = _bookingTimeMs(
       m['completedAt'] ?? m['actualRideEnd'] ?? e['completedAt'] ?? e['actualRideEnd'],
     );
+    final rentalEndMs = _bookingTimeMs(m['rentalEndDate'] ?? e['rentalEndDate']);
     return RiderBooking(
       mongoId: m['_id']?.toString() ??
           m['id']?.toString() ??
@@ -1599,6 +1608,8 @@ class RiderBooking {
       completedAtMs: completedAtMs > 0
           ? completedAtMs
           : _bookingTimeMs(m['updatedAt'] ?? e['updatedAt']),
+      rentalEndDate:
+          rentalEndMs > 0 ? DateTime.fromMillisecondsSinceEpoch(rentalEndMs) : null,
     );
   }
 
@@ -1643,6 +1654,7 @@ class RiderBooking {
   final String razorpayPaymentId;
   final String message;
   final int completedAtMs;
+  final DateTime? rentalEndDate;
 
   bool get isOpenRide {
     if (mongoId.isEmpty || bookingId.isEmpty || vehicleId.isEmpty) return false;
@@ -1990,6 +2002,9 @@ class RiderLookup {
     this.bookingEnabled = false,
     this.fullName,
     this.email,
+    this.profilePhotoUrl,
+    this.instagramId,
+    this.facebookId,
     this.message,
     this.walletAvailable = 0,
     this.walletStatus = '',
@@ -2016,6 +2031,9 @@ class RiderLookup {
       bookingEnabled: enabled,
       fullName: (d['fullName'] ?? d['name'])?.toString(),
       email: d['email']?.toString(),
+      profilePhotoUrl: (d['profilePhotoUrl'] ?? d['profilePhoto'])?.toString(),
+      instagramId: d['instagramId']?.toString(),
+      facebookId: d['facebookId']?.toString(),
       message: message,
       walletAvailable: _asDouble(d['walletAvailable'] ?? d['walletBalance']) ?? 0,
       walletStatus: d['walletStatus']?.toString() ?? '',
@@ -2060,6 +2078,9 @@ class RiderLookup {
   final bool bookingEnabled;
   final String? fullName;
   final String? email;
+  final String? profilePhotoUrl;
+  final String? instagramId;
+  final String? facebookId;
   final String? message;
   final double walletAvailable;
   final String walletStatus;

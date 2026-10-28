@@ -9,11 +9,13 @@ import 'api/firebase_phone.dart';
 import 'api/razorpay_checkout.dart';
 import 'confirm_mobile_screen.dart';
 import 'open_link.dart';
+import 'security_alerts_screen.dart';
 import 'services/booking_end_schedule.dart';
 import 'services/receipt_delivery.dart';
 import 'services/rider_notifications.dart';
 import 'services/rider_safety_tracker.dart';
 import 'services/security_alert_hub.dart';
+import 'services/trip_countdown_sync.dart';
 import 'services/trip_countdown_store.dart';
 import 'services/user_facing_error.dart';
 import 'state/registration_draft.dart';
@@ -21,6 +23,7 @@ import 'theme/evuddy.dart';
 import 'widgets/booking_ui.dart';
 import 'widgets/chrome.dart';
 import 'widgets/rental_units_stepper.dart';
+import 'widgets/rider_safety_pulse.dart';
 import 'widgets/scooter_avatar.dart';
 
 class RideReadyScreen extends StatefulWidget {
@@ -573,6 +576,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         ..rentalUnits = rentalUnits
         ..applyActiveBooking(created);
       await registrationDraft.persist();
+      TripCountdownSync.apply(created);
       if (rental) {
         final token = registrationDraft.firebaseIdToken;
         if (token != null) {
@@ -1126,6 +1130,17 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       error: error,
       footer: _footer(b),
       children: [
+        if (TripCountdownStore.instance.active) ...[
+          RiderSafetyPulse(
+            onOpenAlerts: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute<void>(builder: (_) => const SecurityAlertsScreen()),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+        ],
         if (loading) const InfoNote(text: 'Loading live scooters…'),
         if (hub != null)
           SurfaceCard(

@@ -7,6 +7,7 @@ import 'app_version.dart';
 import 'confirm_mobile_screen.dart';
 import 'deposit_wallet_screen.dart';
 import 'profile_edit_screen.dart';
+import 'rider_profile_screen.dart';
 import 'rider_refund_screen.dart';
 import 'security_alerts_screen.dart';
 import 'fleet_calculator_screen.dart';
@@ -15,6 +16,7 @@ import 'login_screen.dart';
 import 'open_link.dart';
 import 'ride_history_screen.dart';
 import 'ride_ready_screen.dart';
+import 'services/rider_safety_tracker.dart';
 import 'state/registration_draft.dart';
 import 'submitted_screen.dart';
 import 'theme/evuddy.dart';
@@ -205,8 +207,17 @@ class _AccountScreenState extends State<AccountScreen> {
               ],
               if (d.phoneVerified) ...[
                 const SizedBox(height: 12),
+                EvuddyButton(
+                  sun: true,
+                  label: 'My profile & rides',
+                  onPressed: () => Navigator.push(
+                    context,
+                    evuddyRoute(const RiderProfileScreen()),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 EvuddyGhostButton(
-                  label: 'Edit name & email',
+                  label: 'Edit photo, name & email',
                   onPressed: () => Navigator.push(
                     context,
                     evuddyRoute(const ProfileEditScreen()),
@@ -319,6 +330,14 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
         ),
         const SizedBox(height: 14),
+        if (d.phoneVerified && d.hasLiveBooking) ...[
+          InfoNote(
+            text: RiderSafetyTracker.instance.active
+                ? 'Live GPS: ON — shared with EVUDDY ops during this ride. Payment SMS goes to ${d.phoneDisplay} when evuddy.com SMS keys are set.'
+                : 'Live GPS starts after ride start at the yard. Allow Location for EVUDDY. SMS is sent from the server to your registered mobile, not inside the app.',
+          ),
+          const SizedBox(height: 14),
+        ],
         const InfoNote(
           text:
               'EVUDDY admin CRM, live fleet IoT map, finance desks, and rider phone GPS tracking for ops are on evuddy.com admin — staff log in on the web, not through the rider app.',

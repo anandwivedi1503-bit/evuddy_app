@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/trip_countdown_sync.dart';
 import '../api/evuddy_api.dart';
 import '../api/firebase_phone.dart';
 
@@ -32,6 +33,7 @@ class RegistrationDraft {
   String? licenseFrontPath;
   String? licenseBackPath;
   String? profilePhotoPath;
+  String profilePhotoUrl = '';
 
   String? riderId;
   String approvalStatus = '';
@@ -202,6 +204,7 @@ class RegistrationDraft {
       }
     }
     if (mine.city.isNotEmpty) chosenCity = mine.city;
+    TripCountdownSync.apply(mine);
     persist();
     riderSessionTick.value++;
   }
@@ -228,6 +231,11 @@ class RegistrationDraft {
     if (lookup.email != null && lookup.email!.isNotEmpty) {
       email = lookup.email!;
     }
+    if (lookup.profilePhotoUrl != null && lookup.profilePhotoUrl!.isNotEmpty) {
+      profilePhotoUrl = lookup.profilePhotoUrl!;
+    }
+    if (lookup.instagramId != null) instagramId = lookup.instagramId!;
+    if (lookup.facebookId != null) facebookId = lookup.facebookId!;
     approvalStatus = lookup.approvalStatus;
     bookingEnabled = lookup.bookingEnabled || RiderLookup.isApprovedStatus(lookup.approvalStatus);
     walletAvailable = lookup.walletAvailable;
@@ -351,6 +359,9 @@ class RegistrationDraft {
       firebaseRefreshToken = m['firebaseRefreshToken']?.toString();
       fullName = m['fullName']?.toString() ?? fullName;
       email = m['email']?.toString() ?? email;
+      profilePhotoUrl = m['profilePhotoUrl']?.toString() ?? profilePhotoUrl;
+      instagramId = m['instagramId']?.toString() ?? instagramId;
+      facebookId = m['facebookId']?.toString() ?? facebookId;
       comingThrough = m['comingThrough']?.toString() ?? comingThrough;
       riderId = m['riderId']?.toString();
       approvalStatus = m['approvalStatus']?.toString() ?? approvalStatus;
@@ -380,7 +391,7 @@ class RegistrationDraft {
           : walletAvailable;
       walletStatus = m['walletStatus']?.toString() ?? walletStatus;
       final rawBooking = m['activeBooking'];
-      if (rawBooking is Map) {
+        if (rawBooking is Map) {
         activeBooking = RiderBooking.fromJson(rawBooking);
         if (activeBooking!.isRentToOwn) {
           chosenPlan = 'rto';
@@ -388,6 +399,7 @@ class RegistrationDraft {
         } else if (activeBooking!.rentalMode.isNotEmpty) {
           chosenPlan = 'rental';
         }
+        TripCountdownSync.apply(activeBooking);
       }
     } catch (_) {}
   }
@@ -405,6 +417,9 @@ class RegistrationDraft {
           'firebaseRefreshToken': firebaseRefreshToken,
           'fullName': fullName,
           'email': email,
+          'profilePhotoUrl': profilePhotoUrl,
+          'instagramId': instagramId,
+          'facebookId': facebookId,
           'comingThrough': comingThrough,
           'riderId': riderId,
           'approvalStatus': approvalStatus,
