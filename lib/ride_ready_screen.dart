@@ -9,10 +9,17 @@ import 'api/firebase_phone.dart';
 import 'api/razorpay_checkout.dart';
 import 'confirm_mobile_screen.dart';
 import 'open_link.dart';
+import 'services/booking_end_schedule.dart';
+import 'services/receipt_delivery.dart';
+import 'services/rider_notifications.dart';
+import 'services/rider_safety_tracker.dart';
+import 'services/security_alert_hub.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 import 'widgets/booking_ui.dart';
 import 'widgets/chrome.dart';
+import 'widgets/rental_units_stepper.dart';
+import 'widgets/scooter_avatar.dart';
 
 class RideReadyScreen extends StatefulWidget {
   const RideReadyScreen({super.key, this.showBack = true, this.startNew = false});
@@ -26,6 +33,7 @@ class RideReadyScreen extends StatefulWidget {
 
 class _RideReadyScreenState extends State<RideReadyScreen> {
   String duration = registrationDraft.chosenDuration ?? 'Daily';
+  int rentalUnits = registrationDraft.rentalUnits;
   int wizard = 2;
   List<EvuddyVehicle> vehicles = [];
   List<EvuddyHub> listedHubs = [];
@@ -73,9 +81,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
 
   String get durationKey => rental ? duration : 'Rent To Own';
 
-  int get catalogFare => CatalogRates.amountForDuration(durationKey);
+  int get catalogFare => CatalogRates.amountForDuration(durationKey, units: rentalUnits);
 
-  int get catalogPayable => CatalogRates.payableForDuration(durationKey);
+  int get catalogPayable => CatalogRates.payableForDuration(durationKey, units: rentalUnits);
 
   GstSplit get gst => CatalogRates.gstInclusive(catalogFare);
 
@@ -139,6 +147,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     rtoEmergency = TextEditingController(text: d.rtoEmergencyPhone);
     rtoAddress = TextEditingController(text: d.rtoAddress);
     rtoOccupation = TextEditingController(text: d.rtoOccupation);
+    if (d.rentalUnits > 0) rentalUnits = d.rentalUnits;
     if (!widget.startNew &&
         booking != null &&
         booking!.bookingId.isNotEmpty &&
@@ -515,14 +524,28 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         city: d.chosenCity ?? h.city,
         rentalMode: rentalMode,
         duration: rental ? duration : 'Rent To Own',
+        rentalUnits: rental ? rentalUnits : 1,
         referenceBy: d.comingThrough,
         bookingRequestId: _bookingRequestId,
         rto: rto,
       );
       registrationDraft
         ..chosenDuration = duration
+        ..rentalUnits = rentalUnits
         ..applyActiveBooking(created);
       await registrationDraft.persist();
+      if (rental) {
+        final token = registrationDraft.firebaseIdToken;
+        if (token != null) {
+          await RiderNotifications.instance.scheduleRentalEndReminder(
+            bookingId: created.bookingId,
+            duration: duration,
+            units: rentalUnits,
+            phone: d.phone,
+            idToken: token,
+          );
+        }
+      }
       if (!mounted) return;
       setState(() {
         booking = created;
@@ -793,6 +816,16 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           noteText = useWallet ? 'Wallet payment saved.' : 'Payment saved.';
         }
       }
+      if (pay >= 1) {
+        final receiptNote = await ReceiptDelivery.sendAfterPayment(
+          idToken: token,
+          booking: verified,
+          email: registrationDraft.email,
+          phone: registrationDraft.phone,
+          amountRupees: pay,
+        );
+        noteText = '$noteText\n$receiptNote';
+      }
       if (!mounted) return;
       setState(() {
         booking = verified;
@@ -929,6 +962,34 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                 : 'Ride end OTP is ready. Tell this to the yard to return the scooter.');
         _fillAmount(mine ?? booking);
       });
+      final active = mine ?? booking;
+      final rideToken = registrationDraft.firebaseIdToken;
+      if (start && active != null && rideToken != null) {
+        await RiderNotifications.instance.scheduleRentalEndReminder(
+          bookingId: active.bookingId,
+          duration: duration,
+          units: rentalUnits,
+          phone: registrationDraft.phone,
+          idToken: rideToken,
+          rideStartedAt: DateTime.now(),
+        );
+        await RiderSafetyTracker.instance.start(
+          bookingId: active.bookingId,
+          idToken: rideToken,
+        );
+        await SecurityAlertHub.instance.push(
+          title: 'Ride started',
+          body: 'Safety GPS is active. You will get a reminder 1 hour before your plan ends.',
+          category: 'trip',
+          security: true,
+        );
+      }
+      if (!start) {
+        await RiderSafetyTracker.instance.stop();
+        if (active != null) {
+          await RiderNotifications.instance.cancelForBooking(active.bookingId);
+        }
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => busy = false);
@@ -1064,8 +1125,27 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
               value: duration,
               onChanged: (v) => setState(() {
                 duration = v;
+                rentalUnits = 1;
+                registrationDraft
+                  ..chosenDuration = v
+                  ..rentalUnits = 1
+                  ..persist();
                 _fillAmount(null);
               }),
+            ),
+          if (rental) const SizedBox(height: 12),
+          if (rental)
+            RentalUnitsStepper(
+              duration: duration,
+              units: rentalUnits,
+              onChanged: (u) {
+                setState(() {
+                  rentalUnits = u;
+                  registrationDraft.rentalUnits = u;
+                  registrationDraft.persist();
+                  _fillAmount(null);
+                });
+              },
             ),
           if (rental) const SizedBox(height: 16),
           const SectionLabel('Live scooters'),
@@ -1152,6 +1232,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
               _ReviewRow('City', hub?.city ?? d.chosenCity ?? '—'),
               _ReviewRow('Hub', hub == null ? '—' : '${hub!.name} (${hub!.code})'),
               _ReviewRow('Mode', rentalMode),
+              if (rental && rentalUnits > 1)
+                _ReviewRow(
+                  'Plan length',
+                  '$rentalUnits ${BookingEndSchedule.unitLabel(duration)}',
+                ),
               _ReviewRow('Fare (GST included)', CatalogRates.inr(catalogFare)),
               _ReviewRow('Taxable', CatalogRates.inr(gst.taxable)),
               _ReviewRow('CGST 2.5% + SGST 2.5%', CatalogRates.inr(gst.gst)),
@@ -1675,19 +1760,12 @@ class ScooterPickCard extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: ColoredBox(
-                    color: selected ? Evuddy.rapidoYellow : const Color(0xFFFFF8DC),
-                    child: SizedBox(
-                      width: 86,
-                      height: 86,
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Image.asset(
-                          Evuddy.yellowScooterAsset,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
+                  child: ScooterAvatar(
+                    seed: vehicle.vehicleId.isNotEmpty
+                        ? vehicle.vehicleId
+                        : vehicle.registrationNumber,
+                    size: 86,
+                    selected: selected,
                   ),
                 ),
                 const SizedBox(width: 12),

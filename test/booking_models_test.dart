@@ -253,6 +253,7 @@ void main() {
     expect(FleetPartner.low.invest(5), 300000);
     expect(FleetPartner.high.invest(5), 450000);
     expect(CatalogRates.amountForDuration('Hourly'), 60);
+    expect(CatalogRates.amountForDuration('Hourly', units: 3), 180);
     expect(CatalogRates.amountForDuration('Daily'), 250);
     expect(CatalogRates.payableForDuration('Daily'), 2750);
     expect(CatalogRates.payableForDuration('Rent To Own'), 2800);

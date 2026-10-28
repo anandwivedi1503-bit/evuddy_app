@@ -9,6 +9,7 @@ import 'login_screen.dart';
 import 'open_link.dart';
 import 'ride_ready_screen.dart';
 import 'state/registration_draft.dart';
+import 'security_alerts_screen.dart';
 import 'submitted_screen.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
@@ -167,13 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     OfferAdCarousel(onBook: () => _book()),
                     const SizedBox(height: 16),
                     BookSearchBar(onBook: () => _book()),
-                    const SizedBox(height: 12),
-                    EvuddyButton(
-                      sun: true,
-                      label: d.canBook ? 'Book EV now' : 'Start booking',
-                      onPressed: () => _book(),
-                    ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
                     EvuddyGhostButton(
                       label: 'Fleet calculator',
                       onPressed: () {
@@ -227,7 +222,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           : (d.isPendingKyc
                               ? 'KYC'
                               : (d.phoneVerified ? 'Finish KYC' : 'Register')),
-                      onBook: () => _book(),
+                      onAlerts: () {
+                        Navigator.push(
+                          context,
+                          evuddyRoute(const SecurityAlertsScreen()),
+                        );
+                      },
                       onRegister: () {
                         if (d.canBook) {
                           registrationDraft.jumpToTab(2);
