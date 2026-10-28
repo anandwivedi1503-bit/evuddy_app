@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
 import 'api/fleet_calculator.dart';
+import 'app_version.dart';
 import 'confirm_mobile_screen.dart';
 import 'dashboards/command_center_screen.dart';
 import 'deposit_wallet_screen.dart';
