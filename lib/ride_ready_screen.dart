@@ -14,6 +14,7 @@ import 'services/receipt_delivery.dart';
 import 'services/rider_notifications.dart';
 import 'services/rider_safety_tracker.dart';
 import 'services/security_alert_hub.dart';
+import 'services/trip_countdown_store.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 import 'widgets/booking_ui.dart';
