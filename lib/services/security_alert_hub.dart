@@ -69,6 +69,12 @@ class SecurityAlertHub {
     await _persist();
   }
 
+  /// Log out — do not show prior rider's alerts on the next OTP session.
+  Future<void> clearAll() async {
+    _items = [];
+    await _persist();
+  }
+
   Future<void> _persist() async {
     _syncUnread();
     try {

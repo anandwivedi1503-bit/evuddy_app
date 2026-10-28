@@ -8,6 +8,7 @@ class TripCountdownSync {
   TripCountdownSync._();
 
   static void apply(RiderBooking? booking) {
+    if (!registrationDraft.phoneVerified) return;
     if (booking == null || booking.bookingId.isEmpty) {
       return;
     }

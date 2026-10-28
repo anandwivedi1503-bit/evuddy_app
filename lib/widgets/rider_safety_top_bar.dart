@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../services/security_alert_hub.dart';
 import '../services/trip_countdown_store.dart';
+import '../state/registration_draft.dart';
 import '../theme/evuddy.dart';
 import 'rider_safety_pulse.dart';
 
@@ -20,6 +21,7 @@ class RiderSafetyTopBar extends StatelessWidget {
         TripCountdownStore.instance.tick,
       ]),
       builder: (context, _) {
+        if (!registrationDraft.phoneVerified) return const SizedBox.shrink();
         final unread = SecurityAlertHub.instance.unread.value;
         final store = TripCountdownStore.instance;
         if (!store.active && unread <= 0) return const SizedBox.shrink();

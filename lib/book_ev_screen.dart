@@ -88,6 +88,11 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
         perm = await Geolocator.requestPermission();
       }
       if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() {
+            locationHint = 'Allow location to auto-pick the nearest hub (like Rapido).';
+          });
+        }
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
@@ -334,6 +339,44 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
           onTap: () => _pickPlan('rto'),
         ),
         const SizedBox(height: 22),
+        if (canBook) ...[
+          SurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.my_location_rounded, color: Evuddy.greenDeep),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Pickup near you',
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'We save your chosen hub on evuddy.com when you continue — same as the website.',
+                  style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
+                ),
+                const SizedBox(height: 10),
+                EvuddyGhostButton(
+                  label: loading ? 'Loading hubs…' : 'Detect nearest hub',
+                  onPressed: loading ? null : () async {
+                    await _load();
+                    await _detectNearestHub();
+                    if (locationHint == null && mounted) {
+                      _toast('Could not detect location. Pick city and hub manually.');
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         const SectionLabel('City'),
         CityRail(
           cities: cities.map((c) => c.name).toList(),
