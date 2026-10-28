@@ -78,3 +78,5 @@ class TripCountdownSync {
       tripEndsAt: tripEndsAt,
       reminderAt: remind ?? tripEndsAt.subtract(const Duration(hours: 1)),
     );
+  }
+}
