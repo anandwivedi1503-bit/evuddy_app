@@ -4,6 +4,7 @@ import 'account_screen.dart';
 import 'book_ev_screen.dart';
 import 'confirm_mobile_screen.dart';
 import 'home_screen.dart';
+import 'security_alerts_screen.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
 
@@ -71,14 +72,28 @@ class _RiderShellState extends State<RiderShell> with WidgetsBindingObserver {
           );
     return Scaffold(
       backgroundColor: Colors.white,
-      body: IndexedStack(
-        index: index,
+      body: Column(
         children: [
-          const HomeScreen(),
-          bookChild,
-          AccountScreen(
-            key: ValueKey('acct-${session.phoneVerified}-${session.phone}'),
-            onLoggedOut: () => setState(() => index = 0),
+          SecurityAlertBanner(
+            onOpen: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute<void>(builder: (_) => const SecurityAlertsScreen()),
+              );
+            },
+          ),
+          Expanded(
+            child: IndexedStack(
+              index: index,
+              children: [
+                const HomeScreen(),
+                bookChild,
+                AccountScreen(
+                  key: ValueKey('acct-${session.phoneVerified}-${session.phone}'),
+                  onLoggedOut: () => setState(() => index = 0),
+                ),
+              ],
+            ),
           ),
         ],
       ),

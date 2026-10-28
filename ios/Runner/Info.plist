@@ -10,6 +10,10 @@
 	<string>EVUDDY uses the camera for KYC photos, same as the website.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>EVUDDY reads Aadhaar and profile photos for KYC upload.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>EVUDDY uses your location only during an active ride for safety and recovery if a scooter is not returned on time.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>EVUDDY shares live phone GPS with ops during your ride until IoT fleet GPS is active.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

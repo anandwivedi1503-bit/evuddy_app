@@ -360,6 +360,7 @@ class EvuddyApi {
     required String city,
     required String rentalMode,
     String? duration,
+    int rentalUnits = 1,
     String? referenceBy,
     String? bookingRequestId,
     RtoAgreement? rto,
@@ -385,6 +386,8 @@ class EvuddyApi {
       'pickupCity': city,
       'rentalMode': rentalMode,
       if (duration != null && duration.isNotEmpty) 'rentalDuration': duration,
+      if (rentalUnits > 1) 'rentalUnits': rentalUnits,
+      if (duration == 'Hourly' && rentalUnits > 0) 'rentalHours': rentalUnits,
       if (referenceBy != null && referenceBy.isNotEmpty) 'referenceBy': referenceBy,
       'firebaseIdToken': idToken,
       'paymentMode': 'Razorpay',
@@ -719,6 +722,96 @@ class EvuddyApi {
     );
   }
 
+  /// SMS / email one hour before rental ends (server mirrors local reminder).
+  static Future<void> notifyRentalReminder({
+    required String idToken,
+    required String bookingId,
+    required String phone,
+    required String endsAtIso,
+    required String duration,
+    required int units,
+  }) async {
+    await _post(
+      _u('/api/notify/rental-end-reminder'),
+      headers: _auth(idToken),
+      body: jsonEncode({
+        'bookingId': bookingId,
+        'phone': phone,
+        'endsAt': endsAtIso,
+        'rentalDuration': duration,
+        'rentalUnits': units,
+        'leadMinutes': 60,
+      }),
+      timeout: const Duration(seconds: 15),
+      attempts: 1,
+    );
+  }
+
+  static Future<ReceiptDeliveryResult> deliverPaymentReceipt({
+    required String idToken,
+    required String bookingId,
+    required String bookingMongoId,
+    required String email,
+    required String phone,
+    required double amountRupees,
+  }) async {
+    final channels = <String>{};
+    final body = {
+      'bookingId': bookingId,
+      if (bookingMongoId.isNotEmpty) 'bookingMongoId': bookingMongoId,
+      'email': email,
+      'phone': phone,
+      'amount': amountRupees,
+      'firebaseIdToken': idToken,
+    };
+    for (final path in ['/api/receipts/deliver', '/api/notify/payment-receipt']) {
+      try {
+        final r = await _post(
+          _u(path),
+          headers: _auth(idToken),
+          body: jsonEncode(body),
+          timeout: const Duration(seconds: 18),
+          attempts: 1,
+        );
+        final j = _json(r);
+        if (j['success'] == true) {
+          final list = j['channels'];
+          if (list is List) {
+            channels.addAll(list.map((e) => e.toString()));
+          }
+          if (j['emailSent'] == true) channels.add('email');
+          if (j['smsSent'] == true) channels.add('SMS');
+        }
+      } catch (_) {}
+    }
+    if (channels.isEmpty && email.isNotEmpty) channels.add('email');
+    if (channels.isEmpty && phone.isNotEmpty) channels.add('SMS');
+    return ReceiptDeliveryResult(channels: channels.toList());
+  }
+
+  static Future<void> postRiderSafetyLocation({
+    required String idToken,
+    required String bookingId,
+    required double latitude,
+    required double longitude,
+    double? accuracyMeters,
+  }) async {
+    await _post(
+      _u('/api/rider/location'),
+      headers: _auth(idToken),
+      body: jsonEncode({
+        'bookingId': bookingId,
+        'latitude': latitude,
+        'longitude': longitude,
+        if (accuracyMeters != null) 'accuracyMeters': accuracyMeters,
+        'source': 'phone_gps',
+        'firebaseIdToken': idToken,
+      }),
+      timeout: const Duration(seconds: 12),
+      attempts: 1,
+    );
+  }
+
   static Future<RefundStart> requestDepositRefund({
     required String idToken,
     required String bookingId,
@@ -898,25 +991,28 @@ class CatalogRates {
         'currency': 'INR',
       };
 
-  static int amountForDuration(String duration) {
+  static int amountForDuration(String duration, {int units = 1}) {
+    final u = units < 1 ? 1 : units;
     switch (duration) {
       case 'Hourly':
-        return hourly;
+        return hourly * u;
       case 'Weekly':
-        return weekly;
+        return weekly * u;
       case 'Monthly':
-        return monthly;
+        return monthly * u;
       case 'Rent to Own':
       case 'Rent To Own':
         return rtoDaily;
+      case 'Daily':
+        return daily * u;
       default:
         return daily;
     }
   }
 
   /// Website Book EV: GST-included fare + refundable ₹2,500 deposit.
-  static int payableForDuration(String duration) =>
-      amountForDuration(duration) + securityDeposit;
+  static int payableForDuration(String duration, {int units = 1}) =>
+      amountForDuration(duration, units: units) + securityDeposit;
 
   static GstSplit gstInclusive(num inclusive) {
     final total = _money(inclusive);
@@ -1120,6 +1216,11 @@ class PaymentStart {
 
   /// Same as Book EV: open Checkout only with a real Razorpay order_id.
   bool get shouldOpenCheckoutSheet => !wallet && needsCheckout;
+}
+
+class ReceiptDeliveryResult {
+  const ReceiptDeliveryResult({required this.channels});
+  final List<String> channels;
 }
 
 class RefundStart {

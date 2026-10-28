@@ -41,6 +41,7 @@ class RegistrationDraft {
   String? chosenCity;
   String? chosenHubId;
   String? chosenDuration;
+  int rentalUnits = 1;
   RiderBooking? activeBooking;
   String otpGate = 'register'; // register | book
   int shellTab = 0;
@@ -358,6 +359,9 @@ class RegistrationDraft {
       chosenHubId = m['chosenHubId']?.toString();
       chosenPlan = m['chosenPlan']?.toString();
       chosenDuration = m['chosenDuration']?.toString();
+      rentalUnits = m['rentalUnits'] is int
+          ? m['rentalUnits'] as int
+          : int.tryParse(m['rentalUnits']?.toString() ?? '') ?? rentalUnits;
       rtoNomineeName = m['rtoNomineeName']?.toString() ?? rtoNomineeName;
       rtoNomineeRelation = m['rtoNomineeRelation']?.toString() ?? rtoNomineeRelation;
       rtoGuardianName = m['rtoGuardianName']?.toString() ?? rtoGuardianName;
@@ -409,6 +413,7 @@ class RegistrationDraft {
           'chosenHubId': chosenHubId,
           'chosenPlan': chosenPlan,
           'chosenDuration': chosenDuration,
+          'rentalUnits': rentalUnits,
           'rtoNomineeName': rtoNomineeName,
           'rtoNomineeRelation': rtoNomineeRelation,
           'rtoGuardianName': rtoGuardianName,

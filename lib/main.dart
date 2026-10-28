@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 
 import 'api/evuddy_api.dart';
 import 'api/firebase_phone.dart';
+import 'services/security_alert_hub.dart';
+import 'services/rider_notifications.dart';
+import 'services/rider_safety_tracker.dart';
 import 'shell.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
@@ -11,6 +14,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EvuddyFirebase.ensure();
   await registrationDraft.restore();
+  await SecurityAlertHub.instance.restore();
+  await RiderNotifications.instance.ensureReady();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
