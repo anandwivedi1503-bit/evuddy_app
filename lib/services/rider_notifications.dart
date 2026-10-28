@@ -8,8 +8,6 @@ import '../api/evuddy_api.dart';
 import 'booking_end_schedule.dart';
 import 'security_alert_hub.dart';
 import 'trip_countdown_store.dart';
-
-/// Local + server nudges one hour before rental ends.
 class RiderNotifications {
   RiderNotifications._();
   static final RiderNotifications instance = RiderNotifications._();
@@ -81,15 +79,26 @@ class RiderNotifications {
         _details(),
       );
     } else {
-      await _plugin.zonedSchedule(
-        bookingId.hashCode,
-        title,
-        body,
-        tz.TZDateTime.from(remind, tz.local),
-        _details(),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      );
+      try {
+        await _plugin.zonedSchedule(
+          bookingId.hashCode,
+          title,
+          body,
+          tz.TZDateTime.from(remind, tz.local),
+          _details(),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+        );
+      } catch (e) {
+        debugPrint('EVUDDY zonedSchedule failed: $e');
+        await _plugin.show(
+          bookingId.hashCode,
+          title,
+          body,
+          _details(),
+        );
+      }
     }
     await TripCountdownStore.instance.schedule(
       bookingId: bookingId,

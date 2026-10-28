@@ -55,7 +55,7 @@ class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerPr
     final urgent = untilEnd <= const Duration(hours: 1);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
       child: Material(
         elevation: urgent ? 6 : 2,
         shadowColor: Evuddy.magenta.withValues(alpha: 0.45),
@@ -72,7 +72,7 @@ class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerPr
                     : [const Color(0xFF1E3A8A), const Color(0xFF2563EB)],
               ),
             ),
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
             child: Row(
               children: [
                 ScaleTransition(
@@ -114,7 +114,7 @@ class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerPr
                         style: GoogleFonts.plusJakartaSans(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
-                          fontSize: 20,
+                          fontSize: 17,
                         ),
                       ),
                       Text(

@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
 import 'confirm_mobile_screen.dart';
 import 'ride_ready_screen.dart';
+import 'services/nearby_hub.dart';
 import 'state/registration_draft.dart';
 import 'submitted_screen.dart';
 import 'theme/evuddy.dart';
@@ -28,6 +30,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
   String? error;
   bool loading = true;
   bool refreshing = false;
+  String? locationHint;
   Timer? _poll;
 
   bool get canBook => registrationDraft.canBook;
@@ -45,6 +48,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
     }
     _load();
     _refreshApproval();
+    _detectNearestHub();
     _poll = Timer.periodic(const Duration(seconds: 6), (_) {
       if (waitingKyc) _refreshApproval();
     });
@@ -77,6 +81,38 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
     setState(() {});
   }
 
+  Future<void> _detectNearestHub() async {
+    try {
+      var perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+      );
+      if (hubs.isEmpty) return;
+      final pick = NearbyHub.nearest(
+        hubs: hubs,
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+      );
+      if (pick.hub == null) return;
+      registrationDraft
+        ..chosenHubId = pick.hub!.id
+        ..chosenCity = pick.city ?? pick.hub!.city;
+      await registrationDraft.persist();
+      if (!mounted) return;
+      setState(() {
+        hubId = pick.hub!.id;
+        city = pick.city ?? pick.hub!.city;
+        locationHint = 'Using nearest hub · ${pick.hub!.name} (from your location)';
+      });
+    } catch (_) {}
+  }
+
   Future<void> _load() async {
     try {
       final c = await EvuddyApi.cities();
@@ -90,6 +126,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
         loading = false;
         _ensureHub();
       });
+      if (mounted) await _detectNearestHub();
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -247,6 +284,10 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
           const SizedBox(height: 16),
         ],
         if (loading) const InfoNote(text: 'Loading live cities…'),
+        if (locationHint != null && !loading) ...[
+          InfoNote(text: locationHint!),
+          const SizedBox(height: 12),
+        ],
         if (waitingKyc)
           Padding(
             padding: const EdgeInsets.only(bottom: 16),

@@ -186,6 +186,29 @@ class EvuddyApi {
     return missing ?? const RiderLookup.missing();
   }
 
+  static Future<void> updateRiderProfile({
+    required String idToken,
+    required String riderId,
+    required String fullName,
+    required String email,
+  }) async {
+    final r = await _post(
+      _u('/api/riders/me'),
+      headers: _auth(idToken),
+      body: jsonEncode({
+        'riderId': riderId,
+        'fullName': fullName.trim(),
+        'email': email.trim(),
+        'firebaseIdToken': idToken,
+      }),
+      timeout: const Duration(seconds: 18),
+    );
+    final j = _json(r);
+    if (j['success'] != true) {
+      throw ApiException(_message(j, 'Could not update profile.'));
+    }
+  }
+
   static Future<String> uploadFile({
     required File file,
     required String idToken,
