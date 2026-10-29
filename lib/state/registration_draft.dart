@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/rider_gps_sync.dart';
 import '../services/rider_session_cleanup.dart';
 import '../services/trip_countdown_sync.dart';
 import '../api/evuddy_api.dart';
@@ -206,6 +207,7 @@ class RegistrationDraft {
     }
     if (mine.city.isNotEmpty) chosenCity = mine.city;
     TripCountdownSync.apply(mine);
+    RiderGpsSync.schedule(mine);
     persist();
     riderSessionTick.value++;
   }
@@ -312,6 +314,7 @@ class RegistrationDraft {
       try {
         applyActiveBooking(await EvuddyApi.myBooking(token));
       } catch (_) {}
+      RiderGpsSync.schedule(activeBooking);
       persist();
       return lookup;
     } catch (_) {
