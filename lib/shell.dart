@@ -73,7 +73,19 @@ class _RiderShellState extends State<RiderShell> with WidgetsBindingObserver {
           );
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
+      body: IndexedStack(
+        index: index,
+        children: [
+          const HomeScreen(),
+          bookChild,
+          AccountScreen(
+            key: ValueKey('acct-${session.phoneVerified}-${session.phone}'),
+            onLoggedOut: () => setState(() => index = 0),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           RiderSafetyTopBar(
             onOpenAlerts: () {
@@ -83,46 +95,33 @@ class _RiderShellState extends State<RiderShell> with WidgetsBindingObserver {
               );
             },
           ),
-          Expanded(
-            child: IndexedStack(
-              index: index,
-              children: [
-                const HomeScreen(),
-                bookChild,
-                AccountScreen(
-                  key: ValueKey('acct-${session.phoneVerified}-${session.phone}'),
-                  onLoggedOut: () => setState(() => index = 0),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: index,
-        onDestinationSelected: _select,
-        backgroundColor: Colors.white,
-        elevation: 8,
-        shadowColor: const Color(0x14000000),
-        surfaceTintColor: Colors.white,
-        indicatorColor: Evuddy.rapidoYellow,
-        height: 72,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded, color: Evuddy.ink),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.electric_moped_outlined),
-            selectedIcon: Icon(Icons.electric_moped_rounded, color: Evuddy.ink),
-            label: 'Book EV',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded, color: Evuddy.ink),
-            label: 'Account',
+          NavigationBar(
+            selectedIndex: index,
+            onDestinationSelected: _select,
+            backgroundColor: Colors.white,
+            elevation: 8,
+            shadowColor: const Color(0x14000000),
+            surfaceTintColor: Colors.white,
+            indicatorColor: Evuddy.rapidoYellow,
+            height: 72,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_rounded, color: Evuddy.ink),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.electric_moped_outlined),
+                selectedIcon: Icon(Icons.electric_moped_rounded, color: Evuddy.ink),
+                label: 'Book EV',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline_rounded),
+                selectedIcon: Icon(Icons.person_rounded, color: Evuddy.ink),
+                label: 'Account',
+              ),
+            ],
           ),
         ],
       ),

@@ -65,10 +65,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _book({FareOffer? fare}) async {
+    if (registrationDraft.phoneVerified && registrationDraft.hasLiveBooking) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Finish your current trip before starting a new booking.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.push(context, evuddyRoute(const RideReadyScreen()));
+      return;
+    }
     if (registrationDraft.phoneVerified && registrationDraft.canBook) {
-      if (registrationDraft.showRideWorkspace || registrationDraft.activeBooking != null) {
-        await registrationDraft.startFreshBooking();
-      }
       if (fare != null) {
         registrationDraft.chosenPlan = fare.plan;
         registrationDraft.chosenDuration = fare.plan == 'rto' ? 'Rent to Own' : fare.id;
@@ -168,54 +176,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     OfferAdCarousel(onBook: () => _book()),
                     const SizedBox(height: 16),
                     BookSearchBar(onBook: () => _book()),
-                    const SizedBox(height: 16),
-                    EvuddyGhostButton(
-                      label: 'Fleet calculator',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          evuddyRoute(const FleetCalculatorScreen()),
-                        );
-                      },
-                    ),
                     const SizedBox(height: 22),
-                    if (d.canBook) ...[
-                      SurfaceCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'BOOK EV',
-                              style: Theme.of(context).textTheme.labelSmall,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '1 City & hub  ·  2 Scooter  ·  3 Reserve  ·  4 Razorpay / wallet',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                color: Evuddy.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Same steps as evuddy.com/book-bike. GST-included fare + ₹2,500 deposit. Pickup OTP after ₹1. Yard confirms it. Ride-end OTP after remaining is ₹0.',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: Evuddy.muted,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 22),
+                    if (d.canBook && !d.hasLiveBooking) ...[
+                      Text('RIDE', style: Theme.of(context).textTheme.labelSmall),
+                      const SizedBox(height: 10),
+                      FareGrid(onPick: (fare) => _book(fare: fare)),
+                      const SizedBox(height: 18),
                     ],
-                    Text('RIDE', style: Theme.of(context).textTheme.labelSmall),
-                    const SizedBox(height: 10),
-                    FareGrid(onPick: (fare) => _book(fare: fare)),
-                    const SizedBox(height: 18),
-                    const RideSteps(),
-                    const SizedBox(height: 18),
                     QuickActions(
                       registerLabel: d.canBook
                           ? 'Account'

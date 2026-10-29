@@ -17,6 +17,10 @@ Future<void> main() async {
   await SecurityAlertHub.instance.restore();
   await RiderNotifications.instance.ensureReady();
   await TripCountdownStore.instance.restore();
+  if (!registrationDraft.phoneVerified) {
+    await TripCountdownStore.instance.clear();
+    await SecurityAlertHub.instance.clearAll();
+  }
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
