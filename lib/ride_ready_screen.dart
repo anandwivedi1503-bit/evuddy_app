@@ -446,6 +446,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         }
         _fillAmount(mine);
       });
+      if (mine != null) {
+        RiderGpsSync.schedule(mine);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {

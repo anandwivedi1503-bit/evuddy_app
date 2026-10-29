@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'api/evuddy_api.dart';
 import 'api/firebase_phone.dart';
 import 'services/security_alert_hub.dart';
+import 'services/rider_gps_sync.dart';
 import 'services/rider_notifications.dart';
 import 'services/trip_countdown_store.dart';
 import 'shell.dart';
@@ -20,6 +21,8 @@ Future<void> main() async {
   if (!registrationDraft.phoneVerified) {
     await TripCountdownStore.instance.clear();
     await SecurityAlertHub.instance.clearAll();
+  } else {
+    RiderGpsSync.schedule(registrationDraft.activeBooking);
   }
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
