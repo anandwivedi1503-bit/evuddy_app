@@ -368,6 +368,8 @@ class RegistrationDraft {
       fullName = m['fullName']?.toString() ?? fullName;
       email = m['email']?.toString() ?? email;
       profilePhotoUrl = m['profilePhotoUrl']?.toString() ?? profilePhotoUrl;
+      final path = m['profilePhotoPath']?.toString();
+      if (path != null && path.isNotEmpty) profilePhotoPath = path;
       instagramId = m['instagramId']?.toString() ?? instagramId;
       facebookId = m['facebookId']?.toString() ?? facebookId;
       comingThrough = m['comingThrough']?.toString() ?? comingThrough;
@@ -428,6 +430,7 @@ class RegistrationDraft {
           'fullName': fullName,
           'email': email,
           'profilePhotoUrl': profilePhotoUrl,
+          if (profilePhotoPath != null) 'profilePhotoPath': profilePhotoPath,
           'instagramId': instagramId,
           'facebookId': facebookId,
           'comingThrough': comingThrough,
