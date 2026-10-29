@@ -29,6 +29,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   bool uploading = false;
   String? error;
   String? ok;
+  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -52,10 +53,50 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   Future<void> _pickPhoto() async {
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Profile photo',
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: Evuddy.ink,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera_outlined, color: Evuddy.greenDeep),
+                  title: const Text('Camera'),
+                  onTap: () => Navigator.pop(ctx, ImageSource.camera),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined, color: Evuddy.greenDeep),
+                  title: const Text('Gallery'),
+                  onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (source == null || !mounted) return;
+    final picked = await _picker.pickImage(
+      source: source,
       maxWidth: 1200,
       imageQuality: 85,
+      requestFullMetadata: false,
     );
     if (picked == null) return;
     setState(() {
@@ -78,6 +119,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         registrationDraft.profilePhotoUrl = url;
         registrationDraft.profilePhotoPath = picked.path;
       });
+      await registrationDraft.persist();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -134,12 +176,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (photoUrl != null && photoUrl!.isNotEmpty) {
         registrationDraft.profilePhotoUrl = photoUrl!;
       }
+      if (localPhotoPath != null) {
+        registrationDraft.profilePhotoPath = localPhotoPath;
+      }
       await registrationDraft.persist();
       if (!mounted) return;
       setState(() {
         saving = false;
         ok =
-            'Profile saved on evuddy.com. Receipts email this address; SMS goes to your registered mobile.';
+            'Profile saved on evuddy.com. Photo and name show in CRM and on your account.';
       });
     } catch (e) {
       if (!mounted) return;
@@ -206,7 +251,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       kicker: 'Profile',
       title: 'Edit your profile',
       subtitle:
-          'Photo, name, and email sync with evuddy.com CRM. Mobile stays OTP-verified — change number via helpdesk only.',
+          'Same photo as KYC step 4. Camera or gallery — syncs to evuddy.com CRM.',
       error: error,
       footer: EvuddyButton(
         label: saving ? 'Saving…' : 'Save profile',
@@ -222,7 +267,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         const SizedBox(height: 8),
         Center(
           child: Text(
-            'Tap camera to update photo',
+            'Tap camera — same as registration face photo',
             style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
           ),
         ),

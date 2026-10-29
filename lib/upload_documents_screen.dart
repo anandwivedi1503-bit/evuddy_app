@@ -163,6 +163,9 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
         ..approvalStatus = result.riderStatus ??
             (result.ok ? 'Under Review' : d.approvalStatus)
         ..bookingEnabled = result.bookingEnabled;
+      if (photo.isNotEmpty) {
+        d.profilePhotoUrl = photo;
+      }
       await d.persist();
       if (!mounted) return;
       if (d.canBook) {
