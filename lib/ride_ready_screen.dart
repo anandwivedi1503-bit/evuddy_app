@@ -12,6 +12,7 @@ import 'open_link.dart';
 import 'security_alerts_screen.dart';
 import 'services/booking_end_schedule.dart';
 import 'services/receipt_delivery.dart';
+import 'services/rider_gps_sync.dart';
 import 'services/rider_notifications.dart';
 import 'services/rider_safety_tracker.dart';
 import 'services/security_alert_hub.dart';
