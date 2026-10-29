@@ -23,7 +23,6 @@ import 'theme/evuddy.dart';
 import 'widgets/booking_ui.dart';
 import 'widgets/chrome.dart';
 import 'widgets/rental_units_stepper.dart';
-import 'widgets/rider_safety_pulse.dart';
 import 'widgets/scooter_avatar.dart';
 
 class RideReadyScreen extends StatefulWidget {
@@ -1130,17 +1129,6 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       error: error,
       footer: _footer(b),
       children: [
-        if (TripCountdownStore.instance.active) ...[
-          RiderSafetyPulse(
-            onOpenAlerts: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute<void>(builder: (_) => const SecurityAlertsScreen()),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-        ],
         if (loading) const InfoNote(text: 'Loading live scooters…'),
         if (hub != null)
           SurfaceCard(
@@ -1771,10 +1759,6 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Evuddy.muted, height: 1.35),
           ),
-        ],
-        if (!payDue && !b.hasPickupOtp && !b.readyForPickup && !b.inRide) ...[
-          const SizedBox(height: 8),
-          EvuddyButton(sun: true, label: 'Refresh booking', onPressed: _load),
         ],
       ],
     );

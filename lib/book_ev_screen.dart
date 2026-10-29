@@ -175,6 +175,11 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
       );
       return;
     }
+    if (registrationDraft.hasLiveBooking) {
+      _toast('Finish your current trip before a new booking.');
+      Navigator.push(context, evuddyRoute(const RideReadyScreen()));
+      return;
+    }
     registrationDraft.chosenPlan ??= 'rental';
     _ensureHub();
     if (hubs.isEmpty && !loading) {
@@ -189,9 +194,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
     setState(() => error = null);
     final plan = registrationDraft.chosenPlan ?? 'rental';
     final duration = registrationDraft.chosenDuration;
-    if (!registrationDraft.hasLiveBooking) {
-      await registrationDraft.startFreshBooking();
-    }
+    await registrationDraft.startFreshBooking();
     await (registrationDraft
           ..chosenPlan = plan
           ..chosenDuration = duration
@@ -208,6 +211,11 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
   void _pickPlan(String plan) {
     if (!registrationDraft.phoneVerified) {
       Navigator.push(context, evuddyRoute(const ConfirmMobileScreen()));
+      return;
+    }
+    if (registrationDraft.hasLiveBooking) {
+      _toast('Finish your current trip before a new booking.');
+      Navigator.push(context, evuddyRoute(const RideReadyScreen()));
       return;
     }
     if (registrationDraft.isRejected) {
@@ -242,7 +250,9 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
         sun: true,
         label: !canBook
             ? (waitingKyc ? 'Waiting for admin approval' : 'Verify mobile to book')
-            : 'Continue to scooters',
+            : registrationDraft.hasLiveBooking
+                ? 'Resume current trip'
+                : 'Continue to scooters',
         onPressed: _continue,
       ),
       children: [
@@ -267,7 +277,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'This number still has a trip on file. Resume it, or pick Normal / Rent to Own below for a new booking.',
+                  'Finish this trip before starting another booking.',
                   style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, height: 1.4),
                 ),
                 const SizedBox(height: 10),
@@ -303,12 +313,13 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
               text: 'Razorpay after you reserve a live scooter. No PhonePe.',
             ),
           ),
+        if (!registrationDraft.hasLiveBooking) ...[
         PlanSelectCard(
           tag: 'FLEXIBLE',
           title: 'Normal booking',
           price: CatalogRates.inr(CatalogRates.daily),
           unit: '/ day',
-          body: 'Hourly to monthly. GST included. Return the scooter when the plan ends.',
+          body: 'Hourly to monthly. GST included.',
           points: [
             'Hourly ${CatalogRates.inr(CatalogRates.hourly)}',
             'Weekly ${CatalogRates.inr(CatalogRates.weekly)}',
@@ -353,6 +364,7 @@ class _BookEvScreenState extends State<BookEvScreen> with WidgetsBindingObserver
             selected: hubId == h.id,
             onTap: () => setState(() => hubId = h.id),
           ),
+        ],
       ],
     );
   }

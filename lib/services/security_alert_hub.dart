@@ -69,6 +69,11 @@ class SecurityAlertHub {
     await _persist();
   }
 
+  Future<void> clearAll() async {
+    _items = [];
+    await _persist();
+  }
+
   Future<void> _persist() async {
     _syncUnread();
     try {
