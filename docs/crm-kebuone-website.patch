@@ -1,0 +1,1220 @@
+diff --git a/src/app/api/admin/rider-safety/route.ts b/src/app/api/admin/rider-safety/route.ts
+new file mode 100644
+index 0000000..f7d83de
+--- /dev/null
++++ b/src/app/api/admin/rider-safety/route.ts
+@@ -0,0 +1,36 @@
++import { NextResponse } from "next/server";
++
++import { getAdminSession, unauthorizedResponse } from "@/lib/adminAuth";
++import { listRiderSafetyForAdmin } from "@/lib/riderSafetyOps";
++import { clientIp, rateLimitAllowed } from "@/lib/rateLimit";
++
++export const runtime = "nodejs";
++
++export async function GET(req: Request) {
++  const session = await getAdminSession();
++  if (!session) return unauthorizedResponse();
++
++  if (!(await rateLimitAllowed(`admin-safety:${session.username}`, 60, 60 * 1000))) {
++    return NextResponse.json(
++      { success: false, message: "Please wait a moment." },
++      { status: 429 }
++    );
++  }
++  if (!(await rateLimitAllowed(`admin-safety-ip:${clientIp(req)}`, 120, 60 * 1000))) {
++    return NextResponse.json(
++      { success: false, message: "Please wait a moment." },
++      { status: 429 }
++    );
++  }
++
++  try {
++    const data = await listRiderSafetyForAdmin(session);
++    return NextResponse.json({ success: true, data });
++  } catch (error) {
++    console.error("ADMIN RIDER SAFETY:", error);
++    return NextResponse.json(
++      { success: false, message: "Rider safety feed unavailable." },
++      { status: 500 }
++    );
++  }
++}
+diff --git a/src/app/api/notify/payment-receipt/route.ts b/src/app/api/notify/payment-receipt/route.ts
+new file mode 100644
+index 0000000..6ec7818
+--- /dev/null
++++ b/src/app/api/notify/payment-receipt/route.ts
+@@ -0,0 +1,58 @@
++import { NextResponse } from "next/server";
++
++import { deliverPaymentReceipt } from "@/lib/notify/paymentReceiptDeliver";
++import { clientIp, rateLimitAllowed } from "@/lib/rateLimit";
++import { getVerifiedFirebaseUser } from "@/lib/requestAuth";
++
++export const runtime = "nodejs";
++
++export async function POST(req: Request) {
++  try {
++    const firebaseUser = await getVerifiedFirebaseUser(req);
++    if (!firebaseUser) {
++      return NextResponse.json(
++        { success: false, message: "Sign in required." },
++        { status: 401 }
++      );
++    }
++
++    if (
++      !(await rateLimitAllowed(`receipt-del:${firebaseUser.uid}`, 12, 10 * 60 * 1000)) ||
++      !(await rateLimitAllowed(`receipt-del-ip:${clientIp(req)}`, 30, 10 * 60 * 1000))
++    ) {
++      return NextResponse.json(
++        { success: false, message: "Too many receipt requests." },
++        { status: 429 }
++      );
++    }
++
++    const body = (await req.json()) as {
++      bookingId?: string;
++      bookingMongoId?: string;
++      email?: string;
++      phone?: string;
++      amount?: number;
++    };
++
++    const result = await deliverPaymentReceipt({
++      bookingId: String(body.bookingId || ""),
++      bookingMongoId: String(body.bookingMongoId || ""),
++      email: String(body.email || ""),
++      phone: String(body.phone || ""),
++      amount: Number(body.amount),
++    });
++
++    return NextResponse.json({
++      success: result.success,
++      channels: result.channels,
++      emailSent: result.emailSent,
++      smsSent: result.smsSent,
++    });
++  } catch (error) {
++    console.error("PAYMENT RECEIPT NOTIFY ERROR:", error);
++    return NextResponse.json(
++      { success: false, message: "Unable to deliver receipt." },
++      { status: 500 }
++    );
++  }
++}
+diff --git a/src/app/api/notify/rental-end-reminder/route.ts b/src/app/api/notify/rental-end-reminder/route.ts
+new file mode 100644
+index 0000000..59a2c4e
+--- /dev/null
++++ b/src/app/api/notify/rental-end-reminder/route.ts
+@@ -0,0 +1,126 @@
++import { NextResponse } from "next/server";
++
++import { connectDB } from "@/lib/mongodb";
++import { notifyRentalEndReminder } from "@/lib/notify/rentalEndReminder";
++import { clientIp, rateLimitAllowed } from "@/lib/rateLimit";
++import {
++  firebaseUserOwnsRider,
++  getVerifiedFirebaseUser,
++} from "@/lib/requestAuth";
++import Booking from "@/models/Booking";
++import Rider from "@/models/Rider";
++
++export const runtime = "nodejs";
++
++const NOT_DELETED = {
++  $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
++};
++
++export async function POST(req: Request) {
++  try {
++    const firebaseUser = await getVerifiedFirebaseUser(req);
++    if (!firebaseUser) {
++      return NextResponse.json(
++        { success: false, message: "Sign in required." },
++        { status: 401 }
++      );
++    }
++
++    if (
++      !(await rateLimitAllowed(`rental-rem:${firebaseUser.uid}`, 6, 60 * 60 * 1000))
++    ) {
++      return NextResponse.json(
++        { success: false, message: "Reminder already queued." },
++        { status: 429 }
++      );
++    }
++
++    const body = (await req.json()) as {
++      bookingId?: string;
++      phone?: string;
++      endsAt?: string;
++      rentalDuration?: string;
++      rentalUnits?: number;
++      leadMinutes?: number;
++    };
++
++    const bookingId = String(body.bookingId || "").trim();
++    if (!bookingId) {
++      return NextResponse.json(
++        { success: false, message: "bookingId required." },
++        { status: 400 }
++      );
++    }
++
++    await connectDB();
++
++    const riderLookups: Array<{ firebaseUid?: string; phone?: string }> = [
++      { firebaseUid: firebaseUser.uid },
++    ];
++    if (firebaseUser.phone) riderLookups.push({ phone: firebaseUser.phone });
++
++    const rider = await Rider.findOne({
++      $and: [NOT_DELETED, { $or: riderLookups }],
++    });
++    if (!rider || !firebaseUserOwnsRider(firebaseUser, rider)) {
++      return NextResponse.json(
++        { success: false, message: "Rider not found." },
++        { status: 404 }
++      );
++    }
++
++    const booking = await Booking.findOne({
++      bookingId,
++      riderId: rider.riderId,
++      $and: [NOT_DELETED],
++    });
++    if (!booking) {
++      return NextResponse.json(
++        { success: false, message: "Booking not found." },
++        { status: 404 }
++      );
++    }
++
++    if (booking.riderEndReminderSentAt) {
++      return NextResponse.json({
++        success: true,
++        message: "Reminder already sent for this booking.",
++      });
++    }
++
++    const endsAtIso =
++      String(body.endsAt || "").trim() ||
++      (booking.rentalEndDate
++        ? new Date(booking.rentalEndDate).toISOString()
++        : "");
++
++    const result = await notifyRentalEndReminder({
++      bookingId,
++      riderName: String(booking.userName || rider.fullName || ""),
++      riderPhone: String(body.phone || booking.userPhone || rider.phone || ""),
++      riderEmail: String(booking.userEmail || rider.email || ""),
++      endsAtIso,
++      duration: String(body.rentalDuration || booking.rentalMode || ""),
++      units: Number(body.rentalUnits) || undefined,
++      leadMinutes: Number(body.leadMinutes) || 60,
++    });
++
++    booking.riderEndReminderSentAt = new Date();
++    await booking.save();
++
++    return NextResponse.json({
++      success: true,
++      ...result,
++      channels: [
++        ...(result.emailSent ? ["email"] : []),
++        ...(result.smsSent ? ["SMS"] : []),
++      ],
++    });
++  } catch (error) {
++    console.error("RENTAL END REMINDER ERROR:", error);
++    return NextResponse.json(
++      { success: false, message: "Unable to send reminder." },
++      { status: 500 }
++    );
++  }
++}
+diff --git a/src/app/api/receipts/deliver/route.ts b/src/app/api/receipts/deliver/route.ts
+new file mode 100644
+index 0000000..2d5812a
+--- /dev/null
++++ b/src/app/api/receipts/deliver/route.ts
+@@ -0,0 +1,62 @@
++import { NextResponse } from "next/server";
++
++import { deliverPaymentReceipt } from "@/lib/notify/paymentReceiptDeliver";
++import { clientIp, rateLimitAllowed } from "@/lib/rateLimit";
++import { getVerifiedFirebaseUser } from "@/lib/requestAuth";
++
++export const runtime = "nodejs";
++
++async function handle(req: Request) {
++  const firebaseUser = await getVerifiedFirebaseUser(req);
++  if (!firebaseUser) {
++    return NextResponse.json(
++      { success: false, message: "Sign in required." },
++      { status: 401 }
++    );
++  }
++
++  if (
++    !(await rateLimitAllowed(`receipt-del:${firebaseUser.uid}`, 12, 10 * 60 * 1000)) ||
++    !(await rateLimitAllowed(`receipt-del-ip:${clientIp(req)}`, 30, 10 * 60 * 1000))
++  ) {
++    return NextResponse.json(
++      { success: false, message: "Too many receipt requests." },
++      { status: 429 }
++    );
++  }
++
++  const body = (await req.json()) as {
++    bookingId?: string;
++    bookingMongoId?: string;
++    email?: string;
++    phone?: string;
++    amount?: number;
++  };
++
++  const result = await deliverPaymentReceipt({
++    bookingId: String(body.bookingId || ""),
++    bookingMongoId: String(body.bookingMongoId || ""),
++    email: String(body.email || ""),
++    phone: String(body.phone || ""),
++    amount: Number(body.amount),
++  });
++
++  return NextResponse.json({
++    success: result.success,
++    channels: result.channels,
++    emailSent: result.emailSent,
++    smsSent: result.smsSent,
++  });
++}
++
++export async function POST(req: Request) {
++  try {
++    return await handle(req);
++  } catch (error) {
++    console.error("RECEIPT DELIVER ERROR:", error);
++    return NextResponse.json(
++      { success: false, message: "Unable to deliver receipt." },
++      { status: 500 }
++    );
++  }
++}
+diff --git a/src/app/api/rider/location/route.ts b/src/app/api/rider/location/route.ts
+new file mode 100644
+index 0000000..6e2f330
+--- /dev/null
++++ b/src/app/api/rider/location/route.ts
+@@ -0,0 +1,111 @@
++import { NextResponse } from "next/server";
++
++import { connectDB } from "@/lib/mongodb";
++import { notifyOpsAlert } from "@/lib/notify/opsAlert";
++import { clientIp, rateLimitAllowed } from "@/lib/rateLimit";
++import {
++  firebaseUserOwnsRider,
++  getVerifiedFirebaseUser,
++} from "@/lib/requestAuth";
++import Booking from "@/models/Booking";
++import Rider from "@/models/Rider";
++
++export const runtime = "nodejs";
++
++const NOT_DELETED = {
++  $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
++};
++
++export async function POST(req: Request) {
++  try {
++    const firebaseUser = await getVerifiedFirebaseUser(req);
++    if (!firebaseUser) {
++      return NextResponse.json(
++        { success: false, message: "Sign in required." },
++        { status: 401 }
++      );
++    }
++
++    if (
++      !(await rateLimitAllowed(`rider-loc:${firebaseUser.uid}`, 120, 10 * 60 * 1000)) ||
++      !(await rateLimitAllowed(`rider-loc-ip:${clientIp(req)}`, 240, 10 * 60 * 1000))
++    ) {
++      return NextResponse.json(
++        { success: false, message: "Too many location updates." },
++        { status: 429 }
++      );
++    }
++
++    const body = (await req.json()) as {
++      bookingId?: string;
++      latitude?: number;
++      longitude?: number;
++      accuracyMeters?: number;
++      source?: string;
++    };
++
++    const bookingId = String(body.bookingId || "").trim();
++    const latitude = Number(body.latitude);
++    const longitude = Number(body.longitude);
++    if (!bookingId || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
++      return NextResponse.json(
++        { success: false, message: "bookingId, latitude and longitude required." },
++        { status: 400 }
++      );
++    }
++
++    await connectDB();
++
++    const riderLookups: Array<{ firebaseUid?: string; phone?: string }> = [
++      { firebaseUid: firebaseUser.uid },
++    ];
++    if (firebaseUser.phone) riderLookups.push({ phone: firebaseUser.phone });
++
++    const rider = await Rider.findOne({
++      $and: [NOT_DELETED, { $or: riderLookups }],
++    });
++    if (!rider || !firebaseUserOwnsRider(firebaseUser, rider)) {
++      return NextResponse.json(
++        { success: false, message: "Rider not found." },
++        { status: 404 }
++      );
++    }
++
++    const booking = await Booking.findOne({
++      bookingId,
++      riderId: rider.riderId,
++      $and: [NOT_DELETED, { rideStatus: { $nin: ["Completed", "Cancelled"] } }],
++    });
++    if (!booking) {
++      return NextResponse.json(
++        { success: false, message: "Active booking not found." },
++        { status: 404 }
++      );
++    }
++
++    booking.riderPhoneLat = latitude;
++    booking.riderPhoneLng = longitude;
++    booking.riderPhoneAccuracyM = Number(body.accuracyMeters) || undefined;
++    booking.riderPhoneUpdatedAt = new Date();
++    await booking.save();
++
++    if (booking.rideStatus === "In Ride") {
++      const end = booking.rentalEndDate ? new Date(booking.rentalEndDate) : null;
++      const mins = end ? Math.round((end.getTime() - Date.now()) / 60000) : 999;
++      if (mins <= 60 && mins >= 0) {
++        void notifyOpsAlert(
++          `SIREN · rider GPS · ${bookingId}`,
++          `${booking.userName || rider.fullName} · ${latitude.toFixed(5)}, ${longitude.toFixed(5)} · ~${mins} min to rental end`
++        );
++      }
++    }
++
++    return NextResponse.json({ success: true });
++  } catch (error) {
++    console.error("RIDER LOCATION ERROR:", error);
++    return NextResponse.json(
++      { success: false, message: "Unable to save rider location." },
++      { status: 500 }
++    );
++  }
++}
+diff --git a/src/app/api/riders/me/route.ts b/src/app/api/riders/me/route.ts
+new file mode 100644
+index 0000000..07f1324
+--- /dev/null
++++ b/src/app/api/riders/me/route.ts
+@@ -0,0 +1,106 @@
++import { NextResponse } from "next/server";
++
++import { connectDB } from "@/lib/mongodb";
++import {
++  firebaseUserOwnsRider,
++  getVerifiedFirebaseUser,
++} from "@/lib/requestAuth";
++import { riderLookupFilter } from "@/lib/riderLookup";
++import Rider from "@/models/Rider";
++
++function clean(value: unknown) {
++  return String(value || "").trim();
++}
++
++export async function POST(req: Request) {
++  try {
++    await connectDB();
++    const firebaseUser = await getVerifiedFirebaseUser(req);
++    if (!firebaseUser) {
++      return NextResponse.json(
++        { success: false, message: "Sign in with OTP on this phone first." },
++        { status: 401 }
++      );
++    }
++
++    let body: Record<string, unknown>;
++    try {
++      body = await req.json();
++    } catch {
++      return NextResponse.json(
++        { success: false, message: "Invalid request body." },
++        { status: 400 }
++      );
++    }
++
++    const riderId = clean(body.riderId);
++    const fullName = clean(body.fullName).slice(0, 80);
++    const email = clean(body.email).slice(0, 120);
++    const profilePhotoUrl = clean(body.profilePhotoUrl).slice(0, 500);
++    const instagramId = clean(body.instagramId).slice(0, 80);
++    const facebookId = clean(body.facebookId).slice(0, 120);
++
++    if (!riderId) {
++      return NextResponse.json(
++        { success: false, message: "Rider id is required." },
++        { status: 400 }
++      );
++    }
++    if (fullName.length < 2) {
++      return NextResponse.json(
++        { success: false, message: "Enter your full name." },
++        { status: 400 }
++      );
++    }
++    if (!email.includes("@")) {
++      return NextResponse.json(
++        { success: false, message: "Enter a valid email." },
++        { status: 400 }
++      );
++    }
++
++    const rider = await Rider.findOne(riderLookupFilter(riderId));
++    if (!rider || rider.isDeleted) {
++      return NextResponse.json(
++        { success: false, message: "Rider not found." },
++        { status: 404 }
++      );
++    }
++
++    if (!firebaseUserOwnsRider(firebaseUser, rider as any)) {
++      return NextResponse.json(
++        { success: false, message: "This profile belongs to another mobile." },
++        { status: 403 }
++      );
++    }
++
++    rider.fullName = fullName;
++    rider.email = email;
++    if (profilePhotoUrl.startsWith("http")) {
++      rider.profilePhotoUrl = profilePhotoUrl;
++    }
++    if (instagramId) rider.instagramId = instagramId;
++    if (facebookId) rider.facebookId = facebookId;
++    rider.updatedBy = "RiderApp";
++    await rider.save({ validateModifiedOnly: true });
++
++    return NextResponse.json({
++      success: true,
++      message: "Profile updated.",
++      data: {
++        riderId: rider.riderId,
++        fullName: rider.fullName,
++        email: rider.email,
++        profilePhotoUrl: rider.profilePhotoUrl,
++        instagramId: rider.instagramId,
++        facebookId: rider.facebookId,
++      },
++    });
++  } catch (error) {
++    console.error("RIDER PROFILE UPDATE:", error);
++    return NextResponse.json(
++      { success: false, message: "Could not update profile." },
++      { status: 500 }
++    );
++  }
++}
+diff --git a/src/app/api/riders/route.ts b/src/app/api/riders/route.ts
+index f65877b..14dda88 100644
+--- a/src/app/api/riders/route.ts
++++ b/src/app/api/riders/route.ts
+@@ -1608,6 +1608,9 @@ export async function GET(req: Request) {
+               "bookingEnabled",
+               "blacklisted",
+               "status",
++              "profilePhotoUrl",
++              "instagramId",
++              "facebookId",
+               "rejectedReason",
+             ].join(" ")
+           )
+diff --git a/src/app/components/AdminDashboard/AdminDashboard.tsx b/src/app/components/AdminDashboard/AdminDashboard.tsx
+index c264fb0..c4ee585 100644
+--- a/src/app/components/AdminDashboard/AdminDashboard.tsx
++++ b/src/app/components/AdminDashboard/AdminDashboard.tsx
+@@ -12,6 +12,7 @@ import DashboardCard from "../DashboardUI/DashboardCard";
+ import DashboardActions from "../DashboardUI/DashboardActions";
+ import SectionHeader from "../DashboardUI/SectionHeader";
+ import OpsMoneyStrip from "../DashboardUI/OpsMoneyStrip";
++import RiderSafetyBoard from "./RiderSafetyBoard";
+ 
+ type CommandCenterCounts = {
+   riders: number;
+@@ -66,6 +67,7 @@ export default function AdminDashboard({ setActiveDashboard }: AdminDashboardPro
+   const [bookings, setBookings] = useState<any[]>([]);
+   const [tickets, setTickets] = useState<any[]>([]);
+   const [partners, setPartners] = useState<any[]>([]);
++  const [riderSafety, setRiderSafety] = useState<any[]>([]);
+   const [searchHits, setSearchHits] = useState<
+     Array<{ id: string; title: string; subtitle: string; dashboard: string }>
+   >([]);
+@@ -86,6 +88,7 @@ export default function AdminDashboard({ setActiveDashboard }: AdminDashboardPro
+       setBookings(data.recent?.bookings || []);
+       setTickets(data.recent?.tickets || []);
+       setPartners(data.recent?.partners || []);
++      setRiderSafety(Array.isArray(data.riderSafety) ? data.riderSafety : []);
+     } catch (err) {
+       console.error(err);
+     } finally {
+@@ -267,6 +270,15 @@ export default function AdminDashboard({ setActiveDashboard }: AdminDashboardPro
+         />
+       </KPIGrid>
+ 
++      <SectionHeader
++        title="Rider safety · live countdown"
++        subtitle="Phone GPS from the rider app and rental end timers. Siren rows are within 1 hour of return — same alerts riders see on their phones."
++      />
++      <RiderSafetyBoard
++        rows={riderSafety}
++        onOpenIot={() => openDashboard("iot")}
++      />
++
+       <SectionHeader
+         title="Find a record"
+         subtitle="Search riders, bookings, tickets or wallets. Click a row to open that desk."
+diff --git a/src/app/components/AdminDashboard/RiderSafetyBoard.tsx b/src/app/components/AdminDashboard/RiderSafetyBoard.tsx
+new file mode 100644
+index 0000000..df3006d
+--- /dev/null
++++ b/src/app/components/AdminDashboard/RiderSafetyBoard.tsx
+@@ -0,0 +1,88 @@
++"use client";
++
++import type { RiderSafetyRow } from "@/lib/riderSafetyOps";
++
++type Props = {
++  rows: RiderSafetyRow[];
++  onOpenIot?: () => void;
++};
++
++function formatCountdown(minutes: number) {
++  if (minutes >= 24 * 60) return `${Math.floor(minutes / (60 * 24))}d ${Math.floor((minutes % (60 * 24)) / 60)}h`;
++  const h = Math.floor(minutes / 60);
++  const m = minutes % 60;
++  if (h > 0) return `${h}h ${m}m`;
++  return `${m}m`;
++}
++
++export default function RiderSafetyBoard({ rows, onOpenIot }: Props) {
++  if (!rows.length) {
++    return (
++      <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-sm text-slate-600">
++        No active rider trips with a rental end time. When riders start rides in the app, countdown and phone GPS appear here for ops.
++      </div>
++    );
++  }
++
++  return (
++    <div className="space-y-3">
++      {rows.slice(0, 12).map((row) => {
++        const siren = row.alertLevel === "siren";
++        const warn = row.alertLevel === "warning";
++        return (
++          <div
++            key={row.bookingId}
++            className={`rounded-2xl border p-4 shadow-sm ${
++              siren
++                ? "border-red-300 bg-gradient-to-r from-red-700 via-red-600 to-orange-500 text-white animate-pulse"
++                : warn
++                ? "border-amber-200 bg-amber-50"
++                : "border-slate-200 bg-white"
++            }`}
++          >
++            <div className="flex flex-wrap items-start justify-between gap-3">
++              <div>
++                <p className={`text-xs font-extrabold tracking-wide ${siren ? "text-white/90" : "text-red-600"}`}>
++                  {siren ? "🚨 SIREN · RETURN SOON" : warn ? "⚠️ ENDING SOON" : "TRIP SAFETY"}
++                </p>
++                <p className={`text-lg font-extrabold ${siren ? "text-white" : "text-slate-900"}`}>
++                  {row.bookingId} · {row.userName || "Rider"}
++                </p>
++                <p className={`text-sm ${siren ? "text-white/90" : "text-slate-600"}`}>
++                  {row.rentalMode} · {row.vehicleId} · +91{row.userPhone} · {row.rideStatus}
++                </p>
++              </div>
++              <div className="text-right">
++                <p className={`text-3xl font-black tabular-nums ${siren ? "text-white" : "text-slate-900"}`}>
++                  {formatCountdown(row.minutesUntilEnd)}
++                </p>
++                <p className={`text-xs font-semibold ${siren ? "text-white/80" : "text-slate-500"}`}>
++                  until rental end
++                </p>
++              </div>
++            </div>
++            <div className={`mt-3 flex flex-wrap gap-3 text-xs font-semibold ${siren ? "text-white/90" : "text-slate-600"}`}>
++              <span>
++                {row.hasPhoneGps
++                  ? `📍 Phone GPS ${row.riderPhoneLat?.toFixed(5)}, ${row.riderPhoneLng?.toFixed(5)}`
++                  : "📍 Phone GPS waiting (rider app)"}
++              </span>
++              {row.riderPhoneUpdatedAt ? (
++                <span>Updated {new Date(row.riderPhoneUpdatedAt).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" })} IST</span>
++              ) : null}
++              {onOpenIot ? (
++                <button
++                  type="button"
++                  className={`underline ${siren ? "text-white" : "text-emerald-700"}`}
++                  onClick={onOpenIot}
++                >
++                  Open IoT map
++                </button>
++              ) : null}
++            </div>
++          </div>
++        );
++      })}
++    </div>
++  );
++}
+diff --git a/src/app/components/IoTDashboard/IoTDashboard.tsx b/src/app/components/IoTDashboard/IoTDashboard.tsx
+index 440d79e..83098c5 100644
+--- a/src/app/components/IoTDashboard/IoTDashboard.tsx
++++ b/src/app/components/IoTDashboard/IoTDashboard.tsx
+@@ -20,6 +20,7 @@ import StatusBadge from "../DashboardUI/StatusBadge";
+ export default function IoTDashboard(){
+ 
+ const [iotData,setIotData]=useState<any[]>([]);
++const [riderSafety,setRiderSafety]=useState<any[]>([]);
+ const [googleMapsApiKey, setGoogleMapsApiKey] = useState(
+   process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+ );
+@@ -103,6 +104,13 @@ useEffect(() => {
+     const response = await fetch("/api/iot");
+     const data = await response.json();
+     setIotData(data.data || []);
++    try {
++      const safetyRes = await fetch("/api/admin/rider-safety", { cache: "no-store" });
++      const safetyJson = await safetyRes.json();
++      setRiderSafety(Array.isArray(safetyJson.data) ? safetyJson.data : []);
++    } catch {
++      setRiderSafety([]);
++    }
+   };
+ 
+   loadIotData();
+@@ -116,8 +124,13 @@ useEffect(() => {
+     if (!mapRef.current) return;
+ 
+     if (validLocations.length === 0) {
+-      setMapStatus("No valid vehicle GPS locations available.");
+-      return;
++      const phonePins = riderSafety.filter(
++        (r) => r.hasPhoneGps && r.riderPhoneLat && r.riderPhoneLng
++      );
++      if (phonePins.length === 0) {
++        setMapStatus("No vehicle IoT GPS yet. Rider phone GPS appears when a trip is active in the app.");
++        return;
++      }
+     }
+ 
+     const loaded = await loadGoogleMapsScript();
+@@ -128,10 +141,15 @@ useEffect(() => {
+ 
+     setMapStatus("");
+ 
+-    const center = {
+-  lat: parseFloat(String(validLocations[0].currentLat)),
+-  lng: parseFloat(String(validLocations[0].currentLng)),
+-};
++    const center = validLocations.length
++      ? {
++          lat: parseFloat(String(validLocations[0].currentLat)),
++          lng: parseFloat(String(validLocations[0].currentLng)),
++        }
++      : {
++          lat: Number(riderSafety[0]?.riderPhoneLat) || 26.8467,
++          lng: Number(riderSafety[0]?.riderPhoneLng) || 80.9462,
++        };
+ 
+     if (!googleMapRef.current) {
+       googleMapRef.current = new window.google.maps.Map(mapRef.current, {
+@@ -201,7 +219,41 @@ useEffect(() => {
+       bounds.extend(position);
+     });
+ 
+-    if (validLocations.length > 1) {
++    riderSafety
++      .filter((r) => r.hasPhoneGps && r.riderPhoneLat && r.riderPhoneLng)
++      .forEach((r) => {
++        const position = {
++          lat: Number(r.riderPhoneLat),
++          lng: Number(r.riderPhoneLng),
++        };
++        const marker = new window.google.maps.Marker({
++          position,
++          map: googleMapRef.current,
++          title: `${r.bookingId} phone GPS`,
++          icon: {
++            path: window.google.maps.SymbolPath.CIRCLE,
++            scale: 11,
++            fillColor: r.alertLevel === "siren" ? "#DC2626" : "#2563EB",
++            fillOpacity: 1,
++            strokeColor: "#ffffff",
++            strokeWeight: 3,
++          },
++        });
++        const infoWindow = new window.google.maps.InfoWindow({
++          content: `<div style="font-family:Arial,sans-serif;min-width:200px">
++<strong>Rider phone · ${r.bookingId}</strong>
++<div>${r.userName || "Rider"} · +91${r.userPhone || ""}</div>
++<div>${r.rentalMode} · ~${r.minutesUntilEnd} min to end</div>
++<div>GPS via rider app (safety)</div></div>`,
++        });
++        marker.addListener("click", () => {
++          infoWindow.open(googleMapRef.current, marker);
++        });
++        markerRefs.current.push(marker);
++        bounds.extend(position);
++      });
++
++    if (validLocations.length + riderSafety.length > 1) {
+       googleMapRef.current.fitBounds(bounds);
+     } else {
+       googleMapRef.current.setCenter(center);
+@@ -210,7 +262,7 @@ useEffect(() => {
+   };
+ 
+   renderMap();
+-}, [iotData, googleMapsApiKey]);
++}, [iotData, riderSafety, googleMapsApiKey]);
+ 
+ 
+ 
+diff --git a/src/lib/adminCommandCenter.ts b/src/lib/adminCommandCenter.ts
+index 7b0b9f9..56b6c2b 100644
+--- a/src/lib/adminCommandCenter.ts
++++ b/src/lib/adminCommandCenter.ts
+@@ -27,6 +27,7 @@ import Transaction from "@/models/Transaction";
+ import Vehicle from "@/models/Vehicle";
+ import Wallet from "@/models/Wallet";
+ import Review from "@/models/Review";
++import { listRiderSafetyForAdmin, type RiderSafetyRow } from "@/lib/riderSafetyOps";
+ 
+ export type CommandCenterCounts = {
+   riders: number;
+@@ -338,7 +339,9 @@ export async function getAdminCommandCenter(session: AdminSessionInfo) {
+     partners: recentPartners as Array<Record<string, unknown>>,
+   };
+ 
+-  return filterCommandCenterForSession(session, { counts, recent });
++  const riderSafety = await listRiderSafetyForAdmin(session);
++
++  return filterCommandCenterForSession(session, { counts, recent, riderSafety });
+ }
+ 
+ function emptyIf(allowed: boolean, rows: Array<Record<string, unknown>>) {
+@@ -347,9 +350,13 @@ function emptyIf(allowed: boolean, rows: Array<Record<string, unknown>>) {
+ 
+ function filterCommandCenterForSession(
+   session: AdminSessionInfo,
+-  snapshot: { counts: CommandCenterCounts; recent: CommandCenterRecent }
++  snapshot: {
++    counts: CommandCenterCounts;
++    recent: CommandCenterRecent;
++    riderSafety: RiderSafetyRow[];
++  }
+ ) {
+-  const { counts, recent } = snapshot;
++  const { counts, recent, riderSafety } = snapshot;
+   const canBookings = sessionHasAnyDashboard(session, ...API_DASHBOARDS.bookingsRead);
+   const canTickets = sessionHasAnyDashboard(session, ...API_DASHBOARDS.tickets);
+   const canReviews = sessionHasAnyDashboard(session, ...API_DASHBOARDS.reviews);
+@@ -419,7 +426,10 @@ function filterCommandCenterForSession(
+   if (!canTx && !canWallet) counts.totalRevenue = 0;
+   recent.transactions = emptyIf(canTx, recent.transactions);
+ 
+-  return { counts, recent };
++  const safety =
++    canBookings || canIot ? riderSafety : [];
++
++  return { counts, recent, riderSafety: safety };
+ }
+ 
+ export async function searchCommandCenter(
+diff --git a/src/lib/notify/paymentReceiptDeliver.ts b/src/lib/notify/paymentReceiptDeliver.ts
+new file mode 100644
+index 0000000..623c95e
+--- /dev/null
++++ b/src/lib/notify/paymentReceiptDeliver.ts
+@@ -0,0 +1,123 @@
++import { connectDB } from "@/lib/mongodb";
++import { notifyBookingPayment } from "@/lib/notify/bookingNotify";
++import { gstBreakdownInclusive } from "@/lib/gst";
++import Transaction from "@/models/Transaction";
++import Booking from "@/models/Booking";
++
++function env(name: string) {
++  return String(process.env[name] || "").trim();
++}
++
++export type DeliverReceiptInput = {
++  bookingId: string;
++  bookingMongoId?: string;
++  email?: string;
++  phone?: string;
++  amount?: number;
++};
++
++async function sendDetailedEmail(opts: {
++  to: string;
++  bookingId: string;
++  riderName: string;
++  amount: number;
++  paymentMethod: string;
++  invoiceNumber: string;
++  transactionId: string;
++  gst: ReturnType<typeof gstBreakdownInclusive>;
++}) {
++  const resend = env("RESEND_API_KEY");
++  const from = env("NOTIFY_FROM_EMAIL") || "EVUDDY <noreply@evuddy.com>";
++  if (!resend) return false;
++  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;color:#0f172a">
++<p style="color:#18B368;font-weight:800;letter-spacing:.12em;font-size:11px">EVUDDY PAYMENT RECEIPT</p>
++<h1 style="font-size:22px">₹${opts.amount.toLocaleString("en-IN")} received</h1>
++<table style="width:100%;border-collapse:collapse">
++<tr><td style="padding:8px 0;font-weight:700;color:#64748b">Booking</td><td>${opts.bookingId}</td></tr>
++<tr><td style="padding:8px 0;font-weight:700;color:#64748b">Rider</td><td>${opts.riderName}</td></tr>
++<tr><td style="padding:8px 0;font-weight:700;color:#64748b">Method</td><td>${opts.paymentMethod}</td></tr>
++<tr><td style="padding:8px 0;font-weight:700;color:#64748b">Invoice</td><td>${opts.invoiceNumber || "—"}</td></tr>
++<tr><td style="padding:8px 0;font-weight:700;color:#64748b">Transaction</td><td>${opts.transactionId || "—"}</td></tr>
++<tr><td style="padding:8px 0;font-weight:700;color:#64748b">Taxable</td><td>₹${opts.gst.taxableAmount.toFixed(2)}</td></tr>
++<tr><td style="padding:8px 0;font-weight:700;color:#64748b">GST (5%)</td><td>₹${opts.gst.gstAmount.toFixed(2)}</td></tr>
++</table>
++<p style="font-size:12px;color:#64748b;margin-top:20px">Same record as evuddy.com admin CRM · helpdesk@kebuone.in</p>
++</div>`;
++  try {
++    const res = await fetch("https://api.resend.com/emails", {
++      method: "POST",
++      headers: {
++        Authorization: `Bearer ${resend}`,
++        "Content-Type": "application/json",
++      },
++      body: JSON.stringify({
++        from,
++        to: [opts.to],
++        subject: `EVUDDY receipt · ${opts.bookingId} · ₹${opts.amount}`,
++        html,
++      }),
++    });
++    return res.ok;
++  } catch {
++    return false;
++  }
++}
++
++export async function deliverPaymentReceipt(input: DeliverReceiptInput) {
++  await connectDB();
++  const bookingId = String(input.bookingId || "").trim();
++  const txnRaw = bookingId
++    ? await Transaction.findOne({ bookingId }).sort({ createdAt: -1 }).lean()
++    : null;
++  const txn = txnRaw && !Array.isArray(txnRaw) ? txnRaw : null;
++  const bookingRaw = bookingId
++    ? await Booking.findOne({ bookingId }).select("userName userPhone userEmail").lean()
++    : null;
++  const booking = bookingRaw && !Array.isArray(bookingRaw) ? bookingRaw : null;
++
++  const amount = Number(input.amount || txn?.amount || 0);
++  const riderName = String(booking?.userName || "Rider");
++  const riderPhone = String(input.phone || booking?.userPhone || "").slice(-10);
++  const riderEmail = String(input.email || booking?.userEmail || "").trim();
++  const paymentMethod = String(txn?.paymentMethod || "Razorpay");
++  const invoiceNumber = String(txn?.invoiceNumber || "");
++  const transactionId = String(txn?.transactionId || "");
++  const gst = gstBreakdownInclusive(amount);
++
++  const channels: string[] = [];
++
++  if (riderEmail) {
++    const ok = await sendDetailedEmail({
++      to: riderEmail,
++      bookingId,
++      riderName,
++      amount,
++      paymentMethod,
++      invoiceNumber,
++      transactionId,
++      gst,
++    });
++    if (ok) channels.push("email");
++  }
++
++  const notify = await notifyBookingPayment({
++    bookingId,
++    riderName,
++    riderPhone,
++    riderEmail,
++    amount,
++    pendingAmount: 0,
++    paymentStatus: "Paid",
++    paymentMethod: paymentMethod.includes("Wallet") ? "Wallet" : "Razorpay",
++    invoiceNumber,
++  });
++  if (notify.sms) channels.push("SMS");
++  if (notify.email && !channels.includes("email")) channels.push("email");
++
++  return {
++    success: channels.length > 0,
++    channels: [...new Set(channels)],
++    emailSent: channels.includes("email"),
++    smsSent: channels.includes("SMS"),
++  };
++}
+diff --git a/src/lib/notify/rentalEndReminder.ts b/src/lib/notify/rentalEndReminder.ts
+new file mode 100644
+index 0000000..13f96fa
+--- /dev/null
++++ b/src/lib/notify/rentalEndReminder.ts
+@@ -0,0 +1,105 @@
++import { notifyOpsAlert } from "@/lib/notify/opsAlert";
++
++function env(name: string) {
++  return String(process.env[name] || "").trim();
++}
++
++export type RentalEndReminderInput = {
++  bookingId: string;
++  riderName?: string;
++  riderPhone?: string;
++  riderEmail?: string;
++  endsAtIso?: string;
++  duration?: string;
++  units?: number;
++  leadMinutes?: number;
++};
++
++function formatIst(iso: string) {
++  try {
++    return new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
++  } catch {
++    return iso;
++  }
++}
++
++async function sendSms(phone10: string, message: string) {
++  const fast2sms = env("FAST2SMS_API_KEY");
++  if (fast2sms) {
++    try {
++      const res = await fetch("https://www.fast2sms.com/dev/bulkV2", {
++        method: "POST",
++        headers: {
++          authorization: fast2sms,
++          "Content-Type": "application/json",
++        },
++        body: JSON.stringify({
++          route: "q",
++          message: message.slice(0, 300),
++          language: "english",
++          numbers: phone10,
++        }),
++      });
++      if (res.ok) return true;
++    } catch {
++      /* fall through */
++    }
++  }
++  const msg91 = env("MSG91_AUTH_KEY");
++  if (msg91) {
++    try {
++      const res = await fetch(
++        `https://control.msg91.com/api/sendhttp.php?authkey=${encodeURIComponent(msg91)}&mobiles=91${phone10}&message=${encodeURIComponent(message.slice(0, 300))}&sender=EVUDDY&route=4&country=91`,
++        { method: "GET" }
++      );
++      if (res.ok) return true;
++    } catch {
++      /* fall through */
++    }
++  }
++  return false;
++}
++
++async function sendEmail(to: string, subject: string, text: string) {
++  const resend = env("RESEND_API_KEY");
++  const from = env("NOTIFY_FROM_EMAIL") || "EVUDDY <noreply@evuddy.com>";
++  if (!to || !resend) return false;
++  try {
++    const res = await fetch("https://api.resend.com/emails", {
++      method: "POST",
++      headers: {
++        Authorization: `Bearer ${resend}`,
++        "Content-Type": "application/json",
++      },
++      body: JSON.stringify({ from, to: [to], subject, text }),
++    });
++    return res.ok;
++  } catch {
++    return false;
++  }
++}
++
++export async function notifyRentalEndReminder(input: RentalEndReminderInput) {
++  const ends = input.endsAtIso ? formatIst(input.endsAtIso) : "soon";
++  const plan =
++    input.duration && input.units
++      ? `${input.duration} (${input.units} units)`
++      : input.duration || "rental";
++  const smsText = `EVUDDY ALERT: Booking ${input.bookingId} (${plan}) ends around ${ends}. Return the scooter on time. Help: 8726006512`;
++  const emailText = `Hello ${input.riderName || "rider"},\n\nYour EVUDDY booking ${input.bookingId} (${plan}) is scheduled to end around ${ends} (IST).\n\nPlease plan your return to the hub.\n\n— EVUDDY\nhelpdesk@kebuone.in · +91 8726006512`;
++
++  const phone = String(input.riderPhone || "").replace(/\D/g, "").slice(-10);
++  const email = String(input.riderEmail || "").trim();
++
++  const [smsSent, emailSent] = await Promise.all([
++    phone.length === 10 ? sendSms(phone, smsText) : Promise.resolve(false),
++    email ? sendEmail(email, `EVUDDY · ${input.bookingId} ending soon`, emailText) : Promise.resolve(false),
++  ]);
++
++  await notifyOpsAlert(
++    `Booking ${input.bookingId} · ~${input.leadMinutes || 60} min to end`,
++    `${plan} · ${input.riderName || "rider"} · +91${phone || "—"} · ends ${ends}`
++  );
++
++  return { emailSent, smsSent, email: emailSent, sms: smsSent };
++}
+diff --git a/src/lib/riderSafetyOps.ts b/src/lib/riderSafetyOps.ts
+new file mode 100644
+index 0000000..869ba1a
+--- /dev/null
++++ b/src/lib/riderSafetyOps.ts
+@@ -0,0 +1,91 @@
++import { connectDB } from "@/lib/mongodb";
++import { NOT_DELETED_FILTER } from "@/lib/notDeleted";
++import { applyHubScope, resolveHubScope } from "@/lib/staffHubScope";
++import type { AdminSessionInfo } from "@/lib/adminAuth";
++import Booking from "@/models/Booking";
++
++export type RiderSafetyAlertLevel = "ok" | "warning" | "siren";
++
++export type RiderSafetyRow = {
++  bookingId: string;
++  userName: string;
++  userPhone: string;
++  vehicleId: string;
++  rentalMode: string;
++  rideStatus: string;
++  rentalEndDate: string;
++  minutesUntilEnd: number;
++  alertLevel: RiderSafetyAlertLevel;
++  riderPhoneLat: number | null;
++  riderPhoneLng: number | null;
++  riderPhoneUpdatedAt: string | null;
++  hasPhoneGps: boolean;
++};
++
++export function alertLevelForMinutes(minutes: number): RiderSafetyAlertLevel {
++  if (minutes <= 60) return "siren";
++  if (minutes <= 180) return "warning";
++  return "ok";
++}
++
++export function minutesUntil(isoOrDate: Date | string | undefined | null) {
++  if (!isoOrDate) return 99999;
++  const end = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
++  if (Number.isNaN(end.getTime())) return 99999;
++  return Math.max(0, Math.round((end.getTime() - Date.now()) / 60000));
++}
++
++export async function listRiderSafetyForAdmin(session: AdminSessionInfo) {
++  await connectDB();
++  const hubCodes = await resolveHubScope(session);
++  const filter = applyHubScope(
++    {
++      ...NOT_DELETED_FILTER,
++      rideStatus: { $in: ["In Ride", "Ready For Pickup", "Reserved"] },
++    },
++    hubCodes,
++    ["currentHub", "startHub"]
++  );
++
++  const rows = await Booking.find(filter)
++    .select(
++      "bookingId userName userPhone vehicleId rentalMode rideStatus rentalEndDate riderPhoneLat riderPhoneLng riderPhoneUpdatedAt"
++    )
++    .sort({ rentalEndDate: 1 })
++    .limit(50)
++    .lean()
++    .maxTimeMS(4000);
++
++  const mapped: RiderSafetyRow[] = rows.map((row) => {
++    const lat = Number(row.riderPhoneLat);
++    const lng = Number(row.riderPhoneLng);
++    const hasPhoneGps =
++      Number.isFinite(lat) &&
++      Number.isFinite(lng) &&
++      lat !== 0 &&
++      lng !== 0;
++    const minutes = minutesUntil(row.rentalEndDate);
++    return {
++      bookingId: String(row.bookingId || ""),
++      userName: String(row.userName || ""),
++      userPhone: String(row.userPhone || ""),
++      vehicleId: String(row.vehicleId || ""),
++      rentalMode: String(row.rentalMode || ""),
++      rideStatus: String(row.rideStatus || ""),
++      rentalEndDate: row.rentalEndDate
++        ? new Date(row.rentalEndDate).toISOString()
++        : "",
++      minutesUntilEnd: minutes,
++      alertLevel: alertLevelForMinutes(minutes),
++      riderPhoneLat: hasPhoneGps ? lat : null,
++      riderPhoneLng: hasPhoneGps ? lng : null,
++      riderPhoneUpdatedAt: row.riderPhoneUpdatedAt
++        ? new Date(row.riderPhoneUpdatedAt).toISOString()
++        : null,
++      hasPhoneGps,
++    };
++  });
++
++  mapped.sort((a, b) => a.minutesUntilEnd - b.minutesUntilEnd);
++  return mapped;
++}
+diff --git a/src/models/Booking.ts b/src/models/Booking.ts
+index 686edb1..ee04c15 100644
+--- a/src/models/Booking.ts
++++ b/src/models/Booking.ts
+@@ -535,6 +535,26 @@ remarks: {
+   default: "",
+ },
+ 
++/** Rider app phone GPS (safety) — visible on admin IoT / CRM. */
++riderPhoneLat: {
++  type: Number,
++  default: null,
++},
++riderPhoneLng: {
++  type: Number,
++  default: null,
++},
++riderPhoneAccuracyM: {
++  type: Number,
++  default: null,
++},
++riderPhoneUpdatedAt: {
++  type: Date,
++},
++riderEndReminderSentAt: {
++  type: Date,
++},
++
+ reviewId: {
+   type: String,
+   trim: true,
