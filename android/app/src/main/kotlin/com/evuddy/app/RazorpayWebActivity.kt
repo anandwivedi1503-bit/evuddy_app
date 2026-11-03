@@ -1,4 +1,4 @@
-package com.example.evuddy_app
+package com.evuddy.app
 
 import android.app.Activity
 import android.content.ActivityNotFoundException

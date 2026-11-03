@@ -49,3 +49,7 @@ app.*.map.json
 
 # Local CEO / store binaries
 dist/
+
+# Android release signing credentials
+/android/app/key.properties
+/android/app/keystore/
