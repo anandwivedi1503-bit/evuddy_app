@@ -389,6 +389,25 @@ class _AccountScreenState extends State<AccountScreen> {
                 fontWeight: FontWeight.w600,
               ),
         ),
+        const SizedBox(height: 8),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          children: [
+            TextButton(
+              onPressed: () => openEvuddyPath('/privacy-policy'),
+              child: const Text('Privacy'),
+            ),
+            TextButton(
+              onPressed: () => openEvuddyPath('/terms-and-conditions'),
+              child: const Text('Terms'),
+            ),
+            TextButton(
+              onPressed: () => openEvuddyPath('/refund-policy'),
+              child: const Text('Refunds'),
+            ),
+          ],
+        ),
         Text(
           evuddyVersionLabel,
           textAlign: TextAlign.center,

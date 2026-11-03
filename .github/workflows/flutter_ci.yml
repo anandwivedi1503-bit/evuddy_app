@@ -1,0 +1,30 @@
+name: Flutter CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze rider app
+        run: flutter analyze lib
+
+      - name: Unit tests
+        run: flutter test
+
+      - name: Debug APK (no release keystore on CI)
+        run: flutter build apk --debug
