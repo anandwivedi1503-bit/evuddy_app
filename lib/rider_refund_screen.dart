@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
 import 'state/registration_draft.dart';
-import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 
 /// Rider self-service deposit refund — not the ops CRM.
