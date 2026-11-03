@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
-import 'api/fleet_calculator.dart';
 import 'api/partner_pdf.dart';
 import 'fleet_calculator_screen.dart';
 import 'open_link.dart';
