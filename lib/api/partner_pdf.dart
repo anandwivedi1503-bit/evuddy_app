@@ -3,6 +3,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import 'evuddy_api.dart';
+import '../helpdesk.dart';
 
 class FleetLine {
   const FleetLine({
@@ -294,7 +295,7 @@ Future<void> shareFleetPartnerPdf() async {
           ),
         ),
         pw.SizedBox(height: 14),
-        pw.Text('www.evuddy.com/partners   ·   helpdesk@kebuone.in   ·   +91 8726006512',
+        pw.Text('www.evuddy.com/partners   ·   $helpdeskLine',
             style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
       ],
     ),

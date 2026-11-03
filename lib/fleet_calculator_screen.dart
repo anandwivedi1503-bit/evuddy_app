@@ -8,25 +8,20 @@ import 'open_link.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
 
+/// Rider / investor calculator only. Staff business planner lives on evuddy.com admin.
 class FleetCalculatorScreen extends StatefulWidget {
   const FleetCalculatorScreen({
     super.key,
-    this.audience = FleetAudience.investor,
     this.highSpeed = false,
-    this.lockPlanner = true,
   });
 
-  final FleetAudience audience;
   final bool highSpeed;
-  /// Riders/investors cannot open the full FOCO sheet. Staff use Invest → Business planner.
-  final bool lockPlanner;
 
   @override
   State<FleetCalculatorScreen> createState() => _FleetCalculatorScreenState();
 }
 
 class _FleetCalculatorScreenState extends State<FleetCalculatorScreen> {
-  late FleetAudience audience;
   late bool highSpeed;
   FleetInputKind kind = FleetInputKind.scooters;
   final scooters = TextEditingController(text: '${FleetPartner.minFleet}');
@@ -35,7 +30,6 @@ class _FleetCalculatorScreenState extends State<FleetCalculatorScreen> {
   @override
   void initState() {
     super.initState();
-    audience = widget.lockPlanner ? FleetAudience.investor : widget.audience;
     highSpeed = widget.highSpeed;
   }
 
@@ -61,17 +55,14 @@ class _FleetCalculatorScreenState extends State<FleetCalculatorScreen> {
     );
   }
 
-  bool get planner => audience == FleetAudience.planner;
-
   @override
   Widget build(BuildContext context) {
     final q = quote;
     return AuthScreen(
-      kicker: planner ? 'Business planner' : 'Fleet partner',
-      title: planner ? 'Full FOCO numbers' : 'Estimate your fleet',
-      subtitle: planner
-          ? 'Enter scooters or rupees. Annual, 48-month totals, and ops stay on this planner view.'
-          : 'Enter scooters or investment. You see monthly return and fleet size — not the full ops sheet.',
+      kicker: 'Fleet partner',
+      title: 'Estimate your fleet',
+      subtitle:
+          'Monthly return and fleet size from published numbers. Annual, 48-month and ops planning is staff-only on evuddy.com admin.',
       footer: Column(
         children: [
           EvuddyButton(
@@ -87,57 +78,6 @@ class _FleetCalculatorScreenState extends State<FleetCalculatorScreen> {
         ],
       ),
       children: [
-        if (widget.lockPlanner) ...[
-          Row(
-            children: [
-              Expanded(
-                child: ChoicePills(
-                  options: const ['Investor view'],
-                  value: 'Investor view',
-                  onChanged: (_) {},
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Business planner is frozen here. Open it from Investment plans.',
-                      ),
-                    ),
-                  );
-                },
-                child: Opacity(
-                  opacity: 0.45,
-                  child: IgnorePointer(
-                    child: ChoicePills(
-                      options: const ['Business planner'],
-                      value: '',
-                      onChanged: (_) {},
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const InfoNote(
-            text:
-                'You see fleet size, investment and monthly return. Annual, 48-month and ops stay on the business planner screen — both can be used at the same time.',
-          ),
-        ] else ...[
-          ChoicePills(
-            options: const ['Investor view', 'Business planner'],
-            value: planner ? 'Business planner' : 'Investor view',
-            onChanged: (v) => setState(() {
-              audience = v == 'Business planner'
-                  ? FleetAudience.planner
-                  : FleetAudience.investor;
-            }),
-          ),
-        ],
-        const SizedBox(height: 12),
         ChoicePills(
           options: const ['Low-speed', 'High-speed'],
           value: highSpeed ? 'High-speed' : 'Low-speed',
@@ -180,7 +120,7 @@ class _FleetCalculatorScreenState extends State<FleetCalculatorScreen> {
             ),
           ),
         const SizedBox(height: 16),
-        _QuoteCard(quote: q, planner: planner),
+        _QuoteCard(quote: q),
         if (!q.meetsMin && q.fleet > 0) ...[
           const SizedBox(height: 12),
           InfoNote(
@@ -188,51 +128,11 @@ class _FleetCalculatorScreenState extends State<FleetCalculatorScreen> {
                 'Plans start at ${FleetPartner.minFleet} scooters. This estimate is shown so you can scale up before applying.',
           ),
         ],
-        if (planner) ...[
-          const SizedBox(height: 18),
-          Text('SCALE TABLE', style: Theme.of(context).textTheme.labelSmall),
-          const SizedBox(height: 8),
-          SurfaceCard(
-            child: Column(
-              children: [
-                for (final row in FleetCalculator.scale(plan))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${row.fleet} scooters',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${CatalogRates.inr(row.investment)}  ·  ${CatalogRates.inr(row.monthly)}/mo',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontWeight: FontWeight.w700,
-                            color: Evuddy.greenDeep,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          const InfoNote(
-            text:
-                'FOCO: EVUDDY runs riders, GPS, KYC, hub OTP, maintenance and support. You own the fleet. Final terms are in the Fleet Partner Agreement with EVUDDY / Shubhrax Mobility Ltd.',
-          ),
-        ] else ...[
-          const SizedBox(height: 12),
-          const InfoNote(
-            text:
-                'You own the scooters. EVUDDY operates them. Monthly return follows the published Fleet Partner brief — not a live payout in this app.',
-          ),
-        ],
+        const SizedBox(height: 12),
+        const InfoNote(
+          text:
+              'You own the scooters. EVUDDY operates them. Monthly return follows the published Fleet Partner brief — not a live payout in this app.',
+        ),
         const SizedBox(height: 120),
       ],
     );
@@ -240,9 +140,8 @@ class _FleetCalculatorScreenState extends State<FleetCalculatorScreen> {
 }
 
 class _QuoteCard extends StatelessWidget {
-  const _QuoteCard({required this.quote, required this.planner});
+  const _QuoteCard({required this.quote});
   final FleetQuote quote;
-  final bool planner;
 
   @override
   Widget build(BuildContext context) {
@@ -297,45 +196,6 @@ class _QuoteCard extends StatelessWidget {
               ),
             ),
           ],
-          if (planner) ...[
-            const SizedBox(height: 14),
-            _Kv('Per scooter', CatalogRates.inr(quote.perScooter)),
-            _Kv('Monthly / scooter', CatalogRates.inr(quote.monthlyPerScooter)),
-            _Kv('Annual return', CatalogRates.inr(quote.annual)),
-            _Kv('Till ${quote.termMonths} months', CatalogRates.inr(quote.tillTerm)),
-            _Kv('Operations', '100% EVUDDY (FOCO)'),
-            _Kv('Investor role', 'Fleet owner'),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _Kv extends StatelessWidget {
-  const _Kv(this.label, this.value);
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: GoogleFonts.plusJakartaSans(
-                color: Evuddy.muted,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
-          ),
         ],
       ),
     );

@@ -3,6 +3,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../api/evuddy_api.dart';
+import '../helpdesk.dart';
 import '../state/registration_draft.dart';
 
 class ReceiptPdf {
@@ -39,7 +40,7 @@ class ReceiptPdf {
               style: const pw.TextStyle(fontSize: 10),
             ),
             pw.Spacer(),
-            pw.Text('helpdesk@kebuone.in · +91 8726006512 · www.evuddy.com'),
+            pw.Text('$helpdeskLine · www.evuddy.com'),
           ],
         ),
       ),

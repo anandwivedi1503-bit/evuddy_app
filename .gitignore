@@ -49,3 +49,4 @@ app.*.map.json
 
 # Local CEO / store binaries
 dist/
+kebuone-website/

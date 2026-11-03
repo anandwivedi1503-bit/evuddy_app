@@ -30,19 +30,6 @@ class InvestScreen extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           EvuddyGhostButton(
-            label: 'Business planner',
-            onPressed: () => Navigator.push(
-              context,
-              evuddyRoute(
-                const FleetCalculatorScreen(
-                  audience: FleetAudience.planner,
-                  lockPlanner: false,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          EvuddyGhostButton(
             label: 'Download investment PDF',
             onPressed: shareFleetPartnerPdf,
           ),
@@ -75,7 +62,7 @@ class InvestScreen extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         Text(
-          'Use the calculator for any fleet size or rupee amount. Investors see monthly return. Business planner sees annual, 48-month and FOCO ops. Final terms: Fleet Partner Agreement with EVUDDY / Shubhrax Mobility Ltd.',
+          'Investor calculator shows fleet size and monthly return. Full FOCO planner (annual / 48-month) is on evuddy.com admin Partner desk.',
           style: GoogleFonts.plusJakartaSans(
             color: const Color(0xFF44403C),
             fontSize: 13,
