@@ -1,0 +1,371 @@
+From ebaec6482340ab3cbc0ec6bc58e29b9a05df872b Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Tue, 3 Nov 2026 04:53:31 +0000
+Subject: [PATCH] Pre-launch: admin business planner, deposit refund queue,
+ helpdesk SMS
+
+- Add staff Business Planner panel on Partner admin dashboard
+- Queue security-deposit refund rows when riders file REFUND_REQUEST tickets
+- Fix rental-end reminder SMS/email to use shared helpdesk +91 8726006519
+---
+ src/app/api/tickets/route.ts                  |   5 +
+ .../PartnerDashboard/BusinessPlannerPanel.tsx | 162 ++++++++++++++++++
+ .../PartnerDashboard/PartnerDashboard.tsx     |   3 +
+ src/lib/fileRiderBookingTicket.ts             |   5 +
+ src/lib/fleetPartnerCalc.ts                   |  87 ++++++++++
+ src/lib/notify/rentalEndReminder.ts           |   5 +-
+ 6 files changed, 265 insertions(+), 2 deletions(-)
+ create mode 100644 src/app/components/PartnerDashboard/BusinessPlannerPanel.tsx
+ create mode 100644 src/lib/fleetPartnerCalc.ts
+
+diff --git a/src/app/api/tickets/route.ts b/src/app/api/tickets/route.ts
+index 000ef17..19fdd45 100644
+--- a/src/app/api/tickets/route.ts
++++ b/src/app/api/tickets/route.ts
+@@ -24,6 +24,7 @@ import {
+   scopedBookingIds,
+ } from "@/lib/staffHubScope";
+ import { writeAudit } from "@/lib/writeAudit";
++import { queueDepositRefundIfEligible } from "@/lib/queueDepositRefund";
+ import Booking from "@/models/Booking";
+ import { findBookingRider } from "@/lib/findBookingRider";
+ import Ticket from "@/models/Ticket";
+@@ -369,6 +370,10 @@ export async function POST(req: Request) {
+       detail: category,
+     });
+ 
++    if (category === "REFUND_REQUEST") {
++      await queueDepositRefundIfEligible(booking);
++    }
++
+     return NextResponse.json(
+       {
+         success: true,
+diff --git a/src/app/components/PartnerDashboard/BusinessPlannerPanel.tsx b/src/app/components/PartnerDashboard/BusinessPlannerPanel.tsx
+new file mode 100644
+index 0000000..08f588f
+--- /dev/null
++++ b/src/app/components/PartnerDashboard/BusinessPlannerPanel.tsx
+@@ -0,0 +1,162 @@
++"use client";
++
++import { useMemo, useState } from "react";
++
++import {
++  FLEET_PARTNER_MIN_FLEET,
++  FLEET_PLANS,
++  inr,
++  parseAmountInput,
++  quoteFromRupees,
++  quoteFromScooters,
++  scaleTable,
++  type FleetPlanId,
++} from "@/lib/fleetPartnerCalc";
++
++export default function BusinessPlannerPanel() {
++  const [planId, setPlanId] = useState<FleetPlanId>("low");
++  const [mode, setMode] = useState<"scooters" | "rupees">("scooters");
++  const [scooters, setScooters] = useState(String(FLEET_PARTNER_MIN_FLEET));
++  const [rupees, setRupees] = useState("300000");
++
++  const plan = FLEET_PLANS[planId];
++  const quote = useMemo(() => {
++    if (mode === "rupees") {
++      return quoteFromRupees(plan, parseAmountInput(rupees));
++    }
++    return quoteFromScooters(plan, parseAmountInput(scooters));
++  }, [mode, plan, rupees, scooters]);
++
++  const scale = useMemo(() => scaleTable(plan), [plan]);
++
++  return (
++    <section className="mb-10 rounded-3xl border border-[#18B368]/20 bg-[#F7FAF8] p-5 sm:p-7">
++      <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#18B368]">
++        Staff only · Business planner
++      </p>
++      <h2 className="mt-2 text-xl font-semibold text-[#0A1134] sm:text-2xl">
++        FOCO fleet numbers (not shown to riders)
++      </h2>
++      <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5C635E]">
++        Same maths as the EVUDDY Fleet Partner PDF and rider investor calculator. Use for partner
++        calls — public site stays PDF-only.
++      </p>
++
++      <div className="mt-5 flex flex-wrap gap-2">
++        {(["low", "high"] as FleetPlanId[]).map((id) => (
++          <button
++            key={id}
++            type="button"
++            onClick={() => setPlanId(id)}
++            className={`rounded-full px-4 py-2 text-sm font-semibold ${
++              planId === id
++                ? "bg-[#18B368] text-white"
++                : "border border-[#0A1134]/10 bg-white text-[#0A1134]"
++            }`}
++          >
++            {FLEET_PLANS[id].title}
++          </button>
++        ))}
++        <button
++          type="button"
++          onClick={() => setMode("scooters")}
++          className={`rounded-full px-4 py-2 text-sm font-semibold ${
++            mode === "scooters"
++              ? "bg-[#0A1134] text-white"
++              : "border border-[#0A1134]/10 bg-white text-[#0A1134]"
++          }`}
++        >
++          Scooters
++        </button>
++        <button
++          type="button"
++          onClick={() => setMode("rupees")}
++          className={`rounded-full px-4 py-2 text-sm font-semibold ${
++            mode === "rupees"
++              ? "bg-[#0A1134] text-white"
++              : "border border-[#0A1134]/10 bg-white text-[#0A1134]"
++          }`}
++        >
++          Rupees
++        </button>
++      </div>
++
++      <div className="mt-4 grid gap-4 lg:grid-cols-2">
++        <label className="block text-sm font-medium text-[#0A1134]">
++          {mode === "scooters" ? "Number of scooters" : "Investment (₹)"}
++          <input
++            className="mt-2 w-full rounded-2xl border border-pink-100 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-200"
++            inputMode="numeric"
++            value={mode === "scooters" ? scooters : rupees}
++            onChange={(e) =>
++              mode === "scooters" ? setScooters(e.target.value) : setRupees(e.target.value)
++            }
++          />
++        </label>
++
++        <div className="rounded-2xl border border-[#18B368]/15 bg-white p-4">
++          <div className="text-xs font-semibold uppercase tracking-wider text-[#18B368]">
++            Estimate
++          </div>
++          <div className="mt-2 text-2xl font-bold text-[#0A1134]">
++            {quote.fleet} scooters · {inr(quote.investment)}
++          </div>
++          <div className="mt-1 text-lg font-semibold text-[#18B368]">
++            {inr(quote.monthly)} / month
++          </div>
++          <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
++            <div>
++              <dt className="text-[#5C635E]">Annual</dt>
++              <dd className="font-semibold">{inr(quote.annual)}</dd>
++            </div>
++            <div>
++              <dt className="text-[#5C635E]">48 months</dt>
++              <dd className="font-semibold">{inr(quote.tillTerm)}</dd>
++            </div>
++            <div>
++              <dt className="text-[#5C635E]">Per scooter</dt>
++              <dd className="font-semibold">{inr(quote.plan.perScooter)}</dd>
++            </div>
++            <div>
++              <dt className="text-[#5C635E]">Ops</dt>
++              <dd className="font-semibold">100% EVUDDY (FOCO)</dd>
++            </div>
++          </dl>
++          {quote.leftoverRupees > 0 ? (
++            <p className="mt-2 text-xs text-[#5C635E]">
++              {inr(quote.leftoverRupees)} leftover — not enough for another scooter.
++            </p>
++          ) : null}
++          {!quote.meetsMin && quote.fleet > 0 ? (
++            <p className="mt-2 text-xs text-amber-800">
++              Published minimum is {FLEET_PARTNER_MIN_FLEET} scooters.
++            </p>
++          ) : null}
++        </div>
++      </div>
++
++      <div className="mt-6 overflow-x-auto rounded-2xl border border-[#0A1134]/8 bg-white">
++        <table className="min-w-full text-left text-sm">
++          <thead className="bg-[#18B368] text-white">
++            <tr>
++              <th className="px-4 py-3 font-semibold">Fleet</th>
++              <th className="px-4 py-3 font-semibold">Investment</th>
++              <th className="px-4 py-3 font-semibold">Monthly</th>
++              <th className="px-4 py-3 font-semibold">Annual</th>
++            </tr>
++          </thead>
++          <tbody>
++            {scale.map((row) => (
++              <tr key={row.fleet} className="border-t border-[#0A1134]/6">
++                <td className="px-4 py-2 font-medium">{row.fleet}</td>
++                <td className="px-4 py-2">{inr(row.investment)}</td>
++                <td className="px-4 py-2">{inr(row.monthly)}</td>
++                <td className="px-4 py-2">{inr(row.annual)}</td>
++              </tr>
++            ))}
++          </tbody>
++        </table>
++      </div>
++    </section>
++  );
++}
+diff --git a/src/app/components/PartnerDashboard/PartnerDashboard.tsx b/src/app/components/PartnerDashboard/PartnerDashboard.tsx
+index fab90bf..455be9a 100644
+--- a/src/app/components/PartnerDashboard/PartnerDashboard.tsx
++++ b/src/app/components/PartnerDashboard/PartnerDashboard.tsx
+@@ -19,6 +19,7 @@ import DashboardCard from "../DashboardUI/DashboardCard";
+ import SectionHeader from "../DashboardUI/SectionHeader";
+ import DashboardActions from "../DashboardUI/DashboardActions";
+ import StatusBadge from "../DashboardUI/StatusBadge";
++import BusinessPlannerPanel from "./BusinessPlannerPanel";
+ 
+ type ChannelFilter = PartnerSegmentId;
+ 
+@@ -106,6 +107,8 @@ export default function PartnerDashboard() {
+         subtitle="Dealer, distributor and franchise forms land here. Approve, reject and contact from one desk."
+       />
+ 
++      <BusinessPlannerPanel />
++
+       <DashboardActions
+         filename={sheetName}
+         rows={partnerSheetRows(rows)}
+diff --git a/src/lib/fileRiderBookingTicket.ts b/src/lib/fileRiderBookingTicket.ts
+index 0052a12..2f334a0 100644
+--- a/src/lib/fileRiderBookingTicket.ts
++++ b/src/lib/fileRiderBookingTicket.ts
+@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/mongodb";
+ import { nextSeqId } from "@/lib/nextSeqId";
+ import { NOT_DELETED_FILTER } from "@/lib/notDeleted";
+ import { firebaseUserOwnsRider, type VerifiedFirebaseUser } from "@/lib/requestAuth";
++import { queueDepositRefundIfEligible } from "@/lib/queueDepositRefund";
+ import { writeAudit } from "@/lib/writeAudit";
+ import { findBookingRider } from "@/lib/findBookingRider";
+ import Booking from "@/models/Booking";
+@@ -109,5 +110,9 @@ export async function fileRiderBookingTicket(params: {
+     detail: category,
+   });
+ 
++  if (category === "REFUND_REQUEST") {
++    await queueDepositRefundIfEligible(booking);
++  }
++
+   return { ok: true as const, ticketId: String(ticket.ticketId), category };
+ }
+diff --git a/src/lib/fleetPartnerCalc.ts b/src/lib/fleetPartnerCalc.ts
+new file mode 100644
+index 0000000..c9e5d63
+--- /dev/null
++++ b/src/lib/fleetPartnerCalc.ts
+@@ -0,0 +1,87 @@
++/** Published fleet-partner numbers — matches EVUDDY rider app / Fleet Partner PDF. */
++export const FLEET_PARTNER_TERM_MONTHS = 48;
++export const FLEET_PARTNER_MIN_FLEET = 5;
++export const FLEET_PARTNER_SCALE = [5, 10, 15, 20, 30, 50, 100] as const;
++
++export type FleetPlanId = "low" | "high";
++
++export type FleetPlan = {
++  id: FleetPlanId;
++  title: string;
++  perScooter: number;
++  monthlyForFive: number;
++};
++
++export const FLEET_PLANS: Record<FleetPlanId, FleetPlan> = {
++  low: {
++    id: "low",
++    title: "Low-speed EV scooter",
++    perScooter: 60_000,
++    monthlyForFive: 15_000,
++  },
++  high: {
++    id: "high",
++    title: "High-speed EV scooter",
++    perScooter: 90_000,
++    monthlyForFive: 18_000,
++  },
++};
++
++export type FleetQuote = {
++  plan: FleetPlan;
++  fleet: number;
++  investment: number;
++  leftoverRupees: number;
++  monthly: number;
++  annual: number;
++  tillTerm: number;
++  monthlyPerScooter: number;
++  meetsMin: boolean;
++};
++
++function monthlyForFleet(plan: FleetPlan, fleet: number) {
++  const per = plan.monthlyForFive / 5;
++  return Math.round(per * fleet);
++}
++
++export function quoteFromScooters(plan: FleetPlan, fleet: number): FleetQuote {
++  const n = Math.max(0, Math.floor(fleet));
++  const investment = plan.perScooter * n;
++  const monthly = monthlyForFleet(plan, n);
++  return {
++    plan,
++    fleet: n,
++    investment,
++    leftoverRupees: 0,
++    monthly,
++    annual: monthly * 12,
++    tillTerm: monthly * FLEET_PARTNER_TERM_MONTHS,
++    monthlyPerScooter: monthlyForFleet(plan, 1),
++    meetsMin: n >= FLEET_PARTNER_MIN_FLEET,
++  };
++}
++
++export function quoteFromRupees(plan: FleetPlan, rupees: number): FleetQuote {
++  const money = Math.max(0, Math.floor(rupees));
++  const fleet = plan.perScooter <= 0 ? 0 : Math.floor(money / plan.perScooter);
++  const investment = plan.perScooter * fleet;
++  return {
++    ...quoteFromScooters(plan, fleet),
++    leftoverRupees: money - investment,
++  };
++}
++
++export function scaleTable(plan: FleetPlan): FleetQuote[] {
++  return FLEET_PARTNER_SCALE.map((n) => quoteFromScooters(plan, n));
++}
++
++export function parseAmountInput(raw: string) {
++  const cleaned = String(raw || "").replace(/\D/g, "");
++  if (!cleaned) return 0;
++  const n = Number(cleaned);
++  return Number.isFinite(n) ? n : 0;
++}
++
++export function inr(n: number) {
++  return `₹${Math.round(n).toLocaleString("en-IN")}`;
++}
+diff --git a/src/lib/notify/rentalEndReminder.ts b/src/lib/notify/rentalEndReminder.ts
+index 13f96fa..b46dbbf 100644
+--- a/src/lib/notify/rentalEndReminder.ts
++++ b/src/lib/notify/rentalEndReminder.ts
+@@ -1,4 +1,5 @@
+ import { notifyOpsAlert } from "@/lib/notify/opsAlert";
++import { HELPDESK_EMAIL, HELPDESK_PHONE_DISPLAY } from "@/lib/contact";
+ 
+ function env(name: string) {
+   return String(process.env[name] || "").trim();
+@@ -85,8 +86,8 @@ export async function notifyRentalEndReminder(input: RentalEndReminderInput) {
+     input.duration && input.units
+       ? `${input.duration} (${input.units} units)`
+       : input.duration || "rental";
+-  const smsText = `EVUDDY ALERT: Booking ${input.bookingId} (${plan}) ends around ${ends}. Return the scooter on time. Help: 8726006512`;
+-  const emailText = `Hello ${input.riderName || "rider"},\n\nYour EVUDDY booking ${input.bookingId} (${plan}) is scheduled to end around ${ends} (IST).\n\nPlease plan your return to the hub.\n\n— EVUDDY\nhelpdesk@kebuone.in · +91 8726006512`;
++  const smsText = `EVUDDY ALERT: Booking ${input.bookingId} (${plan}) ends around ${ends}. Return the scooter on time. Help: ${HELPDESK_PHONE_DISPLAY.replace("+91 ", "")}`;
++  const emailText = `Hello ${input.riderName || "rider"},\n\nYour EVUDDY booking ${input.bookingId} (${plan}) is scheduled to end around ${ends} (IST).\n\nPlease plan your return to the hub.\n\n— EVUDDY\n${HELPDESK_EMAIL} · ${HELPDESK_PHONE_DISPLAY}`;
+ 
+   const phone = String(input.riderPhone || "").replace(/\D/g, "").slice(-10);
+   const email = String(input.riderEmail || "").trim();
+-- 
+2.43.0
+

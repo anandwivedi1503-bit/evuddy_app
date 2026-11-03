@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'api/evuddy_api.dart';
-import 'api/fleet_calculator.dart';
 import 'app_version.dart';
 import 'confirm_mobile_screen.dart';
 import 'deposit_wallet_screen.dart';
 import 'profile_edit_screen.dart';
 import 'rider_profile_screen.dart';
-import 'rider_refund_screen.dart';
 import 'security_alerts_screen.dart';
 import 'fleet_calculator_screen.dart';
+import 'helpdesk.dart';
 import 'invest_screen.dart';
 import 'login_screen.dart';
 import 'open_link.dart';
@@ -163,12 +162,7 @@ class _AccountScreenState extends State<AccountScreen> {
       title: d.fullName.isEmpty ? 'Your EVUDDY' : d.fullName,
       subtitle: status,
       headerTrailing: d.phoneVerified ? _logoutButton(compact: true) : null,
-      footer: d.phoneVerified
-          ? Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: _logoutButton(),
-            )
-          : _footer(d),
+      footer: d.phoneVerified ? null : _footer(d),
       children: [
         if (d.phoneVerified)
           Padding(
@@ -333,16 +327,11 @@ class _AccountScreenState extends State<AccountScreen> {
         if (d.phoneVerified && d.hasLiveBooking) ...[
           InfoNote(
             text: RiderSafetyTracker.instance.active
-                ? 'Live GPS: ON — shared with EVUDDY ops during this ride. Payment SMS goes to ${d.phoneDisplay} when evuddy.com SMS keys are set.'
-                : 'Live GPS starts after ride start at the yard. Allow Location for EVUDDY. SMS is sent from the server to your registered mobile, not inside the app.',
+                ? 'Live GPS is on for this ride (ops can see phone location during the trip).'
+                : 'Live GPS starts after the yard marks ride started. Allow Location for EVUDDY.',
           ),
           const SizedBox(height: 14),
         ],
-        const InfoNote(
-          text:
-              'EVUDDY admin CRM, live fleet IoT map, finance desks, and rider phone GPS tracking for ops are on evuddy.com admin — staff log in on the web, not through the rider app.',
-        ),
-        const SizedBox(height: 14),
         const TrustStrip(),
         const SizedBox(height: 14),
         GestureDetector(
@@ -388,28 +377,18 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
         const SizedBox(height: 10),
         EvuddyGhostButton(
-          label: 'Business planner',
-          onPressed: () => Navigator.push(
-            context,
-            evuddyRoute(
-              const FleetCalculatorScreen(
-                audience: FleetAudience.planner,
-                lockPlanner: false,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        EvuddyGhostButton(
           label: 'Call helpdesk 24×7',
           onPressed: dialHelpdesk,
         ),
-        const SizedBox(height: 14),
-        const InfoNote(
-          text:
-              'Same screens as evuddy.com Book EV: confirm mobile → OTP → book if approved. OTP uses Firebase. Helpdesk · helpdesk@kebuone.in · +91 8726006512',
-        ),
         const SizedBox(height: 10),
+        Text(
+          helpdeskLine,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Evuddy.muted,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
         Text(
           evuddyVersionLabel,
           textAlign: TextAlign.center,
@@ -418,10 +397,6 @@ class _AccountScreenState extends State<AccountScreen> {
                 fontWeight: FontWeight.w700,
               ),
         ),
-        if (d.phoneVerified) ...[
-          const SizedBox(height: 16),
-          _footer(d),
-        ],
       ],
     );
   }

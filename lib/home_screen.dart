@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'api/evuddy_api.dart';
 import 'book_ev_screen.dart';
 import 'confirm_mobile_screen.dart';
-import 'fleet_calculator_screen.dart';
+import 'invest_screen.dart';
 import 'login_screen.dart';
 import 'open_link.dart';
 import 'ride_ready_screen.dart';
@@ -207,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Navigator.push(context, evuddyRoute(const LoginScreen()));
                       },
                       onInvest: () {
-                        Navigator.push(context, evuddyRoute(const FleetCalculatorScreen()));
+                        Navigator.push(context, evuddyRoute(const InvestScreen()));
                       },
                       onHelp: dialHelpdesk,
                     ),
