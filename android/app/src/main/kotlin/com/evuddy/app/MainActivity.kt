@@ -1,4 +1,4 @@
-package com.example.evuddy_app
+package com.evuddy.app
 
 import android.content.Intent
 import android.os.Bundle
