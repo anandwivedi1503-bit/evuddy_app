@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "548462513436",
+    "project_id": "kebuone-otp",
+    "storage_bucket": "kebuone-otp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:548462513436:android:3e74ff13552b5b8ba93ed9",
+        "android_client_info": {
+          "package_name": "com.evuddy.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDRMZTOywz98s5xujS_SVLWuliIcK5x4DQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

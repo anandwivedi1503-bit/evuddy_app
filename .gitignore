@@ -49,4 +49,11 @@ app.*.map.json
 
 # Local CEO / store binaries
 dist/
+<<<<<<< HEAD
 kebuone-website/
+=======
+
+# Android release signing credentials
+/android/app/key.properties
+/android/app/keystore/
+>>>>>>> origin/main
