@@ -126,7 +126,7 @@ class EvuddySplashMark extends StatelessWidget {
   Widget build(BuildContext context) {
     return Image.asset(
       Evuddy.wordmarkAsset,
-      height: 56,
+      height: 72,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.high,
     );

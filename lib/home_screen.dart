@@ -177,12 +177,25 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 16),
                     BookSearchBar(onBook: () => _book()),
                     const SizedBox(height: 22),
-                    if (d.canBook && !d.hasLiveBooking) ...[
-                      Text('RIDE', style: Theme.of(context).textTheme.labelSmall),
-                      const SizedBox(height: 10),
-                      FareGrid(onPick: (fare) => _book(fare: fare)),
-                      const SizedBox(height: 18),
-                    ],
+                    const SizedBox(height: 22),
+                    Text('RIDE PLANS', style: Theme.of(context).textTheme.labelSmall),
+                    const SizedBox(height: 10),
+                    FareGrid(onPick: (fare) => _book(fare: fare)),
+                    const SizedBox(height: 18),
+                    if (!d.canBook)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 18),
+                        child: Text(
+                          d.isPendingKyc
+                              ? 'Rates above — booking unlocks after admin approves KYC.'
+                              : 'Confirm mobile & KYC to book at these rates.',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: Evuddy.muted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     QuickActions(
                       registerLabel: d.canBook
                           ? 'Account'
