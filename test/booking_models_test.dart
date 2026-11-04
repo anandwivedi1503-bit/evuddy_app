@@ -35,7 +35,7 @@ void main() {
       '_id': 'veh1',
       'vehicleId': 'EV-01',
       'registrationNumber': 'UP32AB1234',
-      'vehicleModel': 'EVUDDY Electric Scooter',
+      'vehicleModel': 'Evuddy Electric Scooter',
       'currentHub': '01',
       'batteryPercentage': '88',
     });

@@ -160,7 +160,7 @@ class _VerifyMobileOtpScreenState extends State<VerifyMobileOtpScreen> {
       if (registrationDraft.isRejected) {
         setState(() {
           verifying = false;
-          error = 'This number was rejected. Contact EVUDDY support.';
+          error = 'This number was rejected. Contact Evuddy support.';
         });
         return;
       }

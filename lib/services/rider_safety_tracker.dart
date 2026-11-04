@@ -25,7 +25,7 @@ class RiderSafetyTracker {
     if (!service) {
       await SecurityAlertHub.instance.push(
         title: 'Turn on location for safety',
-        body: 'EVUDDY uses your phone GPS only during an active ride — same idea as Rapido trip safety.',
+        body: 'Evuddy uses your phone GPS only during an active ride — same idea as Rapido trip safety.',
         category: 'safety',
         security: true,
       );
@@ -54,7 +54,7 @@ class RiderSafetyTracker {
     _idToken = idToken;
     await SecurityAlertHub.instance.push(
       title: 'Safety GPS is on',
-      body: 'Your live phone location is shared with EVUDDY ops during this ride. Fleet IoT will join when installed.',
+      body: 'Your live phone location is shared with Evuddy ops during this ride. Fleet IoT will join when installed.',
       category: 'safety',
       security: true,
     );

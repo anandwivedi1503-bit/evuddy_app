@@ -442,7 +442,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         if (jumpPay) wizard = 4;
         if (mine != null && mine.completed) {
           note =
-              'Thank you for riding with EVUDDY. The yard has taken the scooter back.';
+              'Thank you for riding with Evuddy. The yard has taken the scooter back.';
         }
         _fillAmount(mine);
       });
@@ -1105,7 +1105,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           : (wizard == 3 ? 'BOOKING REVIEW' : (rental ? 'CHOOSE SCOOTER' : 'RENT TO OWN')),
       title: b != null && b.bookingId.isNotEmpty
           ? (b.completed
-              ? 'Thank you for riding with EVUDDY'
+              ? 'Thank you for riding with Evuddy'
               : b.paymentSettled
                   ? "You're booked"
                   : remainingPay
@@ -1758,7 +1758,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Wallet is EVUDDY credit (returned deposits and admin top-ups), not UPI. Razorpay is the online path — same as the website. No PhonePe.',
+            'Wallet is Evuddy credit (returned deposits and admin top-ups), not UPI. Razorpay is the online path — same as the website. No PhonePe.',
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Evuddy.muted, height: 1.35),
           ),
@@ -1927,7 +1927,7 @@ class _ThankYouCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Thank you for riding with EVUDDY',
+            'Thank you for riding with Evuddy',
             textAlign: TextAlign.center,
             style: GoogleFonts.plusJakartaSans(
               color: Colors.white,
@@ -2059,7 +2059,7 @@ class _RideReviewPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('YOUR EVUDDY RATING', style: Theme.of(context).textTheme.labelSmall),
+            Text('YOUR Evuddy RATING', style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: 8),
             Text(
               '★' * hit.stars,
@@ -2087,7 +2087,7 @@ class _RideReviewPanel extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
-                  'EVUDDY · ${hit.staffReply}',
+                  'Evuddy · ${hit.staffReply}',
                   style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -2127,7 +2127,7 @@ class _RideReviewPanel extends StatelessWidget {
             value: wouldRecommend,
             onChanged: onRecommend,
             title: Text(
-              'I would recommend EVUDDY',
+              'I would recommend Evuddy',
               style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13),
             ),
           ),

@@ -72,7 +72,7 @@ class _DepositWalletScreenState extends State<DepositWalletScreen> {
       kicker: 'Hold only',
       title: 'Security deposit',
       subtitle:
-          'Same as evuddy.com: bookings hold ${CatalogRates.inr(CatalogRates.securityDeposit)} refundable deposit. This is not UPI. EVUDDY wallet credit is separate and can pay Book EV when the balance covers the amount.',
+          'Same as evuddy.com: bookings hold ${CatalogRates.inr(CatalogRates.securityDeposit)} refundable deposit. This is not UPI. Evuddy wallet credit is separate and can pay Book EV when the balance covers the amount.',
       footer: Column(
         children: [
           EvuddyButton(
@@ -128,7 +128,7 @@ class _DepositWalletScreenState extends State<DepositWalletScreen> {
         const SizedBox(height: 14),
         const InfoNote(
           text:
-              'GST-included fare plus ₹2,500 deposit on every Book EV, matching the website. Deposit is refunded after return. EVUDDY wallet is credit from refunds/admin — not PhonePe.',
+              'GST-included fare plus ₹2,500 deposit on every Book EV, matching the website. Deposit is refunded after return. Evuddy wallet is credit from refunds/admin — not PhonePe.',
         ),
         const SizedBox(height: 14),
         _Step(n: '1', t: 'Pay hold', d: 'Razorpay ${CatalogRates.inr(CatalogRates.securityDeposit)} deposit with the fare.'),

@@ -10,7 +10,7 @@ import 'widgets/chrome.dart';
 import 'widgets/voice_fill.dart';
 
 const comingThroughOptions = [
-  'Direct / EVUDDY',
+  'Direct / Evuddy',
   'Flipkart Minutes',
   'Zomato',
   'Swiggy',

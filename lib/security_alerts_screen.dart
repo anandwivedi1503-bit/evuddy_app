@@ -71,7 +71,7 @@ class _SecurityAlertsScreenState extends State<SecurityAlertsScreen>
         children: [
           const InfoNote(
             text:
-                'Rider phone: live countdown, GPS safety, and payment alerts appear here. EVUDDY admin CRM, fleet map, and finance desks stay on evuddy.com — not on riders’ phones.',
+                'Rider phone: live countdown, GPS safety, and payment alerts appear here. Evuddy admin CRM, fleet map, and finance desks stay on evuddy.com — not on riders’ phones.',
           ),
           const SizedBox(height: 12),
           if (store.active) _SirenTimerCard(pulse: _pulse),
@@ -84,7 +84,7 @@ class _SecurityAlertsScreenState extends State<SecurityAlertsScreen>
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Phone GPS is streaming to EVUDDY ops for this ride. IoT scooter GPS will appear on admin CRM when devices are live.',
+                      'Phone GPS is streaming to Evuddy ops for this ride. IoT scooter GPS will appear on admin CRM when devices are live.',
                       style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w600,
                         height: 1.35,

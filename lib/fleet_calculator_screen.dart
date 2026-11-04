@@ -131,7 +131,7 @@ class _FleetCalculatorScreenState extends State<FleetCalculatorScreen> {
         const SizedBox(height: 12),
         const InfoNote(
           text:
-              'You own the scooters. EVUDDY operates them. Monthly return follows the published Fleet Partner brief — not a live payout in this app.',
+              'You own the scooters. Evuddy operates them. Monthly return follows the published Fleet Partner brief — not a live payout in this app.',
         ),
         const SizedBox(height: 120),
       ],
@@ -180,7 +180,7 @@ class _QuoteCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'FOCO · EVUDDY operates · ${quote.termMonths} months',
+            'FOCO · Evuddy operates · ${quote.termMonths} months',
             style: GoogleFonts.plusJakartaSans(
               color: Evuddy.muted,
               fontWeight: FontWeight.w600,

@@ -34,7 +34,7 @@ class RiderNotifications {
     const channel = AndroidNotificationChannel(
       'evuddy_trip_alerts',
       'Trip & security alerts',
-      description: 'Booking end reminders and EVUDDY safety messages',
+      description: 'Booking end reminders and Evuddy safety messages',
       importance: Importance.high,
     );
     await _plugin
@@ -65,7 +65,7 @@ class RiderNotifications {
     );
     if (end == null || bookingId.isEmpty) return;
     final remind = BookingEndSchedule.reminderOneHourBefore(end);
-    final title = 'EVUDDY · booking ending soon';
+    final title = 'Evuddy · booking ending soon';
     final body = BookingEndSchedule.humanEnd(duration, units, end);
     await SecurityAlertHub.instance.push(
       title: title,
@@ -93,7 +93,7 @@ class RiderNotifications {
               UILocalNotificationDateInterpretation.absoluteTime,
         );
       } catch (e) {
-        debugPrint('EVUDDY zonedSchedule failed: $e');
+        debugPrint('Evuddy zonedSchedule failed: $e');
         await _plugin.show(
           bookingId.hashCode,
           title,
@@ -131,7 +131,7 @@ class RiderNotifications {
         android: AndroidNotificationDetails(
           'evuddy_trip_alerts',
           'Trip & security alerts',
-          channelDescription: 'Booking end reminders and EVUDDY safety messages',
+          channelDescription: 'Booking end reminders and Evuddy safety messages',
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',

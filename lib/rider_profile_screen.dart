@@ -99,7 +99,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
     return AuthScreen(
       showBack: true,
       kicker: 'Rider profile',
-      title: d.fullName.isEmpty ? 'Your EVUDDY' : d.fullName,
+      title: d.fullName.isEmpty ? 'Your Evuddy' : d.fullName,
       subtitle: d.riderId != null ? 'Rider ${d.riderId}' : 'Complete KYC to unlock booking',
       headerTrailing: IconButton(
         tooltip: 'Refresh',
@@ -181,7 +181,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
               child: _StatTile(
                 label: 'Wallet',
                 value: CatalogRates.inr(d.walletAvailable),
-                sub: d.walletStatus.isEmpty ? 'EVUDDY credit' : d.walletStatus,
+                sub: d.walletStatus.isEmpty ? 'Evuddy credit' : d.walletStatus,
               ),
             ),
             const SizedBox(width: 10),
@@ -210,7 +210,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
                 ),
                 Text(
                   gpsOn
-                      ? 'Phone GPS is shared with EVUDDY ops (like Rapido safety).'
+                      ? 'Phone GPS is shared with Evuddy ops (like Rapido safety).'
                       : 'Turn on location and start ride for live GPS on admin map.',
                   style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
                 ),

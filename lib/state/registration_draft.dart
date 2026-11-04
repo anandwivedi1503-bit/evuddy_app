@@ -19,7 +19,7 @@ class RegistrationDraft {
 
   String fullName = '';
   String email = '';
-  String comingThrough = 'Direct / EVUDDY';
+  String comingThrough = 'Direct / Evuddy';
 
   String aadhaar = '';
   String drivingLicense = '';
@@ -118,7 +118,7 @@ class RegistrationDraft {
   void resetProfileForNewPhone() {
     fullName = '';
     email = '';
-    comingThrough = 'Direct / EVUDDY';
+    comingThrough = 'Direct / Evuddy';
     aadhaar = '';
     drivingLicense = '';
     instagramId = '';
