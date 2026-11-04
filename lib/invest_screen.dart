@@ -7,6 +7,7 @@ import 'fleet_calculator_screen.dart';
 import 'open_link.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
+import 'widgets/fleet_partner_poster.dart';
 
 class InvestScreen extends StatelessWidget {
   const InvestScreen({super.key});
@@ -40,7 +41,7 @@ class InvestScreen extends StatelessWidget {
         ],
       ),
       children: [
-        const ScenePhoto(asset: Evuddy.investPosterAsset, height: 220, fit: BoxFit.contain),
+        const FleetPartnerPoster(height: 220),
         const SizedBox(height: 16),
         _FocoCard(
           tag: 'LOW-SPEED',
