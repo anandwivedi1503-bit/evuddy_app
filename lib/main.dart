@@ -42,7 +42,7 @@ class EvuddyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'EVUDDY',
+      title: 'Evuddy',
       theme: Evuddy.theme(),
       home: const EvuddySplashScreen(),
     );

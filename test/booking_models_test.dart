@@ -281,7 +281,7 @@ void main() {
       'orderId': 'order_123',
       'amount': 100,
       'currency': 'INR',
-      'name': 'EVUDDY',
+      'name': 'Evuddy',
     });
     expect(order.keyId, 'rzp_live_test');
     expect(order.orderId, 'order_123');
@@ -465,7 +465,7 @@ void main() {
       'orderId': 'order_remaining',
       'amount': 274900,
       'currency': 'INR',
-      'name': 'EVUDDY',
+      'name': 'Evuddy',
       'remainingAmount': 2749,
       'receivedAmount': 1,
     }, amountRupees: 2749);

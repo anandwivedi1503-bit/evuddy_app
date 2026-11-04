@@ -1872,7 +1872,7 @@ class RazorpayOrder {
     required this.orderId,
     required this.amount,
     required this.currency,
-    this.name = 'EVUDDY',
+    this.name = 'Evuddy',
     this.image,
   });
 

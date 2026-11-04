@@ -1,6 +1,6 @@
 {
-    "name": "evuddy_app",
-    "short_name": "evuddy_app",
+    "name": "Evuddy",
+    "short_name": "Evuddy",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

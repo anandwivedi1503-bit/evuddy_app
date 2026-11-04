@@ -3,23 +3,23 @@
 <plist version="1.0">
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>EVUDDY uses the microphone so you can speak name, mobile and KYC fields instead of typing.</string>
+	<string>Evuddy uses the microphone so you can speak name, mobile and KYC fields instead of typing.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>EVUDDY turns your speech into form text for register and KYC.</string>
+	<string>Evuddy turns your speech into form text for register and KYC.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>EVUDDY uses the camera for KYC photos, same as the website.</string>
+	<string>Evuddy uses the camera for KYC photos, same as the website.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>EVUDDY reads Aadhaar and profile photos for KYC upload.</string>
+	<string>Evuddy reads Aadhaar and profile photos for KYC upload.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>EVUDDY uses your location only during an active ride for safety and recovery if a scooter is not returned on time.</string>
+	<string>Evuddy uses your location only during an active ride for safety and recovery if a scooter is not returned on time.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>EVUDDY shares live phone GPS with ops during your ride until IoT fleet GPS is active.</string>
+	<string>Evuddy shares live phone GPS with ops during your ride until IoT fleet GPS is active.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>EVUDDY</string>
+	<string>Evuddy</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
