@@ -41,7 +41,7 @@ class InvestScreen extends StatelessWidget {
         ],
       ),
       children: [
-        const FleetPartnerPoster(height: 220),
+        const FleetPartnerPoster(),
         const SizedBox(height: 16),
         _FocoCard(
           tag: 'LOW-SPEED',

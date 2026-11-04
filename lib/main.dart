@@ -49,7 +49,7 @@ class EvuddyApp extends StatelessWidget {
   }
 }
 
-/// Yellow brand hold → white canvas with a pulsing wordmark → home.
+/// Yellow brand hold → cream canvas with wordmark → home.
 class EvuddySplashScreen extends StatefulWidget {
   const EvuddySplashScreen({super.key});
 
@@ -71,7 +71,7 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
     _hold = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
     _toWhite = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
     _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
-    _bg = ColorTween(begin: Evuddy.rapidoYellow, end: Colors.white).animate(
+    _bg = ColorTween(begin: Evuddy.rapidoYellow, end: Evuddy.wash).animate(
       CurvedAnimation(parent: _toWhite, curve: Curves.easeInOutCubic),
     );
     _logoScale = Tween<double>(begin: 1, end: 1.08).animate(
@@ -96,7 +96,7 @@ class _EvuddySplashScreenState extends State<EvuddySplashScreen>
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
-        systemNavigationBarColor: Colors.white,
+        systemNavigationBarColor: Evuddy.wash,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
     );
