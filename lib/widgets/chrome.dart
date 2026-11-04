@@ -10,7 +10,7 @@ class AuthScreen extends StatelessWidget {
     super.key,
     required this.title,
     required this.children,
-    this.kicker = 'EVUDDY',
+    this.kicker = 'Evuddy',
     this.subtitle,
     this.showBack = true,
     this.footer,
@@ -243,7 +243,7 @@ class _IconBtn extends StatelessWidget {
 }
 
 class WelcomeRule extends StatelessWidget {
-  const WelcomeRule({super.key, this.caption = 'EVUDDY'});
+  const WelcomeRule({super.key, this.caption = 'Evuddy'});
 
   final String caption;
 

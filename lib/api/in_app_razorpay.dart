@@ -39,7 +39,7 @@ class InAppRazorpay {
     final digits = contact.replaceAll(RegExp(r'\D'), '');
     final contact10 =
         digits.length >= 10 ? digits.substring(digits.length - 10) : digits;
-    final name = order.name.trim().isEmpty ? 'EVUDDY' : order.name.trim();
+    final name = order.name.trim().isEmpty ? 'Evuddy' : order.name.trim();
     final image = (order.image ?? '').trim().isEmpty
         ? 'https://www.evuddy.com/Evuddy-logo-dark-E.png'
         : order.image!.trim();
