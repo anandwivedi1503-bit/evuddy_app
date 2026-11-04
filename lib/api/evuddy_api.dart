@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Talks only to the live EVUDDY site. Keys stay on evuddy.com — never in the app.
+/// Talks only to the live Evuddy site. Keys stay on evuddy.com — never in the app.
 class EvuddyApi {
   static const origin = 'https://www.evuddy.com';
 
@@ -1378,7 +1378,7 @@ class EvuddyVehicle {
           e['vehicleNumber']?.toString() ??
           '',
       vehicleModel:
-          e['vehicleModel']?.toString() ?? 'EVUDDY Electric Scooter',
+          e['vehicleModel']?.toString() ?? 'Evuddy Electric Scooter',
       currentHub: e['currentHub']?.toString() ?? '',
       batteryPercentage: _asDouble(e['batteryPercentage']) ?? 0,
       hourlyRate: _asDouble(e['hourlyRate']),

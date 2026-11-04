@@ -19,7 +19,7 @@ class ReceiptPdf {
         build: (ctx) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('EVUDDY', style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold)),
+            pw.Text('Evuddy', style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold)),
             pw.Text('Smart electric mobility · GST-inclusive rental receipt'),
             pw.SizedBox(height: 24),
             pw.Text('Payment receipt', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
@@ -48,7 +48,7 @@ class ReceiptPdf {
     final bytes = await doc.save();
     await Printing.sharePdf(
       bytes: bytes,
-      filename: 'EVUDDY-receipt-${receipt.bookingId.isEmpty ? "payment" : receipt.bookingId}.pdf',
+      filename: 'Evuddy-receipt-${receipt.bookingId.isEmpty ? "payment" : receipt.bookingId}.pdf',
     );
   }
 

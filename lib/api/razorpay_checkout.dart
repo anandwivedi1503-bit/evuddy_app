@@ -498,7 +498,7 @@ class _RazorpayCheckoutPageState extends State<RazorpayCheckoutPage>
                         ? 'Opening the same Razorpay checkout as evuddy.com in Chrome…'
                         : _waitingChrome
                             ? 'Finish UPI QR / GPay / PhonePe in Chrome, then return here. There is no Continue button on the website checkout.'
-                            : 'Complete UPI, card or netbanking in Razorpay. EVUDDY never sees your PIN or card number.',
+                            : 'Complete UPI, card or netbanking in Razorpay. Evuddy never sees your PIN or card number.',
                   ),
                   if (_waitingChrome) ...[
                     const SizedBox(height: 12),

@@ -119,7 +119,7 @@ const offerAds = [
   OfferAd(
     kicker: 'FLEET PARTNER',
     title: 'Own the fleet.\nWe operate everything.',
-    body: 'FOCO · you own the EVs · EVUDDY runs riders, GPS and hub OTP',
+    body: 'FOCO · you own the EVs · Evuddy runs riders, GPS and hub OTP',
     cta: 'Fleet calculator',
     colors: [Color(0xFFFFCC00), Color(0xFFFFE566)],
     darkText: true,

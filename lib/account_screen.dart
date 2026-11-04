@@ -159,7 +159,7 @@ class _AccountScreenState extends State<AccountScreen> {
     return AuthScreen(
       showBack: false,
       kicker: 'Account',
-      title: d.fullName.isEmpty ? 'Your EVUDDY' : d.fullName,
+      title: d.fullName.isEmpty ? 'Your Evuddy' : d.fullName,
       subtitle: status,
       headerTrailing: d.phoneVerified ? _logoutButton(compact: true) : null,
       footer: d.phoneVerified ? null : _footer(d),
@@ -312,7 +312,7 @@ class _AccountScreenState extends State<AccountScreen> {
                         style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
                       ),
                       Text(
-                        'For riders on this phone. Not the EVUDDY admin CRM.',
+                        'For riders on this phone. Not the Evuddy admin CRM.',
                         style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
                       ),
                     ],
@@ -328,7 +328,7 @@ class _AccountScreenState extends State<AccountScreen> {
           InfoNote(
             text: RiderSafetyTracker.instance.active
                 ? 'Live GPS is on for this ride (ops can see phone location during the trip).'
-                : 'Live GPS starts after the yard marks ride started. Allow Location for EVUDDY.',
+                : 'Live GPS starts after the yard marks ride started. Allow Location for Evuddy.',
           ),
           const SizedBox(height: 14),
         ],

@@ -156,7 +156,7 @@ class _CommandCenterScreenState extends State<CommandCenterScreen>
       points.add({
         'lat': 26.8467,
         'lng': 80.9462,
-        'label': hubs.isEmpty ? 'EVUDDY Lucknow hub' : 'Hub ${hubs.first.name} (Lucknow)',
+        'label': hubs.isEmpty ? 'Evuddy Lucknow hub' : 'Hub ${hubs.first.name} (Lucknow)',
         'kind': 'hub',
       });
     }

@@ -18,7 +18,7 @@ class InvestScreen extends StatelessWidget {
       kicker: 'Fleet partner',
       title: 'Own the fleet.\nWe operate.',
       subtitle:
-          'FOCO · start with 5 scooters. EVUDDY runs riders, GPS, KYC and hub OTP. Monthly return as published. Apply on evuddy.com — no invest payment in this app.',
+          'FOCO · start with 5 scooters. Evuddy runs riders, GPS, KYC and hub OTP. Monthly return as published. Apply on evuddy.com — no invest payment in this app.',
       footer: Column(
         children: [
           EvuddyButton(
@@ -160,7 +160,7 @@ class _FocoCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'FOCO · EVUDDY operates · ${CatalogRates.partnerMonths} months',
+            'FOCO · Evuddy operates · ${CatalogRates.partnerMonths} months',
             style: GoogleFonts.plusJakartaSans(
               color: const Color(0xFF44403C),
               fontSize: 13,

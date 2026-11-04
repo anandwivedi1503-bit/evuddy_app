@@ -85,7 +85,7 @@ class ReceiptDetailScreen extends StatelessWidget {
           const SizedBox(height: 14),
           const InfoNote(
             text:
-                'Download a PDF for your records or share on WhatsApp / email. EVUDDY ops see the same receipt on evuddy.com admin CRM.',
+                'Download a PDF for your records or share on WhatsApp / email. Evuddy ops see the same receipt on evuddy.com admin CRM.',
           ),
           const SizedBox(height: 16),
           EvuddyButton(

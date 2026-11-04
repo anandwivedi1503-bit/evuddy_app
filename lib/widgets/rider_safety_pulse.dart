@@ -122,7 +122,7 @@ class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerPr
                           if (store.durationLabel.isNotEmpty) store.durationLabel,
                           if (untilReminder > Duration.zero)
                             'Reminder in ${TripCountdownStore.formatDuration(untilReminder)}',
-                          if (gpsOn) 'Phone GPS shared with EVUDDY ops',
+                          if (gpsOn) 'Phone GPS shared with Evuddy ops',
                         ].join(' · '),
                         style: GoogleFonts.plusJakartaSans(
                           color: Colors.white.withValues(alpha: 0.88),
