@@ -32,6 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
   late final TextEditingController phone;
   late final TextEditingController email;
   String comingThrough = registrationDraft.comingThrough;
+  String pickupCityAck = registrationDraft.pickupCityAck;
   String? error;
   bool busy = false;
 
@@ -74,6 +75,10 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => error = 'Enter a valid email address.');
       return;
     }
+    if (pickupCityAck != 'LUCKNOW' && pickupCityAck != 'OTHER') {
+      setState(() => error = 'Confirm whether you are in Lucknow or another city.');
+      return;
+    }
     final previous = registrationDraft.phone;
     if (previous != p && !_verified) {
       registrationDraft.resetProfileForNewPhone();
@@ -82,7 +87,8 @@ class _LoginScreenState extends State<LoginScreen> {
       ..fullName = n
       ..phone = p
       ..email = e
-      ..comingThrough = comingThrough;
+      ..comingThrough = comingThrough
+      ..pickupCityAck = pickupCityAck;
     if (!_verified) {
       registrationDraft
         ..phoneVerified = false
@@ -184,6 +190,30 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        FormDeck(
+          eyebrow: 'City',
+          title: 'Where will you ride?',
+          icon: Icons.location_city_rounded,
+          children: [
+            const Text(
+              'EVUDDY operates in Lucknow only today. Pick the option that matches you.',
+            ),
+            const SizedBox(height: 12),
+            ChoicePills(
+              sun: true,
+              options: const ['Lucknow', 'Another city'],
+              value: pickupCityAck == 'LUCKNOW'
+                  ? 'Lucknow'
+                  : pickupCityAck == 'OTHER'
+                      ? 'Another city'
+                      : '',
+              onChanged: (v) => setState(() {
+                pickupCityAck = v == 'Lucknow' ? 'LUCKNOW' : 'OTHER';
+              }),
+            ),
           ],
         ),
         const SizedBox(height: 16),
