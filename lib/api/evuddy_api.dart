@@ -458,7 +458,11 @@ class EvuddyApi {
     try {
       r = await _post(
         _u('/api/razorpay/create-order'),
-        headers: _auth(idToken),
+        headers: {
+          ..._auth(idToken),
+          'X-Evuddy-Client': 'app',
+          'X-Evuddy-Client-Capabilities': 'firstPaymentHalfRental',
+        },
         body: jsonEncode({
           'bookingMongoId': bookingMongoId,
           'amount': amountRupees,
