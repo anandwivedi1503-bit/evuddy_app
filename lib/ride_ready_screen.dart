@@ -127,15 +127,30 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   }
 
   void _fillAmount(RiderBooking? b) {
-    if (b == null) {
-      amount.text = '1';
-      return;
-    }
-    if (b.remainingPayLocked) {
+    if (b != null && b.remainingPayLocked) {
       amount.text = _moneyInput(_remainingCharge(b));
       return;
     }
-    amount.text = '1';
+    amount.text = _moneyInput(_firstPayFloor(b));
+  }
+
+  /// Same floor as the website: first rental payment is 50% of the GST-included
+  /// fare (deposit excluded). Later payments can be any amount still due.
+  double _firstPayFloor(RiderBooking? b) {
+    if (b != null && b.isRentToOwn) return _remainingCharge(b);
+    if (b != null && b.receivedAmount > 0.009) return 1;
+    final payable = b == null || b.paymentDue <= 0.009
+        ? catalogPayable.toDouble()
+        : b.paymentDue;
+    final deposit = b == null || b.securityDeposit <= 0
+        ? CatalogRates.securityDeposit.toDouble()
+        : b.securityDeposit;
+    final rental = payable - deposit;
+    final half = rental > 0 ? rental * 0.5 : 1.0;
+    final remaining = b == null ? payable : _remainingCharge(b);
+    final min = half < 1 ? 1.0 : half;
+    if (remaining > 0.009 && min > remaining) return remaining;
+    return min;
   }
 
   @override
@@ -453,7 +468,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       if (!mounted) return;
       setState(() {
         loading = false;
-        error = userFacingError(e);
+        if (!silent) error = userFacingError(e);
       });
     }
   }
@@ -592,7 +607,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         wizard = 4;
         note = created.message.isEmpty
             ? (rental
-                ? 'Scooter reserved. Pay any amount from ₹1 on Razorpay to get pickup OTP. Remaining can be paid during the ride.'
+                ? 'Scooter reserved. First payment must be at least 50% of rental. Pickup OTP is issued after that payment.'
                 : 'Agreement saved. Pay today’s GST-included fare plus the ₹2,500 refundable deposit in one Razorpay payment.')
             : created.message;
         _fillAmount(created);
@@ -643,10 +658,13 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     if (b.remainingPayLocked) {
       amount.text = _moneyInput(pay);
     }
-    if (pay < 1 || pay > maxDue + 0.009) {
+    final floor = b.remainingPayLocked ? _remainingCharge(b) : _firstPayFloor(b);
+    if (pay + 0.001 < floor || pay > maxDue + 0.009) {
       setState(() => error = b.isRentToOwn
           ? 'Rent to Own needs today’s full GST-included amount plus deposit in one payment.'
-          : 'Enter a payment between ₹1 and ${CatalogRates.inr(maxDue)}.');
+          : (b.receivedAmount <= 0.009
+              ? 'First payment must be at least 50% of rental (${CatalogRates.inr(floor)}), up to ${CatalogRates.inr(maxDue)}.'
+              : 'Enter a payment between ${CatalogRates.inr(floor)} and ${CatalogRates.inr(maxDue)}.'));
       return;
     }
     if (useWallet && registrationDraft.walletAvailable + 0.009 < pay) {
@@ -1123,7 +1141,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                       ? 'Pickup OTP is already issued. Razorpay will charge only the remaining due.'
                       : (b.receivedAmount > 0.009
                           ? 'Pay any remaining on Razorpay or as cash at the yard before ride-end OTP.'
-                          : 'Pay any amount from ₹1 with Razorpay to get pickup OTP. Remaining can wait until return.'))
+                          : 'First payment must be at least 50% of rental. Pickup OTP is issued after that payment. Remaining can wait until return.'))
           : (wizard == 3
               ? 'GST included fare + refundable deposit. Then Razorpay — same as evuddy.com.'
               : (rental
@@ -1696,7 +1714,10 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         label: 'Continue to review',
         onPressed: () {
           selected ??= vehicles.first;
-          setState(() => wizard = 3);
+          setState(() {
+            wizard = 3;
+            error = null;
+          });
         },
       );
     }

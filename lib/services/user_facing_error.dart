@@ -9,12 +9,16 @@ String userFacingError(Object error, {String fallback = 'Something went wrong. T
   if (raw.contains('ApiException:')) {
     return raw.replaceFirst('ApiException: ', '').trim();
   }
-  if (raw.contains('Razorpay') || raw.contains('payment')) {
-    return 'Payment could not finish. Check UPI or card and try again.';
-  }
-  if (raw.contains('SocketException') || raw.contains('Failed host lookup')) {
+  if (raw.contains('SocketException') ||
+      raw.contains('Failed host lookup') ||
+      raw.contains('ClientException')) {
     return 'No connection to evuddy.com. Check mobile data or Wi‑Fi.';
   }
-  if (raw.length > 160) return fallback;
+  if (raw.length > 160) {
+    if (raw.contains('Razorpay') || raw.contains('payment')) {
+      return 'Payment could not finish. Check UPI or card and try again.';
+    }
+    return fallback;
+  }
   return raw;
 }
