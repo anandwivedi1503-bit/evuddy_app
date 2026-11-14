@@ -6,7 +6,6 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../api/evuddy_api.dart';
 import 'booking_end_schedule.dart';
-import 'security_alert_hub.dart';
 import 'trip_countdown_store.dart';
 
 /// Local + server nudges one hour before rental ends.
@@ -67,12 +66,6 @@ class RiderNotifications {
     final remind = BookingEndSchedule.reminderOneHourBefore(end);
     final title = 'Evuddy · booking ending soon';
     final body = BookingEndSchedule.humanEnd(duration, units, end);
-    await SecurityAlertHub.instance.push(
-      title: title,
-      body: body,
-      category: 'reminder',
-      security: true,
-    );
     if (remind == null) {
       await _plugin.show(
         bookingId.hashCode,

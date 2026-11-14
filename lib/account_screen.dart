@@ -1,27 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'api/evuddy_api.dart';
 import 'app_version.dart';
 import 'confirm_mobile_screen.dart';
 import 'deposit_wallet_screen.dart';
 import 'profile_edit_screen.dart';
-import 'rider_profile_screen.dart';
-import 'security_alerts_screen.dart';
-import 'fleet_calculator_screen.dart';
 import 'helpdesk.dart';
-import 'invest_screen.dart';
 import 'login_screen.dart';
 import 'open_link.dart';
 import 'ride_history_screen.dart';
 import 'ride_ready_screen.dart';
-import 'services/rider_safety_tracker.dart';
 import 'state/registration_draft.dart';
 import 'submitted_screen.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
-import 'widgets/promo.dart';
-import 'widgets/scenes.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key, this.onLoggedOut});
@@ -32,8 +24,6 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
-  bool checking = false;
-
   @override
   void initState() {
     super.initState();
@@ -54,10 +44,9 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => checking = true);
     await registrationDraft.refreshFromServer();
     if (!mounted) return;
-    setState(() => checking = false);
+    setState(() {});
   }
 
   Future<void> _logout() async {
@@ -115,6 +104,32 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
+  Widget _avatar(RegistrationDraft d) {
+    final url = d.profilePhotoUrl.trim();
+    final initial = (d.fullName.isEmpty ? 'E' : d.fullName.trim()[0]).toUpperCase();
+    final image = url.startsWith('http') ? NetworkImage(url) : null;
+    return GestureDetector(
+      onTap: d.phoneVerified
+          ? () => Navigator.push(context, evuddyRoute(const ProfileEditScreen()))
+          : null,
+      child: CircleAvatar(
+        radius: 28,
+        backgroundColor: const Color(0xFFE8F5EE),
+        backgroundImage: image,
+        child: image == null
+            ? Text(
+                initial,
+                style: GoogleFonts.plusJakartaSans(
+                  color: Evuddy.greenDeep,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 20,
+                ),
+              )
+            : null,
+      ),
+    );
+  }
+
   Widget _footer(RegistrationDraft d) {
     if (!d.phoneVerified) {
       return EvuddyButton(
@@ -164,60 +179,50 @@ class _AccountScreenState extends State<AccountScreen> {
       headerTrailing: d.phoneVerified ? _logoutButton(compact: true) : null,
       footer: d.phoneVerified ? null : _footer(d),
       children: [
-        if (d.phoneVerified)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: EvuddyGhostButton(
-              label: checking ? 'Refreshing…' : 'Refresh approval & booking',
-              onPressed: checking ? null : _refresh,
-            ),
-          ),
         SurfaceCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Text(
-                d.phoneDisplay.isEmpty ? 'No number yet' : d.phoneDisplay,
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
+              _avatar(d),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      d.phoneDisplay.isEmpty ? 'No number yet' : d.phoneDisplay,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      d.email.isEmpty ? 'Add email in profile' : d.email,
+                      style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
+                    ),
+                    if (d.riderId != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Rider ${d.riderId}',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: d.canBook ? Evuddy.greenDeep : Evuddy.muted,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                d.email.isEmpty ? 'Complete KYC to unlock hubs' : d.email,
-                style: GoogleFonts.plusJakartaSans(color: Evuddy.muted),
-              ),
-              if (d.riderId != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Rider ${d.riderId} · $status',
-                  style: GoogleFonts.plusJakartaSans(
-                    color: d.canBook ? Evuddy.greenDeep : Evuddy.muted,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-              if (d.phoneVerified) ...[
-                const SizedBox(height: 12),
-                EvuddyButton(
-                  sun: true,
-                  label: 'My profile & rides',
-                  onPressed: () => Navigator.push(
-                    context,
-                    evuddyRoute(const RiderProfileScreen()),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                EvuddyGhostButton(
-                  label: 'Edit photo, name & email',
+              if (d.phoneVerified)
+                IconButton(
+                  tooltip: 'Edit profile',
                   onPressed: () => Navigator.push(
                     context,
                     evuddyRoute(const ProfileEditScreen()),
                   ),
+                  icon: const Icon(Icons.edit_outlined, color: Evuddy.ink),
                 ),
-              ],
             ],
           ),
         ),
@@ -293,48 +298,6 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
         const SizedBox(height: 14),
         GestureDetector(
-          onTap: d.phoneVerified
-              ? () => Navigator.push(context, evuddyRoute(const SecurityAlertsScreen()))
-              : null,
-          child: SurfaceCard(
-            child: Row(
-              children: [
-                const Icon(Icons.emergency_outlined, color: Evuddy.magenta),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('TRIP SAFETY & ALERTS', style: Theme.of(context).textTheme.labelSmall),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Siren timer · GPS · booking end reminders',
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
-                      ),
-                      Text(
-                        'For riders on this phone. Not the Evuddy admin CRM.',
-                        style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded, color: Evuddy.muted),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        if (d.phoneVerified && d.hasLiveBooking) ...[
-          InfoNote(
-            text: RiderSafetyTracker.instance.active
-                ? 'Live GPS is on for this ride (ops can see phone location during the trip).'
-                : 'Live GPS starts after the yard marks ride started. Allow Location for Evuddy.',
-          ),
-          const SizedBox(height: 14),
-        ],
-        const TrustStrip(),
-        const SizedBox(height: 14),
-        GestureDetector(
           onTap: () => Navigator.push(context, evuddyRoute(const DepositWalletScreen())),
           child: SurfaceCard(
             child: Row(
@@ -363,22 +326,10 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 14),
-        const OfferAdCarousel(),
-        const SizedBox(height: 14),
-        EvuddyButton(
-          label: 'Investment plans',
-          onPressed: () => Navigator.push(context, evuddyRoute(const InvestScreen())),
-        ),
-        const SizedBox(height: 10),
-        EvuddyGhostButton(
-          label: 'Fleet calculator',
-          onPressed: () => Navigator.push(context, evuddyRoute(const FleetCalculatorScreen())),
-        ),
-        const SizedBox(height: 10),
-        EvuddyGhostButton(
-          label: 'Call helpdesk 24×7',
+        const SizedBox(height: 8),
+        TextButton(
           onPressed: dialHelpdesk,
+          child: const Text('Call helpdesk'),
         ),
         const SizedBox(height: 10),
         Text(

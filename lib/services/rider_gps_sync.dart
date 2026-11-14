@@ -3,6 +3,7 @@ import 'dart:async';
 import '../api/evuddy_api.dart';
 import '../state/registration_draft.dart';
 import 'rider_safety_tracker.dart';
+import 'trip_countdown_sync.dart';
 
 /// Keeps phone GPS uplink on whenever the server says the trip is live (not only after one screen action).
 class RiderGpsSync {
@@ -25,9 +26,7 @@ class RiderGpsSync {
       return;
     }
 
-    final track = booking.inRide ||
-        booking.pickupOtpVerified ||
-        (booking.hasPickupOtp && booking.receivedAmount >= 0.99);
+    final track = TripCountdownSync.rideClockOpen(booking);
     if (!track) {
       await RiderSafetyTracker.instance.stop();
       return;

@@ -1,5 +1,4 @@
 import '../api/evuddy_api.dart';
-import 'security_alert_hub.dart';
 
 class ReceiptDelivery {
   const ReceiptDelivery._();
@@ -26,11 +25,6 @@ class ReceiptDelivery {
     final summary = channels.isEmpty
         ? 'Payment saved. Receipt email + SMS go to your profile email and registered mobile when evuddy.com is updated.'
         : 'Receipt sent via ${channels.join(' & ')} (email + registered mobile SMS when enabled on server).';
-    await SecurityAlertHub.instance.push(
-      title: 'Payment receipt',
-      body: summary,
-      category: 'payment',
-    );
     return summary;
   }
 }

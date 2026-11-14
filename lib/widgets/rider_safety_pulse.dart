@@ -80,8 +80,8 @@ class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerPr
                     CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
                   ),
                   child: Container(
-                    width: 52,
-                    height: 52,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
@@ -90,7 +90,7 @@ class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerPr
                     child: Icon(
                       urgent ? Icons.campaign_rounded : Icons.shield_moon_outlined,
                       color: Colors.white,
-                      size: 28,
+                      size: 16,
                     ),
                   ),
                 ),
@@ -114,7 +114,7 @@ class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerPr
                         style: GoogleFonts.plusJakartaSans(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
-                          fontSize: 17,
+                          fontSize: 14,
                         ),
                       ),
                       Text(

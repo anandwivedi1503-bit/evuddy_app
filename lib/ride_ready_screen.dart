@@ -591,12 +591,6 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         ..applyActiveBooking(created);
       await registrationDraft.persist();
       TripCountdownSync.apply(created);
-      if (rental) {
-        final token = registrationDraft.firebaseIdToken;
-        if (token != null) {
-          await _scheduleReminders(bookingId: created.bookingId, token: token);
-        }
-      }
       if (!mounted) return;
       setState(() {
         booking = created;
@@ -954,6 +948,12 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     final current = booking;
     if (start && current != null && !current.pickupOtpVerified) {
       setState(() => error = 'Wait for the yard to enter pickup OTP first — same as evuddy.com.');
+      return;
+    }
+    if (start && current != null && !TripCountdownSync.rideClockOpen(
+          current.copy(rideStatus: 'In Ride', pickupOtpVerified: true),
+        )) {
+      setState(() => error = 'Pay 50% of the total before you swipe Ride started.');
       return;
     }
     if (!start && current != null && current.isRentToOwn) {

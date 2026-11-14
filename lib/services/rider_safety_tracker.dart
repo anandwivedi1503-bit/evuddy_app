@@ -52,12 +52,6 @@ class RiderSafetyTracker {
     if (!ok) return;
     _bookingId = bookingId;
     _idToken = idToken;
-    await SecurityAlertHub.instance.push(
-      title: 'Safety GPS is on',
-      body: 'Your live phone location is shared with Evuddy ops during this ride. Fleet IoT will join when installed.',
-      category: 'safety',
-      security: true,
-    );
     const settings = LocationSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: 35,
