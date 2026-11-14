@@ -8,11 +8,13 @@ import 'invest_screen.dart';
 import 'login_screen.dart';
 import 'open_link.dart';
 import 'ride_ready_screen.dart';
+import 'services/festive_today.dart';
 import 'state/registration_draft.dart';
 import 'security_alerts_screen.dart';
 import 'submitted_screen.dart';
 import 'theme/evuddy.dart';
 import 'widgets/chrome.dart';
+import 'widgets/festive_poster.dart';
 import 'widgets/fares.dart';
 import 'widgets/promo.dart';
 import 'widgets/scenes.dart';
@@ -27,6 +29,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<EvuddyHub> hubs = [];
   bool loadingHubs = true;
+  FestiveToday? festive;
+  bool _posterOpen = false;
 
   @override
   void initState() {
@@ -62,6 +66,20 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       setState(() => loadingHubs = false);
     }
+    await _loadFestive();
+  }
+
+  Future<void> _loadFestive() async {
+    final today = await FestiveToday.load();
+    if (!mounted) return;
+    setState(() => festive = today);
+    if (today == null || _posterOpen) return;
+    if (await FestiveToday.alreadyShown(today.sessionKey)) return;
+    if (!mounted) return;
+    _posterOpen = true;
+    await showFestivePoster(context, today);
+    _posterOpen = false;
+    await FestiveToday.markShown(today.sessionKey);
   }
 
   Future<void> _book({FareOffer? fare}) async {
@@ -130,6 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (festive != null) FestiveHomeMast(today: festive!),
                     Text(
                       d.canBook
                           ? (d.fullName.isEmpty

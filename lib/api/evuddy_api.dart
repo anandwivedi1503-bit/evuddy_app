@@ -251,6 +251,9 @@ class EvuddyApi {
       _u('/api/riders'),
       headers: {
         'Content-Type': 'application/json',
+        'X-Evuddy-Client': 'app',
+        if ((body['pickupCityAck']?.toString() ?? '').isNotEmpty)
+          'X-Evuddy-Client-Capabilities': 'pickupCityAck',
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
       },
       body: jsonEncode(body),
@@ -455,7 +458,11 @@ class EvuddyApi {
     try {
       r = await _post(
         _u('/api/razorpay/create-order'),
-        headers: _auth(idToken),
+        headers: {
+          ..._auth(idToken),
+          'X-Evuddy-Client': 'app',
+          'X-Evuddy-Client-Capabilities': 'firstPaymentHalfRental',
+        },
         body: jsonEncode({
           'bookingMongoId': bookingMongoId,
           'amount': amountRupees,

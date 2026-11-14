@@ -15,7 +15,7 @@ class TripCountdownSync {
     if (booking == null || booking.bookingId.isEmpty) {
       return;
     }
-    if (booking.completed || booking.cancelled) {
+    if (booking.completed || booking.cancelled || !rideClockOpen(booking)) {
       if (TripCountdownStore.instance.bookingId == booking.bookingId) {
         TripCountdownStore.instance.clear();
       }
@@ -33,7 +33,7 @@ class TripCountdownSync {
       return;
     }
 
-    final live = booking.isOpenRide || booking.inRide || booking.hasPickupOtp;
+    final live = booking.inRide;
     if (!live) return;
 
     final duration = registrationDraft.chosenDuration ??
@@ -52,6 +52,17 @@ class TripCountdownSync {
       units: units,
       tripEndsAt: computed,
     );
+  }
+
+  /// Siren runs only after half the total is paid and the rider has swiped Ride started.
+  static bool rideClockOpen(RiderBooking booking) {
+    if (!booking.inRide || booking.completed || booking.cancelled) return false;
+    if (booking.isRentToOwn) return booking.receivedAmount > 0.009;
+    final total = booking.paymentDue > 0.009
+        ? booking.paymentDue
+        : booking.receivedAmount + booking.due;
+    if (total <= 0.009) return false;
+    return booking.receivedAmount + 0.01 >= total * 0.5;
   }
 
   static String _durationLabel(RiderBooking booking) {
