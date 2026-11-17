@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'booking_end_schedule.dart';
 import 'trip_countdown_store.dart';
 import '../api/evuddy_api.dart';
@@ -9,7 +11,7 @@ class TripCountdownSync {
 
   static void apply(RiderBooking? booking) {
     if (!registrationDraft.phoneVerified) {
-      TripCountdownStore.instance.clear();
+      unawaited(TripCountdownStore.instance.clear());
       return;
     }
     if (booking == null || booking.bookingId.isEmpty) {
@@ -17,7 +19,14 @@ class TripCountdownSync {
     }
     if (booking.completed || booking.cancelled) {
       if (TripCountdownStore.instance.bookingId == booking.bookingId) {
-        TripCountdownStore.instance.clear();
+        unawaited(TripCountdownStore.instance.clear());
+      }
+      return;
+    }
+
+    if (!booking.inRide) {
+      if (TripCountdownStore.instance.bookingId == booking.bookingId) {
+        unawaited(TripCountdownStore.instance.clear());
       }
       return;
     }

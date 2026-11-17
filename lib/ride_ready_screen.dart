@@ -579,12 +579,6 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         ..applyActiveBooking(created);
       await registrationDraft.persist();
       TripCountdownSync.apply(created);
-      if (rental) {
-        final token = registrationDraft.firebaseIdToken;
-        if (token != null) {
-          await _scheduleReminders(bookingId: created.bookingId, token: token);
-        }
-      }
       if (!mounted) return;
       setState(() {
         booking = created;
@@ -1019,6 +1013,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           category: 'trip',
           security: true,
         );
+        TripCountdownSync.apply(active);
       }
       if (!start) {
         await RiderSafetyTracker.instance.stop();

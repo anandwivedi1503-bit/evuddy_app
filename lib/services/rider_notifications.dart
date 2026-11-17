@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -29,7 +31,17 @@ class RiderNotifications {
     const init = InitializationSettings(android: android);
     await _plugin.initialize(
       init,
-      onDidReceiveNotificationResponse: (_) {},
+      onDidReceiveNotificationResponse: (response) {
+        final payload = response.payload;
+        if (payload != null && payload.isNotEmpty) {
+          unawaited(SecurityAlertHub.instance.push(
+            title: 'Evuddy · booking ending soon',
+            body: payload,
+            category: 'reminder',
+            security: true,
+          ));
+        }
+      },
     );
     const channel = AndroidNotificationChannel(
       'evuddy_trip_alerts',
@@ -68,9 +80,9 @@ class RiderNotifications {
     final title = 'Evuddy · booking ending soon';
     final body = BookingEndSchedule.humanEnd(duration, units, end);
     await SecurityAlertHub.instance.push(
-      title: title,
-      body: body,
-      category: 'reminder',
+      title: 'Trip timer live',
+      body: '${BookingEndSchedule.humanEnd(duration, units, end)} Local alert ~1 hour before.',
+      category: 'trip',
       security: true,
     );
     if (remind == null) {
@@ -79,6 +91,13 @@ class RiderNotifications {
         title,
         body,
         _details(),
+        payload: body,
+      );
+      await SecurityAlertHub.instance.push(
+        title: title,
+        body: body,
+        category: 'reminder',
+        security: true,
       );
     } else {
       try {
@@ -91,6 +110,7 @@ class RiderNotifications {
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
+          payload: body,
         );
       } catch (e) {
         debugPrint('Evuddy zonedSchedule failed: $e');
@@ -108,7 +128,12 @@ class RiderNotifications {
       tripEndsAt: end,
       reminderAt: remind ?? end.subtract(const Duration(hours: 1)),
     );
-    if (idToken != null && idToken.isNotEmpty && phone.isNotEmpty) {
+  // Server SMS/email only in the last hour (see kebuone rental-end-reminder deferral).
+    final lead = remind == null;
+    if (lead &&
+        idToken != null &&
+        idToken.isNotEmpty &&
+        phone.isNotEmpty) {
       try {
         await EvuddyApi.notifyRentalReminder(
           idToken: idToken,
