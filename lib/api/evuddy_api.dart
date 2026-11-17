@@ -380,6 +380,19 @@ class EvuddyApi {
     return data.whereType<Map>().map(RideReview.fromJson).toList();
   }
 
+  /// Same as evuddy.com Book EV before reserve — frees an abandoned unpaid hold.
+  static Future<void> releaseUnpaidReserveIfAny(String idToken) async {
+    try {
+      await _post(
+        _u('/api/bookings/release-unpaid-reserve'),
+        headers: _auth(idToken),
+        body: jsonEncode({}),
+        attempts: 1,
+        timeout: const Duration(seconds: 12),
+      );
+    } catch (_) {}
+  }
+
   static Future<RiderBooking> createBooking({
     required String idToken,
     required String userName,
@@ -424,6 +437,7 @@ class EvuddyApi {
       'paymentStatus': 'Pending',
       if (rto != null) ...rto.toJson(),
     };
+    await releaseUnpaidReserveIfAny(idToken);
     final r = await _post(
       _u('/api/bookings'),
       headers: _auth(idToken),
