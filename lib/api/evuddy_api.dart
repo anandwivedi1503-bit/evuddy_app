@@ -2,9 +2,49 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// Live seasonal skin from GET /api/festive-today. Absent on ordinary days.
+class BrandCampaign {
+  const BrandCampaign({
+    required this.id,
+    required this.theme,
+    required this.ribbon,
+    required this.welcomeTitle,
+    required this.welcomeBody,
+    required this.logoAccent,
+    required this.heroImage,
+  });
+
+  final String id;
+  final String theme;
+  final String ribbon;
+  final String welcomeTitle;
+  final String welcomeBody;
+  final String logoAccent;
+  final String heroImage;
+
+  static BrandCampaign fromJson(Map raw) {
+    return BrandCampaign(
+      id: raw['id']?.toString() ?? '',
+      theme: raw['theme']?.toString() ?? '',
+      ribbon: raw['ribbon']?.toString() ?? '',
+      welcomeTitle: raw['welcomeTitle']?.toString() ?? '',
+      welcomeBody: raw['welcomeBody']?.toString() ?? '',
+      logoAccent: raw['logoAccent']?.toString() ?? '#18B368',
+      heroImage: raw['heroImage']?.toString() ?? '',
+    );
+  }
+
+  Color get accent {
+    final hex = logoAccent.replaceAll('#', '');
+    if (hex.length != 6) return const Color(0xFF18B368);
+    return Color(int.parse('FF$hex', radix: 16));
+  }
+}
 
 /// Talks only to the live Evuddy site. Keys stay on evuddy.com — never in the app.
 class EvuddyApi {
@@ -94,6 +134,20 @@ class EvuddyApi {
       return {'success': false, 'message': r.body};
     } catch (_) {
       return {'success': false, 'message': 'Unexpected response (${r.statusCode}).'};
+    }
+  }
+
+  /// Same calendar the website uses. Null when the day is a normal brand day.
+  static Future<BrandCampaign?> festiveToday() async {
+    try {
+      final r = await _get(_u('/api/festive-today'), timeout: const Duration(seconds: 8));
+      final j = _json(r);
+      if (r.statusCode != 200 || j['mode'] == 'normal' || j['campaign'] is! Map) {
+        return null;
+      }
+      return BrandCampaign.fromJson(j['campaign'] as Map);
+    } catch (_) {
+      return null;
     }
   }
 
