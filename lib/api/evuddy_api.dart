@@ -394,9 +394,20 @@ class EvuddyApi {
     return list;
   }
 
+  static const _clientHeaders = {
+    'x-evuddy-client': 'app',
+    'x-evuddy-client-capabilities': 'pickupCityAck',
+  };
+
   static Map<String, String> _auth(String idToken) => {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $idToken',
+        ..._clientHeaders,
+      };
+
+  static Map<String, String> get _publicHeaders => {
+        'Content-Type': 'application/json',
+        ..._clientHeaders,
       };
 
   static Future<MineBookings> fetchMine(String idToken) async {
@@ -1994,9 +2005,11 @@ class RazorpayOrder {
   int amountPaise(double rupeesPaid) {
     final expected = (rupeesPaid * 100).round();
     final raw = amount.round();
+    if (raw <= 0) return expected;
     if (raw == expected) return raw;
     if (raw == rupeesPaid.round()) return expected;
-    if (raw >= expected) return raw;
+    // Server may echo total payable (paise) while the rider chose a partial amount (e.g. ₹1).
+    if (raw > expected + 1) return expected;
     return expected;
   }
 }
