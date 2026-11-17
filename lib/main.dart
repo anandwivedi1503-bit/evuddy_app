@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'api/evuddy_api.dart';
 import 'api/firebase_phone.dart';
+import 'services/brand_calendar.dart';
 import 'services/security_alert_hub.dart';
 import 'services/rider_gps_sync.dart';
 import 'services/rider_notifications.dart';
@@ -18,6 +19,7 @@ Future<void> main() async {
   await SecurityAlertHub.instance.restore();
   await RiderNotifications.instance.ensureReady();
   await TripCountdownStore.instance.restore();
+  await BrandCalendar.instance.start();
   if (!registrationDraft.phoneVerified) {
     await TripCountdownStore.instance.clear();
     await SecurityAlertHub.instance.clearAll();
@@ -40,11 +42,17 @@ class EvuddyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Evuddy',
-      theme: Evuddy.theme(),
-      home: const EvuddySplashScreen(),
+    return ListenableBuilder(
+      listenable: BrandCalendar.instance,
+      builder: (context, _) {
+        final accent = BrandCalendar.instance.campaign?.accent;
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Evuddy',
+          theme: Evuddy.theme(primaryAccent: accent),
+          home: const EvuddySplashScreen(),
+        );
+      },
     );
   }
 }
