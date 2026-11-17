@@ -5,6 +5,8 @@ import 'book_ev_screen.dart';
 import 'confirm_mobile_screen.dart';
 import 'home_screen.dart';
 import 'security_alerts_screen.dart';
+import 'services/brand_calendar.dart';
+import 'widgets/festive_ribbon.dart';
 import 'widgets/rider_safety_top_bar.dart';
 import 'state/registration_draft.dart';
 import 'theme/evuddy.dart';
@@ -42,8 +44,11 @@ class _RiderShellState extends State<RiderShell> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && registrationDraft.phoneVerified) {
-      registrationDraft.refreshFromServer();
+    if (state == AppLifecycleState.resumed) {
+      BrandCalendar.instance.refresh();
+      if (registrationDraft.phoneVerified) {
+        registrationDraft.refreshFromServer();
+      }
     }
   }
 
@@ -71,23 +76,38 @@ class _RiderShellState extends State<RiderShell> with WidgetsBindingObserver {
             key: ValueKey('plans-${session.phone}'),
             showBack: false,
           );
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: IndexedStack(
-        index: index,
-        children: [
-          const HomeScreen(),
-          bookChild,
-          AccountScreen(
-            key: ValueKey('acct-${session.phoneVerified}-${session.phone}'),
-            onLoggedOut: () => setState(() => index = 0),
+    return ListenableBuilder(
+      listenable: BrandCalendar.instance,
+      builder: (context, _) {
+        final ribbon = BrandCalendar.instance.campaign;
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: Column(
+            children: [
+              if (ribbon != null) ...[
+                const SizedBox(height: 4),
+                FestiveRibbon(campaign: ribbon),
+                const SizedBox(height: 4),
+              ],
+              Expanded(
+                child: IndexedStack(
+                  index: index,
+                  children: [
+                    const HomeScreen(),
+                    bookChild,
+                    AccountScreen(
+                      key: ValueKey('acct-${session.phoneVerified}-${session.phone}'),
+                      onLoggedOut: () => setState(() => index = 0),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          RiderSafetyTopBar(
+          bottomNavigationBar: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RiderSafetyTopBar(
             onOpenAlerts: () {
               Navigator.push(
                 context,
@@ -123,8 +143,10 @@ class _RiderShellState extends State<RiderShell> with WidgetsBindingObserver {
               ),
             ],
           ),
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

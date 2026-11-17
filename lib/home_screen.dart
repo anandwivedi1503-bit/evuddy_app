@@ -27,8 +27,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<EvuddyHub> hubs = [];
   bool loadingHubs = true;
-  BrandCampaign? campaign;
-
   @override
   void initState() {
     super.initState();
@@ -50,7 +48,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final online = await EvuddyApi.health();
       final h = await EvuddyApi.hubs();
-      final festive = await EvuddyApi.festiveToday();
       if (registrationDraft.phoneVerified) {
         await registrationDraft.refreshFromServer();
       }
@@ -58,7 +55,6 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         registrationDraft.apiOnline = online;
         hubs = h;
-        campaign = festive;
         loadingHubs = false;
       });
     } catch (_) {
@@ -133,10 +129,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (campaign != null) ...[
-                      _FestiveRibbon(campaign: campaign!),
-                      const SizedBox(height: 14),
-                    ],
                     Text(
                       d.canBook
                           ? (d.fullName.isEmpty
@@ -476,45 +468,6 @@ class _LiveTripBanner extends StatelessWidget {
             const Icon(Icons.chevron_right_rounded, color: Colors.white),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _FestiveRibbon extends StatelessWidget {
-  const _FestiveRibbon({required this.campaign});
-  final BrandCampaign campaign;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      decoration: BoxDecoration(
-        color: campaign.accent.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: campaign.accent.withOpacity(0.45)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            campaign.welcomeTitle,
-            style: GoogleFonts.plusJakartaSans(
-              fontWeight: FontWeight.w800,
-              color: Evuddy.ink,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            campaign.ribbon,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Evuddy.ink,
-            ),
-          ),
-        ],
       ),
     );
   }

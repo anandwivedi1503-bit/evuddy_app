@@ -82,12 +82,13 @@ class Evuddy {
     );
   }
 
-  static ThemeData theme() {
+  static ThemeData theme({Color? primaryAccent}) {
+    final primary = primaryAccent ?? green;
     return ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: paper,
-      colorScheme: const ColorScheme.light(
-        primary: green,
+      colorScheme: ColorScheme.light(
+        primary: primary,
         onPrimary: paper,
         secondary: magenta,
         surface: paper,
