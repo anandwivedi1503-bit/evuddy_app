@@ -272,6 +272,12 @@ void main() {
       'amount': 2500,
       'currency': 'INR',
     }).amountPaise(2500), 250000);
+    expect(RazorpayOrder.fromJson({
+      'keyId': 'rzp',
+      'orderId': 'order_1',
+      'amount': 137500,
+      'currency': 'INR',
+    }).amountPaise(1), 100);
   });
 
   test('parses Razorpay create-order response', () {

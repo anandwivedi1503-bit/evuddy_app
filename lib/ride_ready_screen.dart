@@ -578,6 +578,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         ..rentalUnits = rentalUnits
         ..applyActiveBooking(created);
       await registrationDraft.persist();
+      await TripCountdownStore.instance.clear();
       TripCountdownSync.apply(created);
       if (!mounted) return;
       setState(() {

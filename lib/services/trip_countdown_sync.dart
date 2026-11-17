@@ -42,9 +42,6 @@ class TripCountdownSync {
       return;
     }
 
-    final live = booking.isOpenRide || booking.inRide || booking.hasPickupOtp;
-    if (!live) return;
-
     final duration = registrationDraft.chosenDuration ??
         (booking.rentalMode.isNotEmpty ? booking.rentalMode : 'Daily');
     if (duration == 'Rent To Own') return;
