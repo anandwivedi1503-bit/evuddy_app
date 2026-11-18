@@ -1484,7 +1484,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           const SizedBox(height: 12),
           const InfoNote(
             text:
-                'Pickup OTP is being prepared. Keep this page open — it appears here for the yard.',
+                'Pay the full fare and the ₹2,500 deposit to get pickup OTP. A partial payment does not unlock the scooter.',
           ),
         ],
         if (b.pickupOtpVerified && !b.inRide) ...[
@@ -1533,7 +1533,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       ] else if (!b.completed && b.receivedAmount <= 0.009) ...[
         const SizedBox(height: 12),
         const InfoNote(
-          text: 'Reserve is holding the scooter. Pay at least ₹1 to get pickup OTP.',
+          text: 'Reserve is holding the scooter. Pay the full amount due to get pickup OTP.',
         ),
       ],
       if (b.completed) ...[
