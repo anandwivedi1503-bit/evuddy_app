@@ -132,6 +132,7 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
         'instagramId': d.instagramId,
         'facebookId': d.facebookId,
         'comingThrough': d.comingThrough,
+        'pickupCityAck': d.pickupCityAck,
         'reference1Name': d.reference1Name,
         'reference1Phone': d.reference1Phone,
         'reference2Name': d.reference2Name,
