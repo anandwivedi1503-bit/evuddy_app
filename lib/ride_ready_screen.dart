@@ -134,7 +134,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   }
 
   void _fillAmount(RiderBooking? b) {
-    if (b?.remainingPayLocked == true) {
+    if (b != null && b.remainingPayLocked) {
       amount.text = _moneyInput(_remainingCharge(b));
       return;
     }
