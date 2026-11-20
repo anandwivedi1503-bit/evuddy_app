@@ -1809,19 +1809,38 @@ class RiderBooking {
 
   bool get hasPickupOtp => pickupOtp.isNotEmpty;
 
-  bool get isRemainingPayment =>
-      receivedAmount >= 1 || hasPickupOtp || pickupOtpVerified;
+  double get totalPayable {
+    if (paymentDue > 0.009) return paymentDue;
+    final total = receivedAmount + pendingAmount;
+    return total > 0.009 ? total : 0;
+  }
 
-  /// Website locks remaining amount after first pay, and always for Rent to Own.
+  double get pickupPaymentThreshold {
+    final total = totalPayable;
+    if (total <= 0.009) return 0;
+    if (isRentToOwn) return total;
+    final half = double.parse((total * 0.5).toStringAsFixed(2));
+    return half < 1 ? 1 : (half > total ? total : half);
+  }
+
+  double get pickupPaymentTopUp =>
+      (pickupPaymentThreshold - receivedAmount).clamp(0, due).toDouble();
+
+  bool get pickupPaymentMet =>
+      pickupPaymentThreshold > 0.009 &&
+      receivedAmount + 0.009 >= pickupPaymentThreshold;
+
+  bool get isRemainingPayment =>
+      pickupPaymentMet;
+
+  /// Lock the final balance after the pickup payment threshold is met.
   bool get remainingPayLocked => isRentToOwn || isRemainingPayment;
 
-  /// First standard-rental payment is at least 50% of total; later taps pay the balance.
+  /// First payment, or a top-up on an older partial booking, reaches 50% of total.
   double get suggestedPayRupees {
     if (remainingPayLocked) return due > 0.009 ? due : 0;
     if (due <= 0.009) return 0;
-    if (due <= 1) return due;
-    final half = double.parse((due * 0.5).toStringAsFixed(2));
-    return half < 1 ? 1 : half;
+    return pickupPaymentTopUp;
   }
 
   bool get completed {

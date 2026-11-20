@@ -641,14 +641,20 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         ? _remainingCharge(b)
         : catalogPayable.toDouble();
     final pay = b.remainingPayLocked ? _remainingCharge(b) : _payNow(b);
-    final firstPaymentMinimum = b.remainingPayLocked ? 1.0 : _firstPaymentMinimum(maxDue);
+    final firstPaymentMinimum = b.remainingPayLocked
+        ? 1.0
+        : (b.pickupPaymentTopUp > 0.009
+            ? b.pickupPaymentTopUp
+            : _firstPaymentMinimum(maxDue));
     if (b.remainingPayLocked) {
       amount.text = _moneyInput(pay);
     }
     if (pay < firstPaymentMinimum - 0.009 || pay > maxDue + 0.009) {
       setState(() => error = b.isRentToOwn
           ? 'Rent to Own needs today’s full GST-included amount plus deposit in one payment.'
-          : 'First payment must be at least ${CatalogRates.inr(firstPaymentMinimum)} (50% of the total), up to ${CatalogRates.inr(maxDue)}.');
+          : (b.receivedAmount > 0.009 && !b.pickupPaymentMet
+              ? 'Pay at least ${CatalogRates.inr(firstPaymentMinimum)} more to reach 50% of the total, up to ${CatalogRates.inr(maxDue)}.'
+              : 'First payment must be at least ${CatalogRates.inr(firstPaymentMinimum)} (50% of the total), up to ${CatalogRates.inr(maxDue)}.'));
       return;
     }
     if (useWallet && registrationDraft.walletAvailable + 0.009 < pay) {
@@ -1123,10 +1129,14 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
               : b.paymentSettled
                   ? 'Payment is complete. Use the OTP below at the selected yard — same as evuddy.com/book-bike.'
                   : remainingPay
-                      ? 'Pickup OTP is already issued. Razorpay will charge only the remaining due.'
-                      : (b.receivedAmount > 0.009
-                          ? 'Pay any remaining on Razorpay or as cash at the yard before ride-end OTP.'
-                          : 'Pay at least 50% of the total with Razorpay to get pickup OTP. Remaining can be paid during the ride.'))
+                      ? (b.hasPickupOtp || b.pickupOtpVerified
+                          ? 'Pickup OTP is issued. Razorpay will charge only the remaining due.'
+                          : 'The 50% pickup payment is met. Pickup OTP is being prepared; the balance can be paid during the ride.')
+                      : (b.receivedAmount > 0.009 && !b.pickupPaymentMet
+                          ? 'Pay at least ${CatalogRates.inr(b.pickupPaymentTopUp)} more to unlock pickup OTP. The rest can be paid during the ride.'
+                          : (b.receivedAmount > 0.009
+                              ? 'Pay any remaining on Razorpay or as cash at the yard before ride-end OTP.'
+                              : 'Pay at least 50% of the total with Razorpay to get pickup OTP. Remaining can be paid during the ride.')))
           : (wizard == 3
               ? 'GST included fare + refundable deposit. Then Razorpay — same as evuddy.com.'
               : (rental
@@ -1472,7 +1482,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         ),
       ],
       if (!b.completed && b.receivedAmount > 0.009) ...[
-        if (b.hasPickupOtp && !b.pickupOtpVerified) ...[
+        if (b.hasPickupOtp && b.pickupPaymentMet && !b.pickupOtpVerified) ...[
           const SizedBox(height: 12),
           OtpReveal(
             label: 'PICKUP OTP — tell this to the yard',
@@ -1481,11 +1491,17 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           ),
           const SizedBox(height: 8),
           EvuddyGhostButton(label: 'Resend pickup OTP SMS', onPressed: busy ? null : _resendOtp),
-        ] else if (b.pickupOtpVerified && !b.inRide) ...[
+        ] else if (b.pickupOtpVerified && b.pickupPaymentMet && !b.inRide) ...[
           const SizedBox(height: 12),
           const InfoNote(
             text:
                 'Yard confirmed pickup and unlocked the scooter. Slide to start your ride.',
+          ),
+        ] else if (b.receivedAmount > 0.009 && !b.pickupPaymentMet) ...[
+          const SizedBox(height: 12),
+          InfoNote(
+            text:
+                'Pay at least ${CatalogRates.inr(b.pickupPaymentTopUp)} more to reach 50% of the total and unlock the pickup OTP.',
           ),
         ] else if (!b.hasPickupOtp && !b.pickupOtpVerified && b.receivedAmount > 0.009) ...[
           const SizedBox(height: 12),
@@ -1494,7 +1510,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                 'Pickup OTP is issued after at least 50% of the total is paid. The remaining balance can be paid during the ride.',
           ),
         ],
-        if (b.pickupOtpVerified && !b.inRide) ...[
+        if (b.pickupOtpVerified && b.pickupPaymentMet && !b.inRide) ...[
           const SizedBox(height: 12),
           RideSwipeBar(
             label: 'Slide to start ride',
