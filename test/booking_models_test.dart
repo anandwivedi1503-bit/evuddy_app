@@ -166,7 +166,7 @@ void main() {
         'receivedAmount': 0,
         'pendingAmount': 2750,
       }).suggestedPayRupees,
-      1,
+      1375,
     );
     expect(
       RiderBooking.fromJson({

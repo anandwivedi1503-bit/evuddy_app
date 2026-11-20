@@ -22,8 +22,8 @@ class RazorpayWebHost {
   }
 }
 
-/// Official `Razorpay.open` — same CheckoutActivity that captured the first ₹1
-/// on GPay / PhonePe. Remaining due uses this, not a WebView toast.
+/// Official `Razorpay.open` for native UPI / card Checkout. Remaining due uses
+/// this, not a WebView toast.
 class InAppRazorpay {
   InAppRazorpay._();
 

@@ -20,10 +20,10 @@ class BrandCalendar extends ChangeNotifier {
 
   Future<void> refresh() async {
     final next = await EvuddyApi.festiveToday();
-    final id = next?.id ?? '';
-    final prev = campaign?.id ?? '';
+    final revision = next?.revision ?? '';
+    final previousRevision = campaign?.revision ?? '';
     campaign = next;
-    if (id != prev) notifyListeners();
+    if (revision != previousRevision) notifyListeners();
   }
 
   void stop() {

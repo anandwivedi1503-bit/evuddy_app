@@ -126,16 +126,22 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     return n.toStringAsFixed(2);
   }
 
+  double _firstPaymentMinimum(double total) {
+    if (total <= 0.009) return 0;
+    if (total <= 1) return total;
+    final half = double.parse((total * 0.5).toStringAsFixed(2));
+    return half < 1 ? 1 : half;
+  }
+
   void _fillAmount(RiderBooking? b) {
-    if (b == null) {
-      amount.text = '1';
-      return;
-    }
-    if (b.remainingPayLocked) {
+    if (b?.remainingPayLocked == true) {
       amount.text = _moneyInput(_remainingCharge(b));
       return;
     }
-    amount.text = '1';
+    final due = b == null ? catalogPayable.toDouble() : _remainingCharge(b);
+    final total = due > 0.009 ? due : catalogPayable.toDouble();
+    final suggested = b?.suggestedPayRupees ?? _firstPaymentMinimum(total);
+    amount.text = _moneyInput(suggested > 0.009 ? suggested : _firstPaymentMinimum(total));
   }
 
   @override
@@ -587,7 +593,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         wizard = 4;
         note = created.message.isEmpty
             ? (rental
-                ? 'Scooter reserved. Pay any amount from ₹1 on Razorpay to get pickup OTP. Remaining can be paid during the ride.'
+                ? 'Scooter reserved. Pay at least 50% of the total to get pickup OTP. Remaining can be paid during the ride.'
                 : 'Agreement saved. Pay today’s GST-included fare plus the ₹2,500 refundable deposit in one Razorpay payment.')
             : created.message;
         _fillAmount(created);
@@ -635,13 +641,14 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         ? _remainingCharge(b)
         : catalogPayable.toDouble();
     final pay = b.remainingPayLocked ? _remainingCharge(b) : _payNow(b);
+    final firstPaymentMinimum = b.remainingPayLocked ? 1.0 : _firstPaymentMinimum(maxDue);
     if (b.remainingPayLocked) {
       amount.text = _moneyInput(pay);
     }
-    if (pay < 1 || pay > maxDue + 0.009) {
+    if (pay < firstPaymentMinimum - 0.009 || pay > maxDue + 0.009) {
       setState(() => error = b.isRentToOwn
           ? 'Rent to Own needs today’s full GST-included amount plus deposit in one payment.'
-          : 'Enter a payment between ₹1 and ${CatalogRates.inr(maxDue)}.');
+          : 'First payment must be at least ${CatalogRates.inr(firstPaymentMinimum)} (50% of the total), up to ${CatalogRates.inr(maxDue)}.');
       return;
     }
     if (useWallet && registrationDraft.walletAvailable + 0.009 < pay) {
@@ -669,8 +676,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       }
       token = registrationDraft.firebaseIdToken ?? token;
       final attached = started.booking;
-      // After the captured ₹1, create-order mints a new remaining order. If
-      // this call only attached that first rupee, ask once more like a second
+      // If a payment was captured and create-order only attached it to the
+      // booking, ask once more for the remaining due like a second
       // Pay remaining tap on evuddy.com.
       if (!useWallet &&
           !started.needsCheckout &&
@@ -1119,7 +1126,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                       ? 'Pickup OTP is already issued. Razorpay will charge only the remaining due.'
                       : (b.receivedAmount > 0.009
                           ? 'Pay any remaining on Razorpay or as cash at the yard before ride-end OTP.'
-                          : 'Pay any amount from ₹1 with Razorpay to get pickup OTP. Remaining can wait until return.'))
+                          : 'Pay at least 50% of the total with Razorpay to get pickup OTP. Remaining can be paid during the ride.'))
           : (wizard == 3
               ? 'GST included fare + refundable deposit. Then Razorpay — same as evuddy.com.'
               : (rental
@@ -1484,7 +1491,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           const SizedBox(height: 12),
           const InfoNote(
             text:
-                'Pay the full fare and the ₹2,500 deposit to get pickup OTP. A partial payment does not unlock the scooter.',
+                'Pickup OTP is issued after at least 50% of the total is paid. The remaining balance can be paid during the ride.',
           ),
         ],
         if (b.pickupOtpVerified && !b.inRide) ...[
@@ -1533,7 +1540,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       ] else if (!b.completed && b.receivedAmount <= 0.009) ...[
         const SizedBox(height: 12),
         const InfoNote(
-          text: 'Reserve is holding the scooter. Pay the full amount due to get pickup OTP.',
+          text: 'Reserve is holding the scooter. Pay at least 50% of the total to get pickup OTP.',
         ),
       ],
       if (b.completed) ...[
@@ -1589,7 +1596,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         else
           EvuddyField(
             label: 'PAY AMOUNT',
-            hint: 'Starts at ₹1 for pickup OTP — same as evuddy.com',
+            hint: 'First payment must be at least ${CatalogRates.inr(_firstPaymentMinimum(b.due))} (50% of total).',
             controller: amount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
@@ -1646,9 +1653,21 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
               for (final t in tickets.take(5))
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    '${t.ticketId} · ${t.status} · ${t.category}',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Evuddy.muted),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${t.ticketId} · ${t.status} · ${t.category}',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Evuddy.muted),
+                      ),
+                      if (t.adminRemarks.trim().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Support reply: ${t.adminRemarks}',
+                          style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
             ],
