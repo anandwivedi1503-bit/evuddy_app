@@ -1377,7 +1377,8 @@ class SupportTicket {
       category: e['category']?.toString() ?? '',
       status: e['status']?.toString() ?? '',
       description: e['description']?.toString() ?? '',
-      adminRemarks: e['adminRemarks']?.toString() ?? '',
+      adminRemarks:
+          (e['adminRemarks'] ?? e['supportReply'] ?? e['adminReply'])?.toString() ?? '',
     );
   }
 

@@ -1618,7 +1618,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
             inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
           ),
       ],
-      if (b.receivedAmount >= 1 && !b.completed) ...[
+      if (b.bookingId.isNotEmpty) ...[
         const SizedBox(height: 18),
         SurfaceCard(
           child: Column(

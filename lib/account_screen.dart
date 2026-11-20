@@ -33,10 +33,12 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> {
   bool checking = false;
+  late final Future<String> _versionLabel;
 
   @override
   void initState() {
     super.initState();
+    _versionLabel = loadEvuddyVersionLabel();
     riderSessionTick.addListener(_tick);
     if (registrationDraft.phoneVerified) {
       _refresh();
@@ -408,13 +410,16 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
           ],
         ),
-        Text(
-          evuddyVersionLabel,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Evuddy.muted,
-                fontWeight: FontWeight.w700,
-              ),
+        FutureBuilder<String>(
+          future: _versionLabel,
+          builder: (context, snapshot) => Text(
+            snapshot.data ?? 'Evuddy',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Evuddy.muted,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
         ),
       ],
     );
