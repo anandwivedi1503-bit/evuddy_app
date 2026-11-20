@@ -17,6 +17,8 @@ class BrandCampaign {
     required this.welcomeBody,
     required this.logoAccent,
     required this.heroImage,
+    required this.date,
+    required this.sessionKey,
   });
 
   final String id;
@@ -26,6 +28,11 @@ class BrandCampaign {
   final String welcomeBody;
   final String logoAccent;
   final String heroImage;
+  final String date;
+  final String sessionKey;
+
+  String get revision =>
+      '$id|$date|$sessionKey|$theme|$ribbon|$welcomeTitle|$welcomeBody|$logoAccent|$heroImage';
 
   static BrandCampaign fromJson(Map raw) {
     return BrandCampaign(
@@ -36,6 +43,8 @@ class BrandCampaign {
       welcomeBody: raw['welcomeBody']?.toString() ?? '',
       logoAccent: raw['logoAccent']?.toString() ?? '#18B368',
       heroImage: raw['heroImage']?.toString() ?? '',
+      date: raw['date']?.toString() ?? '',
+      sessionKey: raw['sessionKey']?.toString() ?? '',
     );
   }
 
@@ -396,7 +405,7 @@ class EvuddyApi {
 
   static const _clientHeaders = {
     'x-evuddy-client': 'app',
-    'x-evuddy-client-capabilities': 'pickupCityAck',
+    'x-evuddy-client-capabilities': 'pickupCityAck,firstPaymentHalfRental',
   };
 
   static Map<String, String> _auth(String idToken) => {
@@ -577,9 +586,9 @@ class EvuddyApi {
     return parsed;
   }
 
-  /// Live Book EV after kebuone-website remaining-pay fix: open Checkout only
-  /// when create-order returned `orderId` + `keyId`. A captured ₹1 must not
-  /// reuse that order — remaining rupees come back as a new `order_`.
+  /// Open Checkout only when create-order returned `orderId` + `keyId`.
+  /// A captured payment must not reuse that order — remaining rupees come
+  /// back as a new `order_`.
   static PaymentStart parseCreateOrder(
     Map j, {
     double amountRupees = 0,
@@ -1806,10 +1815,13 @@ class RiderBooking {
   /// Website locks remaining amount after first pay, and always for Rent to Own.
   bool get remainingPayLocked => isRentToOwn || isRemainingPayment;
 
-  /// First Razorpay tap is ₹1 (pickup OTP). After that, Checkout is remaining due.
+  /// First standard-rental payment is at least 50% of total; later taps pay the balance.
   double get suggestedPayRupees {
     if (remainingPayLocked) return due > 0.009 ? due : 0;
-    return 1;
+    if (due <= 0.009) return 0;
+    if (due <= 1) return due;
+    final half = double.parse((due * 0.5).toStringAsFixed(2));
+    return half < 1 ? 1 : half;
   }
 
   bool get completed {
@@ -2008,7 +2020,7 @@ class RazorpayOrder {
     if (raw <= 0) return expected;
     if (raw == expected) return raw;
     if (raw == rupeesPaid.round()) return expected;
-    // Server may echo total payable (paise) while the rider chose a partial amount (e.g. ₹1).
+    // Server may echo total payable (paise) while the rider chose a partial amount.
     if (raw > expected + 1) return expected;
     return expected;
   }
