@@ -1,0 +1,21 @@
+Evuddy — Google Play "Default store listing" upload map
+
+REQUIRED (phone app)
+  App icon 512x512     → play_store_icon_512.png
+  Feature graphic      → play_store_feature_graphic_1024x500.png
+  Phone screenshots    → phone/01 … phone/07 (use at least 2; 4–7 recommended)
+
+OPTIONAL (only if you expand those sections in Play Console)
+  7-inch tablet        → tablet_7inch/01_home_ride_plans.jpg
+  10-inch tablet       → tablet_10inch/01_home_ride_plans.jpg
+  Video                → leave empty
+  Desktop / XR         → skip (phone-only app)
+
+Suggested phone order for Play:
+  07_home_ride_plans.jpg
+  04_book_ev.jpg
+  03_login_send_otp.jpg
+  05_account.jpg
+  02_splash.jpg
+  01_launcher_evuddy_icon.jpg
+  06_verify_otp.jpg
