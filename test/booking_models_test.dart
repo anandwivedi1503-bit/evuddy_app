@@ -99,7 +99,7 @@ void main() {
         'receivedAmount': 1,
         'pendingAmount': 249,
       }).isRemainingPayment,
-      isTrue,
+      isFalse,
     );
     final verified = RiderBooking.fromJson({
       'receivedAmount': 250,

@@ -6,7 +6,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
-import '../api/evuddy_api.dart';
 import 'booking_end_schedule.dart';
 import 'security_alert_hub.dart';
 import 'trip_countdown_store.dart';
@@ -16,7 +15,8 @@ class RiderNotifications {
   RiderNotifications._();
   static final RiderNotifications instance = RiderNotifications._();
 
-  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
   bool _ready = false;
 
   Future<void> ensureReady() async {
@@ -34,12 +34,14 @@ class RiderNotifications {
       onDidReceiveNotificationResponse: (response) {
         final payload = response.payload;
         if (payload != null && payload.isNotEmpty) {
-          unawaited(SecurityAlertHub.instance.push(
-            title: 'Evuddy · booking ending soon',
-            body: payload,
-            category: 'reminder',
-            security: true,
-          ));
+          unawaited(
+            SecurityAlertHub.instance.push(
+              title: 'Evuddy · booking ending soon',
+              body: payload,
+              category: 'reminder',
+              security: true,
+            ),
+          );
         }
       },
     );
@@ -50,7 +52,9 @@ class RiderNotifications {
       importance: Importance.high,
     );
     await _plugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(channel);
     _ready = true;
   }
@@ -64,24 +68,19 @@ class RiderNotifications {
     required String bookingId,
     required String duration,
     required int units,
-    required String phone,
-    String? idToken,
-    DateTime? rideStartedAt,
+    required DateTime rideEndsAt,
   }) async {
     await ensureReady();
     await requestPermissionIfNeeded();
-    final end = BookingEndSchedule.rentalEndsAt(
-      duration: duration,
-      units: units,
-      from: rideStartedAt ?? DateTime.now(),
-    );
-    if (end == null || bookingId.isEmpty) return;
+    final end = rideEndsAt;
+    if (bookingId.isEmpty) return;
     final remind = BookingEndSchedule.reminderOneHourBefore(end);
     final title = 'Evuddy · booking ending soon';
     final body = BookingEndSchedule.humanEnd(duration, units, end);
     await SecurityAlertHub.instance.push(
       title: 'Trip timer live',
-      body: '${BookingEndSchedule.humanEnd(duration, units, end)} Local alert ~1 hour before.',
+      body:
+          '${BookingEndSchedule.humanEnd(duration, units, end)} Local alert ~1 hour before.',
       category: 'trip',
       security: true,
     );
@@ -114,37 +113,16 @@ class RiderNotifications {
         );
       } catch (e) {
         debugPrint('Evuddy zonedSchedule failed: $e');
-        await _plugin.show(
-          bookingId.hashCode,
-          title,
-          body,
-          _details(),
-        );
+        await _plugin.show(bookingId.hashCode, title, body, _details());
       }
     }
     await TripCountdownStore.instance.schedule(
       bookingId: bookingId,
-      durationLabel: '$duration · $units ${BookingEndSchedule.unitLabel(duration)}',
+      durationLabel:
+          '$duration · $units ${BookingEndSchedule.unitLabel(duration)}',
       tripEndsAt: end,
       reminderAt: remind ?? end.subtract(const Duration(hours: 1)),
     );
-  // Server SMS/email only in the last hour (see kebuone rental-end-reminder deferral).
-    final lead = remind == null;
-    if (lead &&
-        idToken != null &&
-        idToken.isNotEmpty &&
-        phone.isNotEmpty) {
-      try {
-        await EvuddyApi.notifyRentalReminder(
-          idToken: idToken,
-          bookingId: bookingId,
-          phone: phone,
-          endsAtIso: end.toUtc().toIso8601String(),
-          duration: duration,
-          units: units,
-        );
-      } catch (_) {}
-    }
   }
 
   Future<void> cancelForBooking(String bookingId) async {
@@ -153,13 +131,13 @@ class RiderNotifications {
   }
 
   NotificationDetails _details() => const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'evuddy_trip_alerts',
-          'Trip & security alerts',
-          channelDescription: 'Booking end reminders and Evuddy safety messages',
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-        ),
-      );
+    android: AndroidNotificationDetails(
+      'evuddy_trip_alerts',
+      'Trip & security alerts',
+      channelDescription: 'Booking end reminders and Evuddy safety messages',
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+    ),
+  );
 }

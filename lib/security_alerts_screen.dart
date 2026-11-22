@@ -24,8 +24,10 @@ class _SecurityAlertsScreenState extends State<SecurityAlertsScreen>
   @override
   void initState() {
     super.initState();
-    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 850))
-      ..repeat(reverse: true);
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    )..repeat(reverse: true);
     SecurityAlertHub.instance.unread.addListener(_onTick);
     TripCountdownStore.instance.tick.addListener(_onTick);
     _clock = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -70,8 +72,7 @@ class _SecurityAlertsScreenState extends State<SecurityAlertsScreen>
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           const InfoNote(
-            text:
-                'Rider phone: live countdown, GPS safety, and payment alerts appear here. Evuddy admin CRM, fleet map, and finance desks stay on evuddy.com — not on riders’ phones.',
+            text: 'Rider phone: live countdown, GPS safety, and payment alerts appear here. Evuddy admin CRM, fleet map, and finance desks stay on evuddy.com — not on riders’ phones.',
           ),
           const SizedBox(height: 12),
           if (store.active) _SirenTimerCard(pulse: _pulse),
@@ -80,7 +81,10 @@ class _SecurityAlertsScreenState extends State<SecurityAlertsScreen>
             SurfaceCard(
               child: Row(
                 children: [
-                  const Icon(Icons.my_location_rounded, color: Evuddy.greenDeep),
+                  const Icon(
+                    Icons.my_location_rounded,
+                    color: Evuddy.greenDeep,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -101,7 +105,10 @@ class _SecurityAlertsScreenState extends State<SecurityAlertsScreen>
           if (items.isEmpty)
             Text(
               'Start a booking or pay on Razorpay to see reminders and receipt alerts here.',
-              style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontWeight: FontWeight.w600),
+              style: GoogleFonts.plusJakartaSans(
+                color: Evuddy.muted,
+                fontWeight: FontWeight.w600,
+              ),
             )
           else
             for (final a in items) ...[
@@ -123,11 +130,13 @@ class _SirenTimerCard extends StatelessWidget {
     final store = TripCountdownStore.instance;
     final untilEnd = store.timeUntilEnd ?? Duration.zero;
     final untilReminder = store.timeUntilReminder ?? Duration.zero;
-    final urgent = untilEnd <= const Duration(hours: 1);
+    final overdue = store.overdue;
+    final urgent = overdue || untilEnd <= const Duration(hours: 1);
     return ScaleTransition(
-      scale: Tween<double>(begin: 0.97, end: 1.03).animate(
-        CurvedAnimation(parent: pulse, curve: Curves.easeInOut),
-      ),
+      scale: Tween<double>(
+        begin: 0.97,
+        end: 1.03,
+      ).animate(CurvedAnimation(parent: pulse, curve: Curves.easeInOut)),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -135,12 +144,18 @@ class _SirenTimerCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           gradient: LinearGradient(
             colors: urgent
-                ? [const Color(0xFF450A0A), const Color(0xFFDC2626), const Color(0xFFFBBF24)]
+                ? [
+                    const Color(0xFF450A0A),
+                    const Color(0xFFDC2626),
+                    const Color(0xFFFBBF24),
+                  ]
                 : [const Color(0xFF172554), const Color(0xFF1D4ED8)],
           ),
           boxShadow: [
             BoxShadow(
-              color: (urgent ? Evuddy.magenta : Evuddy.greenDeep).withValues(alpha: 0.35),
+              color: (urgent ? Evuddy.magenta : Evuddy.greenDeep).withValues(
+                alpha: 0.35,
+              ),
               blurRadius: 24,
               offset: const Offset(0, 12),
             ),
@@ -158,7 +173,9 @@ class _SirenTimerCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  urgent ? 'SIREN · PLAN ENDING' : 'ACTIVE TRIP TIMER',
+                  overdue
+                      ? 'SIREN · RETURN OVERDUE'
+                      : (urgent ? 'SIREN · PLAN ENDING' : 'ACTIVE TRIP TIMER'),
                   style: GoogleFonts.plusJakartaSans(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -169,7 +186,9 @@ class _SirenTimerCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              TripCountdownStore.formatDuration(untilEnd),
+              overdue
+                  ? 'OVERDUE ${TripCountdownStore.formatDuration(untilEnd)}'
+                  : TripCountdownStore.formatDuration(untilEnd),
               style: GoogleFonts.plusJakartaSans(
                 color: Colors.white,
                 fontSize: 40,
@@ -178,8 +197,13 @@ class _SirenTimerCard extends StatelessWidget {
               ),
             ),
             Text(
-              'until booking ${store.bookingId} ends',
-              style: GoogleFonts.plusJakartaSans(color: Colors.white70, fontWeight: FontWeight.w600),
+              overdue
+                  ? 'Booking ${store.bookingId} passed its scheduled return time'
+                  : 'until booking ${store.bookingId} ends',
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.white70,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             if (untilReminder > Duration.zero) ...[
               const SizedBox(height: 10),
@@ -215,7 +239,9 @@ class _AlertTile extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: a.security ? Evuddy.magenta.withValues(alpha: 0.35) : Evuddy.line,
+              color: a.security
+                  ? Evuddy.magenta.withValues(alpha: 0.35)
+                  : Evuddy.line,
             ),
           ),
           padding: const EdgeInsets.all(16),
@@ -223,7 +249,9 @@ class _AlertTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(
-                a.security ? Icons.campaign_outlined : Icons.notifications_active_outlined,
+                a.security
+                    ? Icons.campaign_outlined
+                    : Icons.notifications_active_outlined,
                 color: a.security ? Evuddy.magenta : Evuddy.greenDeep,
               ),
               const SizedBox(width: 12),
@@ -233,7 +261,10 @@ class _AlertTile extends StatelessWidget {
                   children: [
                     Text(
                       a.title,
-                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 15),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -275,10 +306,16 @@ class SecurityAlertBanner extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               onTap: onOpen,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
-                    const Icon(Icons.notifications_active_rounded, color: Evuddy.rapidoYellow),
+                    const Icon(
+                      Icons.notifications_active_rounded,
+                      color: Evuddy.rapidoYellow,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -289,7 +326,10 @@ class SecurityAlertBanner extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Icon(Icons.chevron_right_rounded, color: Colors.white70),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: Colors.white70,
+                    ),
                   ],
                 ),
               ),

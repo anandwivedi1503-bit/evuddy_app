@@ -93,14 +93,17 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
     final alerts = SecurityAlertHub.instance.all.take(5).toList();
     final gpsOn = RiderSafetyTracker.instance.active;
     final tripLive = TripCountdownStore.instance.active;
-    final completedTrips =
-        rides.where((r) => r.rideStatus.toLowerCase().contains('complete')).length;
+    final completedTrips = rides
+        .where((r) => r.rideStatus.toLowerCase().contains('complete'))
+        .length;
 
     return AuthScreen(
       showBack: true,
       kicker: 'Rider profile',
       title: d.fullName.isEmpty ? 'Your Evuddy' : d.fullName,
-      subtitle: d.riderId != null ? 'Rider ${d.riderId}' : 'Complete KYC to unlock booking',
+      subtitle: d.riderId != null
+          ? 'Rider ${d.riderId}'
+          : 'Complete KYC to unlock booking',
       headerTrailing: IconButton(
         tooltip: 'Refresh',
         onPressed: loading ? null : _refresh,
@@ -133,7 +136,9 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
                 backgroundImage: _photo(d),
                 child: _photo(d) == null
                     ? Text(
-                        d.fullName.isEmpty ? '?' : d.fullName.substring(0, 1).toUpperCase(),
+                        d.fullName.isEmpty
+                            ? '?'
+                            : d.fullName.substring(0, 1).toUpperCase(),
                         style: GoogleFonts.plusJakartaSans(
                           fontWeight: FontWeight.w800,
                           fontSize: 28,
@@ -149,15 +154,22 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
                   children: [
                     Text(
                       d.phoneDisplay,
-                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     Text(
                       d.email.isEmpty ? 'Add email for receipts' : d.email,
-                      style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 13),
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Evuddy.muted,
+                        fontSize: 13,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     _StatusChip(
-                      label: d.canBook ? 'Approved · ready to book' : d.approvalStatus,
+                      label: d.canBook
+                          ? 'Approved · ready to book'
+                          : d.approvalStatus,
                       ok: d.canBook,
                     ),
                   ],
@@ -173,7 +185,9 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
               child: _StatTile(
                 label: 'Trips',
                 value: '${rides.isEmpty ? '—' : rides.length}',
-                sub: completedTrips > 0 ? '$completedTrips completed' : 'Book your first ride',
+                sub: completedTrips > 0
+                    ? '$completedTrips completed'
+                    : 'Book your first ride',
               ),
             ),
             const SizedBox(width: 10),
@@ -200,19 +214,30 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('LIVE TRIP', style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  'LIVE TRIP',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   tripLive
-                      ? 'Plan ends ${TripCountdownStore.formatDuration(TripCountdownStore.instance.timeUntilEnd ?? Duration.zero)}'
+                      ? (TripCountdownStore.instance.overdue
+                            ? 'Plan overdue ${TripCountdownStore.formatDuration(TripCountdownStore.instance.timeUntilEnd ?? Duration.zero)}'
+                            : 'Plan ends ${TripCountdownStore.formatDuration(TripCountdownStore.instance.timeUntilEnd ?? Duration.zero)}')
                       : 'Trip safety',
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 16),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
                 ),
                 Text(
                   gpsOn
                       ? 'Phone GPS is shared with Evuddy ops (like Rapido safety).'
                       : 'Turn on location and start ride for live GPS on admin map.',
-                  style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Evuddy.muted,
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 EvuddyGhostButton(
@@ -232,11 +257,17 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('OPEN BOOKING', style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  'OPEN BOOKING',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
                 const SizedBox(height: 6),
                 Text(
                   active.bookingId,
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
                 ),
                 Text(
                   '${active.rideStatus} · ${active.paymentStatus} · due ₹${active.due.toStringAsFixed(0)}',
@@ -280,23 +311,25 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        Text(
-          'RECENT RIDES',
-          style: Theme.of(context).textTheme.labelSmall,
-        ),
+        Text('RECENT RIDES', style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: 8),
         if (loading && rides.isEmpty)
           const InfoNote(text: 'Loading rides from evuddy.com…')
         else if (rides.isEmpty)
           const InfoNote(text: 'No rides yet. Book an EV from the bottom tab.')
         else
-          ...rides.take(4).map(
+          ...rides
+              .take(4)
+              .map(
                 (r) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: SurfaceCard(
                     child: Row(
                       children: [
-                        const Icon(Icons.electric_moped_rounded, color: Evuddy.greenDeep),
+                        const Icon(
+                          Icons.electric_moped_rounded,
+                          color: Evuddy.greenDeep,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -304,11 +337,16 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
                             children: [
                               Text(
                                 r.bookingId,
-                                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                               Text(
                                 '${r.rideStatus} · ${r.rentalMode} · ${CatalogRates.inr(r.receivedAmount)}',
-                                style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
+                                style: GoogleFonts.plusJakartaSans(
+                                  color: Evuddy.muted,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
@@ -319,13 +357,12 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
                 ),
               ),
         const SizedBox(height: 14),
-        Text(
-          'UPDATES & ALERTS',
-          style: Theme.of(context).textTheme.labelSmall,
-        ),
+        Text('UPDATES & ALERTS', style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: 8),
         if (alerts.isEmpty)
-          const InfoNote(text: 'Payment receipts, trip reminders, and safety messages appear here.')
+          const InfoNote(
+            text: 'Payment receipts, trip reminders, and safety messages appear here.',
+          )
         else
           ...alerts.map(
             (a) => Padding(
@@ -336,14 +373,20 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
                   children: [
                     Text(
                       a.title,
-                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 14),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       a.body,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 12),
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Evuddy.muted,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -356,7 +399,11 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
 }
 
 class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value, required this.sub});
+  const _StatTile({
+    required this.label,
+    required this.value,
+    required this.sub,
+  });
   final String label;
   final String value;
   final String sub;
@@ -371,13 +418,19 @@ class _StatTile extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
-            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 15),
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+            ),
           ),
           Text(
             sub,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.plusJakartaSans(color: Evuddy.muted, fontSize: 10),
+            style: GoogleFonts.plusJakartaSans(
+              color: Evuddy.muted,
+              fontSize: 10,
+            ),
           ),
         ],
       ),
