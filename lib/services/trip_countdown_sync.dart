@@ -31,40 +31,39 @@ class TripCountdownSync {
       return;
     }
 
+    if (booking.isRentToOwn) return;
     final end = booking.rentalEndDate;
-    if (end != null && end.isAfter(DateTime.now())) {
+    if (end != null) {
       _scheduleIfNeeded(
         bookingId: booking.bookingId,
         duration: _durationLabel(booking),
-        units: registrationDraft.rentalUnits,
+        units: _unitsFor(booking),
         tripEndsAt: end,
       );
       return;
     }
-
-    final duration = registrationDraft.chosenDuration ??
-        (booking.rentalMode.isNotEmpty ? booking.rentalMode : 'Daily');
-    if (duration == 'Rent To Own') return;
-    final units = registrationDraft.rentalUnits.clamp(1, BookingEndSchedule.maxUnits(duration));
-    final computed = BookingEndSchedule.rentalEndsAt(
-      duration: duration,
-      units: units,
-      from: DateTime.now(),
-    );
-    if (computed == null) return;
-    _scheduleIfNeeded(
-      bookingId: booking.bookingId,
-      duration: duration,
-      units: units,
-      tripEndsAt: computed,
-    );
+    if (TripCountdownStore.instance.bookingId != booking.bookingId) {
+      unawaited(TripCountdownStore.instance.clear());
+    }
   }
 
   static String _durationLabel(RiderBooking booking) {
-    final d = registrationDraft.chosenDuration ?? booking.rentalMode;
-    final u = registrationDraft.rentalUnits;
+    final d = booking.rentalMode.isNotEmpty
+        ? booking.rentalMode
+        : (registrationDraft.chosenDuration ?? 'Daily');
+    final u = _unitsFor(booking);
     if (d.isEmpty) return booking.bookingId;
     return '$d · $u ${BookingEndSchedule.unitLabel(d)}';
+  }
+
+  static int _unitsFor(RiderBooking booking) {
+    final duration = booking.rentalMode.isNotEmpty
+        ? booking.rentalMode
+        : (registrationDraft.chosenDuration ?? 'Daily');
+    final units = duration == 'Hourly'
+        ? booking.rentalHours
+        : registrationDraft.rentalUnits;
+    return units.clamp(1, BookingEndSchedule.maxUnits(duration)).toInt();
   }
 
   static void _scheduleIfNeeded({
@@ -84,7 +83,8 @@ class TripCountdownSync {
     final remind = BookingEndSchedule.reminderOneHourBefore(tripEndsAt);
     store.schedule(
       bookingId: bookingId,
-      durationLabel: '$duration · $units ${BookingEndSchedule.unitLabel(duration)}',
+      durationLabel:
+          '$duration · $units ${BookingEndSchedule.unitLabel(duration)}',
       tripEndsAt: tripEndsAt,
       reminderAt: remind ?? tripEndsAt.subtract(const Duration(hours: 1)),
     );

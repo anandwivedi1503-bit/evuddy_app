@@ -17,15 +17,18 @@ class RiderSafetyPulse extends StatefulWidget {
   State<RiderSafetyPulse> createState() => _RiderSafetyPulseState();
 }
 
-class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerProviderStateMixin {
+class _RiderSafetyPulseState extends State<RiderSafetyPulse>
+    with SingleTickerProviderStateMixin {
   Timer? _clock;
   late final AnimationController _pulse;
 
   @override
   void initState() {
     super.initState();
-    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
-      ..repeat(reverse: true);
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
     TripCountdownStore.instance.tick.addListener(_onTick);
     _clock = Timer.periodic(const Duration(seconds: 1), (_) {
       TripCountdownStore.instance.tick.value++;
@@ -52,7 +55,8 @@ class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerPr
     final untilEnd = store.timeUntilEnd ?? Duration.zero;
     final untilReminder = store.timeUntilReminder ?? Duration.zero;
     final gpsOn = RiderSafetyTracker.instance.active;
-    final urgent = untilEnd <= const Duration(hours: 1);
+    final overdue = store.overdue;
+    final urgent = overdue || untilEnd <= const Duration(hours: 1);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
@@ -68,7 +72,11 @@ class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerPr
               borderRadius: BorderRadius.circular(22),
               gradient: LinearGradient(
                 colors: urgent
-                    ? [const Color(0xFF7F1D1D), const Color(0xFFDC2626), const Color(0xFFF97316)]
+                    ? [
+                        const Color(0xFF7F1D1D),
+                        const Color(0xFFDC2626),
+                        const Color(0xFFF97316),
+                      ]
                     : [const Color(0xFF1E3A8A), const Color(0xFF2563EB)],
               ),
             ),
@@ -88,7 +96,9 @@ class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerPr
                       border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: Icon(
-                      urgent ? Icons.campaign_rounded : Icons.shield_moon_outlined,
+                      urgent
+                          ? Icons.campaign_rounded
+                          : Icons.shield_moon_outlined,
                       color: Colors.white,
                       size: 28,
                     ),
@@ -100,7 +110,11 @@ class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerPr
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        urgent ? 'RETURN SOON · PLAN ENDING' : 'TRIP SAFETY LIVE',
+                        overdue
+                            ? 'RETURN OVERDUE · CONTACT THE HUB'
+                            : (urgent
+                                  ? 'RETURN SOON · PLAN ENDING'
+                                  : 'TRIP SAFETY LIVE'),
                         style: GoogleFonts.plusJakartaSans(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
@@ -110,7 +124,9 @@ class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerPr
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Ends in ${TripCountdownStore.formatDuration(untilEnd)}',
+                        overdue
+                            ? 'Overdue ${TripCountdownStore.formatDuration(untilEnd)}'
+                            : 'Ends in ${TripCountdownStore.formatDuration(untilEnd)}',
                         style: GoogleFonts.plusJakartaSans(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
@@ -119,7 +135,8 @@ class _RiderSafetyPulseState extends State<RiderSafetyPulse> with SingleTickerPr
                       ),
                       Text(
                         [
-                          if (store.durationLabel.isNotEmpty) store.durationLabel,
+                          if (store.durationLabel.isNotEmpty)
+                            store.durationLabel,
                           if (untilReminder > Duration.zero)
                             'Reminder in ${TripCountdownStore.formatDuration(untilReminder)}',
                           if (gpsOn) 'Phone GPS shared with Evuddy ops',

@@ -17,6 +17,8 @@ class BrandCampaign {
     required this.welcomeBody,
     required this.logoAccent,
     required this.heroImage,
+    required this.date,
+    required this.sessionKey,
   });
 
   final String id;
@@ -26,6 +28,11 @@ class BrandCampaign {
   final String welcomeBody;
   final String logoAccent;
   final String heroImage;
+  final String date;
+  final String sessionKey;
+
+  String get revision =>
+      '$id|$date|$sessionKey|$theme|$ribbon|$welcomeTitle|$welcomeBody|$logoAccent|$heroImage';
 
   static BrandCampaign fromJson(Map raw) {
     return BrandCampaign(
@@ -36,6 +43,8 @@ class BrandCampaign {
       welcomeBody: raw['welcomeBody']?.toString() ?? '',
       logoAccent: raw['logoAccent']?.toString() ?? '#18B368',
       heroImage: raw['heroImage']?.toString() ?? '',
+      date: raw['date']?.toString() ?? '',
+      sessionKey: raw['sessionKey']?.toString() ?? '',
     );
   }
 
@@ -133,16 +142,24 @@ class EvuddyApi {
       if (body is Map<String, dynamic>) return body;
       return {'success': false, 'message': r.body};
     } catch (_) {
-      return {'success': false, 'message': 'Unexpected response (${r.statusCode}).'};
+      return {
+        'success': false,
+        'message': 'Unexpected response (${r.statusCode}).',
+      };
     }
   }
 
   /// Same calendar the website uses. Null when the day is a normal brand day.
   static Future<BrandCampaign?> festiveToday() async {
     try {
-      final r = await _get(_u('/api/festive-today'), timeout: const Duration(seconds: 8));
+      final r = await _get(
+        _u('/api/festive-today'),
+        timeout: const Duration(seconds: 8),
+      );
       final j = _json(r);
-      if (r.statusCode != 200 || j['mode'] == 'normal' || j['campaign'] is! Map) {
+      if (r.statusCode != 200 ||
+          j['mode'] == 'normal' ||
+          j['campaign'] is! Map) {
         return null;
       }
       return BrandCampaign.fromJson(j['campaign'] as Map);
@@ -153,7 +170,10 @@ class EvuddyApi {
 
   static Future<bool> health() async {
     try {
-      final r = await _get(_u('/api/health'), timeout: const Duration(seconds: 8));
+      final r = await _get(
+        _u('/api/health'),
+        timeout: const Duration(seconds: 8),
+      );
       final j = _json(r);
       return r.statusCode == 200 && j['success'] == true;
     } catch (_) {
@@ -163,7 +183,9 @@ class EvuddyApi {
 
   static List<String> riderPhoneKeys(String phone) {
     final digits = phone.replaceAll(RegExp(r'\D'), '');
-    final ten = digits.length >= 10 ? digits.substring(digits.length - 10) : digits;
+    final ten = digits.length >= 10
+        ? digits.substring(digits.length - 10)
+        : digits;
     if (ten.isEmpty) return const [];
     return [ten, '+91$ten', '91$ten'];
   }
@@ -171,22 +193,34 @@ class EvuddyApi {
   static RiderLookup? _parseRiderLookup(http.Response r) {
     final j = _json(r);
     if (r.statusCode == 401) {
-      throw ApiException(_message(j, 'Sign in again with your registered mobile.'));
+      throw ApiException(
+        _message(j, 'Sign in again with your registered mobile.'),
+      );
     }
     if (j['success'] == true && j['data'] is Map) {
-      return RiderLookup.fromData(j['data'] as Map, message: j['message']?.toString());
+      return RiderLookup.fromData(
+        j['data'] as Map,
+        message: j['message']?.toString(),
+      );
     }
     if (j['success'] == true && j['data'] is List) {
       final rows = (j['data'] as List).whereType<Map>();
       if (rows.isNotEmpty) {
-        return RiderLookup.fromData(rows.first, message: j['message']?.toString());
+        return RiderLookup.fromData(
+          rows.first,
+          message: j['message']?.toString(),
+        );
       }
     }
-    if (j['success'] == true && (j['riderId'] != null || j['approvalStatus'] != null)) {
+    if (j['success'] == true &&
+        (j['riderId'] != null || j['approvalStatus'] != null)) {
       return RiderLookup.fromData(j, message: j['message']?.toString());
     }
     if (r.statusCode == 404 || j['errorCode'] == 'RIDER_NOT_FOUND') {
-      return RiderLookup(found: false, message: j['message']?.toString() ?? 'Rider not found.');
+      return RiderLookup(
+        found: false,
+        message: j['message']?.toString() ?? 'Rider not found.',
+      );
     }
     return null;
   }
@@ -200,10 +234,7 @@ class EvuddyApi {
     for (final key in riderPhoneKeys(phone)) {
       for (var attempt = 0; attempt < 3; attempt++) {
         final r = await _get(
-          _u('/api/riders', {
-            'phone': key,
-            'firebaseIdToken': idToken,
-          }),
+          _u('/api/riders', {'phone': key, 'firebaseIdToken': idToken}),
           headers: headers,
           timeout: const Duration(seconds: 15),
         );
@@ -211,7 +242,9 @@ class EvuddyApi {
         if (parsed != null && parsed.found) return parsed;
         if (parsed != null && !parsed.found) missing = parsed;
         if (attempt < 2) {
-          await Future<void>.delayed(Duration(milliseconds: 400 * (attempt + 1)));
+          await Future<void>.delayed(
+            Duration(milliseconds: 400 * (attempt + 1)),
+          );
         }
       }
     }
@@ -291,11 +324,14 @@ class EvuddyApi {
     final streamed = await req.send().timeout(const Duration(seconds: 45));
     final r = await http.Response.fromStream(streamed);
     final j = _json(r);
-    final url = j['url']?.toString() ??
+    final url =
+        j['url']?.toString() ??
         (j['data'] is Map ? (j['data'] as Map)['url']?.toString() : null);
     if (j['success'] == true && url != null && url.isNotEmpty) return url;
     throw ApiException(
-      j['error']?.toString() ?? j['message']?.toString() ?? 'File upload failed.',
+      j['error']?.toString() ??
+          j['message']?.toString() ??
+          'File upload failed.',
     );
   }
 
@@ -318,19 +354,29 @@ class EvuddyApi {
     return RegisterResult(
       ok: r.statusCode >= 200 && r.statusCode < 300 && j['success'] == true,
       statusCode: r.statusCode,
-      message: j['message']?.toString() ?? (errors.isEmpty ? null : errors.join(' ')),
+      message:
+          j['message']?.toString() ??
+          (errors.isEmpty ? null : errors.join(' ')),
       errors: errors,
       riderExists: j['riderExists'] == true,
-      riderId: (j['riderId'] ?? (j['data'] is Map ? (j['data'] as Map)['riderId'] : null))
-          ?.toString(),
-      riderStatus: j['riderStatus']?.toString() ??
-          (j['data'] is Map ? (j['data'] as Map)['approvalStatus']?.toString() : null) ??
+      riderId:
+          (j['riderId'] ??
+                  (j['data'] is Map ? (j['data'] as Map)['riderId'] : null))
+              ?.toString(),
+      riderStatus:
+          j['riderStatus']?.toString() ??
+          (j['data'] is Map
+              ? (j['data'] as Map)['approvalStatus']?.toString()
+              : null) ??
           j['approvalStatus']?.toString(),
-      bookingEnabled: j['bookingEnabled'] == true ||
+      bookingEnabled:
+          j['bookingEnabled'] == true ||
           (j['data'] is Map && (j['data'] as Map)['bookingEnabled'] == true) ||
           RiderLookup.isApprovedStatus(
             j['riderStatus']?.toString() ??
-                (j['data'] is Map ? (j['data'] as Map)['approvalStatus']?.toString() : null) ??
+                (j['data'] is Map
+                    ? (j['data'] as Map)['approvalStatus']?.toString()
+                    : null) ??
                 j['approvalStatus']?.toString() ??
                 '',
           ),
@@ -344,11 +390,13 @@ class EvuddyApi {
     if (j['success'] != true || data is! List) return [];
     return data
         .whereType<Map>()
-        .map((e) => EvuddyCity(
-              id: e['_id']?.toString() ?? '',
-              name: e['cityName']?.toString() ?? '',
-              state: e['state']?.toString() ?? '',
-            ))
+        .map(
+          (e) => EvuddyCity(
+            id: e['_id']?.toString() ?? '',
+            name: e['cityName']?.toString() ?? '',
+            state: e['state']?.toString() ?? '',
+          ),
+        )
         .where((c) => c.name.isNotEmpty)
         .toList();
   }
@@ -367,7 +415,10 @@ class EvuddyApi {
         .toList();
   }
 
-  static Future<List<EvuddyVehicle>> vehicles({String? city, String? hub}) async {
+  static Future<List<EvuddyVehicle>> vehicles({
+    String? city,
+    String? hub,
+  }) async {
     Future<List<EvuddyVehicle>> fetch(Map<String, String>? query) async {
       final r = await _get(_u('/api/vehicles', query));
       final j = _json(r);
@@ -386,7 +437,9 @@ class EvuddyApi {
     };
     var list = await fetch(query.isEmpty ? null : query);
     if (list.isEmpty && query.isNotEmpty) {
-      list = await fetch(city != null && city.trim().isNotEmpty ? {'city': city.trim()} : null);
+      list = await fetch(
+        city != null && city.trim().isNotEmpty ? {'city': city.trim()} : null,
+      );
     }
     if (list.isEmpty && query.isNotEmpty) {
       list = await fetch(null);
@@ -396,19 +449,19 @@ class EvuddyApi {
 
   static const _clientHeaders = {
     'x-evuddy-client': 'app',
-    'x-evuddy-client-capabilities': 'pickupCityAck',
+    'x-evuddy-client-capabilities': 'pickupCityAck,firstPaymentHalfRental',
   };
 
   static Map<String, String> _auth(String idToken) => {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $idToken',
-        ..._clientHeaders,
-      };
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $idToken',
+    ..._clientHeaders,
+  };
 
   static Map<String, String> get _publicHeaders => {
-        'Content-Type': 'application/json',
-        ..._clientHeaders,
-      };
+    'Content-Type': 'application/json',
+    ..._clientHeaders,
+  };
 
   static Future<MineBookings> fetchMine(String idToken) async {
     final r = await _get(
@@ -496,7 +549,8 @@ class EvuddyApi {
       if (duration != null && duration.isNotEmpty) 'rentalDuration': duration,
       if (rentalUnits > 1) 'rentalUnits': rentalUnits,
       if (duration == 'Hourly' && rentalUnits > 0) 'rentalHours': rentalUnits,
-      if (referenceBy != null && referenceBy.isNotEmpty) 'referenceBy': referenceBy,
+      if (referenceBy != null && referenceBy.isNotEmpty)
+        'referenceBy': referenceBy,
       'firebaseIdToken': idToken,
       'paymentMode': 'Razorpay',
       'paymentStatus': 'Pending',
@@ -572,14 +626,16 @@ class EvuddyApi {
     if (parsed.order != null &&
         parsed.order!.orderId.startsWith('order_') &&
         !parsed.needsCheckout) {
-      throw ApiException('evuddy.com did not return a Razorpay key or order id.');
+      throw ApiException(
+        'evuddy.com did not return a Razorpay key or order id.',
+      );
     }
     return parsed;
   }
 
-  /// Live Book EV after kebuone-website remaining-pay fix: open Checkout only
-  /// when create-order returned `orderId` + `keyId`. A captured ₹1 must not
-  /// reuse that order — remaining rupees come back as a new `order_`.
+  /// Open Checkout only when create-order returned `orderId` + `keyId`.
+  /// A captured payment must not reuse that order — remaining rupees come
+  /// back as a new `order_`.
   static PaymentStart parseCreateOrder(
     Map j, {
     double amountRupees = 0,
@@ -630,9 +686,7 @@ class EvuddyApi {
     if (j['alreadyCaptured'] == true || booking.due <= 0.009) {
       return PaymentStart.settled(booking: booking);
     }
-    throw ApiException(
-      _message(j, 'Unable to create Razorpay order.'),
-    );
+    throw ApiException(_message(j, 'Unable to create Razorpay order.'));
   }
 
   static Future<RazorpayOrder> createRazorpayOrder({
@@ -873,7 +927,10 @@ class EvuddyApi {
       'amount': amountRupees,
       'firebaseIdToken': idToken,
     };
-    for (final path in ['/api/receipts/deliver', '/api/notify/payment-receipt']) {
+    for (final path in [
+      '/api/receipts/deliver',
+      '/api/notify/payment-receipt',
+    ]) {
       try {
         final r = await _post(
           _u(path),
@@ -928,7 +985,10 @@ class EvuddyApi {
     String paymentId = '',
     double amountRupees = 2500,
   }) async {
-    Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body) async {
+    Future<Map<String, dynamic>> post(
+      String path,
+      Map<String, dynamic> body,
+    ) async {
       final r = await _post(
         _u(path),
         headers: _auth(idToken),
@@ -973,14 +1033,20 @@ class EvuddyApi {
         order = null;
       }
       if (order != null &&
-          !(order.orderId.startsWith('order_') && order.keyId.startsWith('rzp_'))) {
+          !(order.orderId.startsWith('order_') &&
+              order.keyId.startsWith('rzp_'))) {
         order = null;
       }
       return RefundStart(
         ok: true,
-        message: _message(j, 'Deposit refund queued on Razorpay to the original UPI / card.'),
+        message: _message(
+          j,
+          'Deposit refund queued on Razorpay to the original UPI / card.',
+        ),
         order: order,
-        refundId: (j['refundId'] ?? j['id'] ?? j['razorpayRefundId'])?.toString() ?? '',
+        refundId:
+            (j['refundId'] ?? j['id'] ?? j['razorpayRefundId'])?.toString() ??
+            '',
       );
     }
     try {
@@ -994,8 +1060,7 @@ class EvuddyApi {
       );
       return const RefundStart(
         ok: true,
-        message:
-            'Razorpay Checkout opens when finance returns an order. A deposit refund ticket was sent to the yard so the hold can be released to the original UPI / card.',
+        message: 'Razorpay Checkout opens when finance returns an order. A deposit refund ticket was sent to the yard so the hold can be released to the original UPI / card.',
       );
     } catch (_) {}
     throw ApiException(
@@ -1025,9 +1090,11 @@ class EvuddyApi {
       throw ApiException(_message(j, 'Unable to update ride.'));
     }
     final booking = RiderBooking.fromJson(j);
-    final topEnd = (j['rideEndOTP'] ?? j['rideEndOtp'])?.toString().trim() ?? '';
+    final topEnd =
+        (j['rideEndOTP'] ?? j['rideEndOtp'])?.toString().trim() ?? '';
     return RideActionResult(
-      message: j['message']?.toString() ??
+      message:
+          j['message']?.toString() ??
           (start
               ? 'Ride started. Pay any remaining amount before you return.'
               : 'Ride end OTP is ready. Tell this to the yard to return the scooter.'),
@@ -1089,16 +1156,16 @@ class CatalogRates {
   static int highSpeedMonthly(int fleet) => 3600 * fleet;
 
   static Map<String, dynamic> payload() => {
-        'hourly': hourly,
-        'daily': daily,
-        'weekly': weekly,
-        'monthly': monthly,
-        'rtoDaily': rtoDaily,
-        'rtoMonths': rtoMonths,
-        'securityDeposit': securityDeposit,
-        'gstInclusiveRental': true,
-        'currency': 'INR',
-      };
+    'hourly': hourly,
+    'daily': daily,
+    'weekly': weekly,
+    'monthly': monthly,
+    'rtoDaily': rtoDaily,
+    'rtoMonths': rtoMonths,
+    'securityDeposit': securityDeposit,
+    'gstInclusiveRental': true,
+    'currency': 'INR',
+  };
 
   static int amountForDuration(String duration, {int units = 1}) {
     final u = units < 1 ? 1 : units;
@@ -1206,15 +1273,15 @@ class RtoAgreement {
   }
 
   Map<String, dynamic> toJson() => {
-        'rtoNomineeName': nomineeName.trim(),
-        'rtoNomineeRelation': nomineeRelation,
-        'rtoGuardianName': guardianName.trim(),
-        'rtoEmergencyPhone': emergencyPhone.replaceAll(RegExp(r'\D'), ''),
-        'rtoEmail': email.trim().toLowerCase(),
-        'rtoPermanentAddress': address.trim(),
-        'rtoOccupation': occupation.trim(),
-        'rtoAgreementAccepted': agreed,
-      };
+    'rtoNomineeName': nomineeName.trim(),
+    'rtoNomineeRelation': nomineeRelation,
+    'rtoGuardianName': guardianName.trim(),
+    'rtoEmergencyPhone': emergencyPhone.replaceAll(RegExp(r'\D'), ''),
+    'rtoEmail': email.trim().toLowerCase(),
+    'rtoPermanentAddress': address.trim(),
+    'rtoOccupation': occupation.trim(),
+    'rtoAgreementAccepted': agreed,
+  };
 }
 
 class RideHistoryItem {
@@ -1241,11 +1308,14 @@ class RideHistoryItem {
       hub: (e['pickupHubName'] ?? e['startHub'])?.toString() ?? '',
       city: (e['pickupCity'] ?? e['city'])?.toString() ?? '',
       receivedAmount: _asDouble(e['receivedAmount']) ?? 0,
-      canReview: e['canReview'] == true ||
+      canReview:
+          e['canReview'] == true ||
           ((e['reviewStars'] == null) &&
               (e['rideStatus']?.toString().toLowerCase().contains('complete') ==
                   true)),
-      reviewStars: (e['reviewStars'] is num) ? (e['reviewStars'] as num).toInt() : null,
+      reviewStars: (e['reviewStars'] is num)
+          ? (e['reviewStars'] as num).toInt()
+          : null,
     );
   }
 
@@ -1304,14 +1374,14 @@ class GstSplit {
 
 class PaymentStart {
   const PaymentStart.checkout(this.order, {this.bookEvFlow = false})
-      : booking = null,
-        wallet = false;
+    : booking = null,
+      wallet = false;
   const PaymentStart.settled({required this.booking, this.wallet = false})
-      : order = null,
-        bookEvFlow = false;
+    : order = null,
+      bookEvFlow = false;
   const PaymentStart.bookEv({this.order, this.booking})
-      : wallet = false,
-        bookEvFlow = true;
+    : wallet = false,
+      bookEvFlow = true;
 
   final RazorpayOrder? order;
   final RiderBooking? booking;
@@ -1368,7 +1438,10 @@ class SupportTicket {
       category: e['category']?.toString() ?? '',
       status: e['status']?.toString() ?? '',
       description: e['description']?.toString() ?? '',
-      adminRemarks: e['adminRemarks']?.toString() ?? '',
+      adminRemarks:
+          (e['adminRemarks'] ?? e['supportReply'] ?? e['adminReply'])
+              ?.toString() ??
+          '',
     );
   }
 
@@ -1453,11 +1526,11 @@ class EvuddyVehicle {
     return EvuddyVehicle(
       id: e['_id']?.toString() ?? vid,
       vehicleId: vid,
-      registrationNumber: e['registrationNumber']?.toString() ??
+      registrationNumber:
+          e['registrationNumber']?.toString() ??
           e['vehicleNumber']?.toString() ??
           '',
-      vehicleModel:
-          e['vehicleModel']?.toString() ?? 'Evuddy Electric Scooter',
+      vehicleModel: e['vehicleModel']?.toString() ?? 'Evuddy Electric Scooter',
       currentHub: e['currentHub']?.toString() ?? '',
       batteryPercentage: _asDouble(e['batteryPercentage']) ?? 0,
       hourlyRate: _asDouble(e['hourlyRate']),
@@ -1501,18 +1574,19 @@ class EvuddyVehicle {
     return s.isEmpty || s == 'available';
   }
 
-  String get displayId =>
-      vehicleId.isNotEmpty
-          ? vehicleId
-          : (registrationNumber.isNotEmpty ? registrationNumber : vehicleModel);
+  String get displayId => vehicleId.isNotEmpty
+      ? vehicleId
+      : (registrationNumber.isNotEmpty ? registrationNumber : vehicleModel);
 }
 
 /// Hub codes like `01` match `1`, and names/locations match as on the website.
 bool hubMatches(String currentHub, EvuddyHub hub) {
-  final aliases = [hub.name, hub.code, hub.location, hub.city]
-      .map((s) => s.trim().toLowerCase())
-      .where((s) => s.isNotEmpty)
-      .toList();
+  final aliases = [
+    hub.name,
+    hub.code,
+    hub.location,
+    hub.city,
+  ].map((s) => s.trim().toLowerCase()).where((s) => s.isNotEmpty).toList();
   final t = currentHub.trim().toLowerCase();
   if (t.isEmpty) return true;
   for (final a in aliases) {
@@ -1597,15 +1671,16 @@ class RiderBooking {
     this.message = '',
     this.completedAtMs = 0,
     this.rentalEndDate,
+    this.rentalHours = 1,
+    this.pickupOtpTestMode = false,
   });
 
   factory RiderBooking.fromJson(Map e) {
     final nested = e['data'];
     final booking = e['booking'];
-    final m = nested is Map
-        ? nested
-        : (booking is Map ? booking : e);
-    var pending = _asDouble(
+    final m = nested is Map ? nested : (booking is Map ? booking : e);
+    var pending =
+        _asDouble(
           m['pendingAmount'] ??
               e['pendingAmount'] ??
               m['remainingAmount'] ??
@@ -1615,80 +1690,101 @@ class RiderBooking {
     final topRemaining =
         _asDouble(e['remainingAmount'] ?? e['pendingAmount']) ?? 0;
     if (pending <= 0.009 && topRemaining > 0.009) pending = topRemaining;
-    final received = _asDouble(
-          m['receivedAmount'] ?? e['receivedAmount'] ?? e['paidAmount'] ?? m['paidAmount'],
+    final received =
+        _asDouble(
+          m['receivedAmount'] ??
+              e['receivedAmount'] ??
+              e['paidAmount'] ??
+              m['paidAmount'],
         ) ??
         0;
     final billed = _asDouble(m['paymentDue'] ?? e['paymentDue']) ?? 0;
     final lat = _asDouble(
-          m['latitude'] ??
-              m['gpsLat'] ??
-              m['lat'] ??
-              e['latitude'] ??
-              e['gpsLat'],
-        );
-    final lng = _asDouble(
-          m['longitude'] ??
-              m['gpsLng'] ??
-              m['lng'] ??
-              e['longitude'] ??
-              e['gpsLng'],
-        );
-    final completedAtMs = _bookingTimeMs(
-      m['completedAt'] ?? m['actualRideEnd'] ?? e['completedAt'] ?? e['actualRideEnd'],
+      m['latitude'] ?? m['gpsLat'] ?? m['lat'] ?? e['latitude'] ?? e['gpsLat'],
     );
-    final rentalEndMs = _bookingTimeMs(m['rentalEndDate'] ?? e['rentalEndDate']);
+    final lng = _asDouble(
+      m['longitude'] ??
+          m['gpsLng'] ??
+          m['lng'] ??
+          e['longitude'] ??
+          e['gpsLng'],
+    );
+    final completedAtMs = _bookingTimeMs(
+      m['completedAt'] ??
+          m['actualRideEnd'] ??
+          e['completedAt'] ??
+          e['actualRideEnd'],
+    );
+    final rentalEndMs = _bookingTimeMs(
+      m['rentalEndDate'] ?? e['rentalEndDate'],
+    );
     return RiderBooking(
-      mongoId: m['_id']?.toString() ??
+      mongoId:
+          m['_id']?.toString() ??
           m['id']?.toString() ??
           e['bookingMongoId']?.toString() ??
           e['_id']?.toString() ??
           '',
       bookingId: m['bookingId']?.toString() ?? e['bookingId']?.toString() ?? '',
       rentalMode: m['rentalMode']?.toString() ?? '',
-      paymentStatus: (m['paymentStatus'] ?? e['paymentStatus'])?.toString() ?? '',
-      paymentMode: (m['paymentMode'] ?? e['paymentMode'] ?? m['paymentMethod'] ?? e['paymentMethod'])
+      paymentStatus:
+          (m['paymentStatus'] ?? e['paymentStatus'])?.toString() ?? '',
+      paymentMode:
+          (m['paymentMode'] ??
+                  e['paymentMode'] ??
+                  m['paymentMethod'] ??
+                  e['paymentMethod'])
               ?.toString() ??
           '',
       rideStatus: (m['rideStatus'] ?? e['rideStatus'])?.toString() ?? '',
       pendingAmount: pending,
       receivedAmount: received,
       paymentDue: billed,
-      pickupOtp: (m['pickupOTP'] ??
-              m['pickupOtp'] ??
-              e['pickupOTP'] ??
-              e['pickupOtp'])
-          ?.toString() ??
+      pickupOtp:
+          (m['pickupOTP'] ?? m['pickupOtp'] ?? e['pickupOTP'] ?? e['pickupOtp'])
+              ?.toString() ??
           '',
-      rideEndOtp: (m['rideEndOTP'] ??
-              m['rideEndOtp'] ??
-              e['rideEndOTP'] ??
-              e['rideEndOtp'])
-          ?.toString() ??
+      rideEndOtp:
+          (m['rideEndOTP'] ??
+                  m['rideEndOtp'] ??
+                  e['rideEndOTP'] ??
+                  e['rideEndOtp'])
+              ?.toString() ??
           '',
-      pickupOtpVerified: m['pickupOTPVerified'] == true || e['pickupOTPVerified'] == true,
+      pickupOtpVerified:
+          m['pickupOTPVerified'] == true || e['pickupOTPVerified'] == true,
       vehicleId: m['vehicleId']?.toString() ?? '',
       vehicleModel: m['vehicleModel']?.toString() ?? '',
-      vehicleNumber: (m['vehicleNumber'] ?? m['registrationNumber'])?.toString() ?? '',
+      vehicleNumber:
+          (m['vehicleNumber'] ?? m['registrationNumber'])?.toString() ?? '',
       startHub: m['startHub']?.toString() ?? '',
       pickupHubName: m['pickupHubName']?.toString() ?? '',
       city: (m['pickupCity'] ?? m['city'])?.toString() ?? '',
-      securityDeposit: _asDouble(m['securityDeposit'] ?? e['securityDeposit']) ??
+      securityDeposit:
+          _asDouble(m['securityDeposit'] ?? e['securityDeposit']) ??
           CatalogRates.securityDeposit.toDouble(),
       latitude: lat,
       longitude: lng,
-      razorpayPaymentId: (m['razorpayPaymentId'] ??
-              m['razorpay_payment_id'] ??
-              e['razorpayPaymentId'] ??
-              e['razorpay_payment_id'])
-          ?.toString() ??
+      razorpayPaymentId:
+          (m['razorpayPaymentId'] ??
+                  m['razorpay_payment_id'] ??
+                  e['razorpayPaymentId'] ??
+                  e['razorpay_payment_id'])
+              ?.toString() ??
           '',
       message: e['message']?.toString() ?? '',
       completedAtMs: completedAtMs > 0
           ? completedAtMs
           : _bookingTimeMs(m['updatedAt'] ?? e['updatedAt']),
-      rentalEndDate:
-          rentalEndMs > 0 ? DateTime.fromMillisecondsSinceEpoch(rentalEndMs) : null,
+      rentalEndDate: rentalEndMs > 0
+          ? DateTime.fromMillisecondsSinceEpoch(rentalEndMs)
+          : null,
+      rentalHours: (_asDouble(m['rentalHours'] ?? e['rentalHours']) ?? 1)
+          .round()
+          .clamp(1, 72)
+          .toInt(),
+      pickupOtpTestMode:
+          m['pickupOtpTestMode'] == true || e['pickupOtpTestMode'] == true,
     );
   }
 
@@ -1734,6 +1830,8 @@ class RiderBooking {
   final String message;
   final int completedAtMs;
   final DateTime? rentalEndDate;
+  final int rentalHours;
+  final bool pickupOtpTestMode;
 
   bool get isOpenRide {
     if (mongoId.isEmpty || bookingId.isEmpty || vehicleId.isEmpty) return false;
@@ -1756,7 +1854,9 @@ class RiderBooking {
   bool get markedFullyPaid {
     final p = paymentStatus.toLowerCase();
     final m = paymentMode.toLowerCase();
-    if (p.contains('pending') || p.contains('partial') || p.contains('unpaid')) {
+    if (p.contains('pending') ||
+        p.contains('partial') ||
+        p.contains('unpaid')) {
       return false;
     }
     if (p == 'paid' ||
@@ -1767,7 +1867,10 @@ class RiderBooking {
       return true;
     }
     if (m.contains('cash') &&
-        (p.contains('paid') || p.contains('cash') || p.contains('complete') || p.isEmpty)) {
+        (p.contains('paid') ||
+            p.contains('cash') ||
+            p.contains('complete') ||
+            p.isEmpty)) {
       return pendingAmount <= 0.009;
     }
     return false;
@@ -1790,7 +1893,8 @@ class RiderBooking {
         return paymentDue - receivedAmount;
       }
       if (markedFullyPaid) return 0;
-      if (receivedAmount > 0.009 && (paymentDue - receivedAmount).abs() <= 0.009) {
+      if (receivedAmount > 0.009 &&
+          (paymentDue - receivedAmount).abs() <= 0.009) {
         return 0;
       }
       return paymentDue;
@@ -1800,16 +1904,38 @@ class RiderBooking {
 
   bool get hasPickupOtp => pickupOtp.isNotEmpty;
 
-  bool get isRemainingPayment =>
-      receivedAmount >= 1 || hasPickupOtp || pickupOtpVerified;
+  double get totalPayable {
+    if (paymentDue > 0.009) return paymentDue;
+    final total = receivedAmount + pendingAmount;
+    return total > 0.009 ? total : 0;
+  }
 
-  /// Website locks remaining amount after first pay, and always for Rent to Own.
+  double get pickupPaymentThreshold {
+    final total = totalPayable;
+    if (total <= 0.009) return 0;
+    if (isRentToOwn) return total;
+    if (pickupOtpTestMode) return total < 1 ? total : 1;
+    final half = double.parse((total * 0.5).toStringAsFixed(2));
+    return half < 1 ? 1 : (half > total ? total : half);
+  }
+
+  double get pickupPaymentTopUp =>
+      (pickupPaymentThreshold - receivedAmount).clamp(0, due).toDouble();
+
+  bool get pickupPaymentMet =>
+      pickupPaymentThreshold > 0.009 &&
+      receivedAmount + 0.009 >= pickupPaymentThreshold;
+
+  bool get isRemainingPayment => pickupPaymentMet;
+
+  /// Lock the final balance after the pickup payment threshold is met.
   bool get remainingPayLocked => isRentToOwn || isRemainingPayment;
 
-  /// First Razorpay tap is ₹1 (pickup OTP). After that, Checkout is remaining due.
+  /// First payment, or a top-up on an older partial booking, reaches 50% of total.
   double get suggestedPayRupees {
     if (remainingPayLocked) return due > 0.009 ? due : 0;
-    return 1;
+    if (due <= 0.009) return 0;
+    return pickupPaymentTopUp;
   }
 
   bool get completed {
@@ -1838,7 +1964,10 @@ class RiderBooking {
   bool get inRide {
     final s = rideStatus.toLowerCase().trim();
     if (completed || cancelled) return false;
-    return s == 'in ride' || s == 'ongoing' || s == 'started' || s.contains('in-ride');
+    return s == 'in ride' ||
+        s == 'ongoing' ||
+        s == 'started' ||
+        s.contains('in-ride');
   }
 
   bool get isRentToOwn {
@@ -1878,35 +2007,41 @@ class RiderBooking {
       razorpayPaymentId: razorpayPaymentId,
       message: message ?? this.message,
       completedAtMs: completedAtMs,
+      rentalEndDate: rentalEndDate,
+      rentalHours: rentalHours,
+      pickupOtpTestMode: pickupOtpTestMode,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'mongoId': mongoId,
-        '_id': mongoId,
-        'bookingId': bookingId,
-        'rentalMode': rentalMode,
-        'paymentStatus': paymentStatus,
-        'paymentMode': paymentMode,
-        'rideStatus': rideStatus,
-        'pendingAmount': pendingAmount,
-        'receivedAmount': receivedAmount,
-        'paymentDue': paymentDue,
-        'pickupOTP': pickupOtp,
-        'rideEndOTP': rideEndOtp,
-        'pickupOTPVerified': pickupOtpVerified,
-        'vehicleId': vehicleId,
-        'vehicleModel': vehicleModel,
-        'vehicleNumber': vehicleNumber,
-        'startHub': startHub,
-        'pickupHubName': pickupHubName,
-        'city': city,
-        'securityDeposit': securityDeposit,
-        'latitude': latitude,
-        'longitude': longitude,
-        'razorpayPaymentId': razorpayPaymentId,
-        'message': message,
-      };
+    'mongoId': mongoId,
+    '_id': mongoId,
+    'bookingId': bookingId,
+    'rentalMode': rentalMode,
+    'paymentStatus': paymentStatus,
+    'paymentMode': paymentMode,
+    'rideStatus': rideStatus,
+    'pendingAmount': pendingAmount,
+    'receivedAmount': receivedAmount,
+    'paymentDue': paymentDue,
+    'pickupOTP': pickupOtp,
+    'rideEndOTP': rideEndOtp,
+    'pickupOTPVerified': pickupOtpVerified,
+    'vehicleId': vehicleId,
+    'vehicleModel': vehicleModel,
+    'vehicleNumber': vehicleNumber,
+    'startHub': startHub,
+    'pickupHubName': pickupHubName,
+    'city': city,
+    'securityDeposit': securityDeposit,
+    'latitude': latitude,
+    'longitude': longitude,
+    'razorpayPaymentId': razorpayPaymentId,
+    'message': message,
+    'rentalEndDate': rentalEndDate?.toIso8601String(),
+    'rentalHours': rentalHours,
+    'pickupOtpTestMode': pickupOtpTestMode,
+  };
 
   RiderBooking mergedWith(RiderBooking live) {
     final preferLive = live.receivedAmount + 0.009 >= receivedAmount;
@@ -1914,8 +2049,9 @@ class RiderBooking {
       mongoId: live.mongoId.isNotEmpty ? live.mongoId : mongoId,
       bookingId: live.bookingId.isNotEmpty ? live.bookingId : bookingId,
       rentalMode: live.rentalMode.isNotEmpty ? live.rentalMode : rentalMode,
-      paymentStatus:
-          live.paymentStatus.isNotEmpty ? live.paymentStatus : paymentStatus,
+      paymentStatus: live.paymentStatus.isNotEmpty
+          ? live.paymentStatus
+          : paymentStatus,
       paymentMode: live.paymentMode.isNotEmpty ? live.paymentMode : paymentMode,
       rideStatus: live.rideStatus.isNotEmpty ? live.rideStatus : rideStatus,
       pendingAmount: preferLive ? live.pendingAmount : pendingAmount,
@@ -1925,22 +2061,32 @@ class RiderBooking {
       rideEndOtp: live.rideEndOtp.isNotEmpty ? live.rideEndOtp : rideEndOtp,
       pickupOtpVerified: live.pickupOtpVerified || pickupOtpVerified,
       vehicleId: live.vehicleId.isNotEmpty ? live.vehicleId : vehicleId,
-      vehicleModel: live.vehicleModel.isNotEmpty ? live.vehicleModel : vehicleModel,
-      vehicleNumber:
-          live.vehicleNumber.isNotEmpty ? live.vehicleNumber : vehicleNumber,
+      vehicleModel: live.vehicleModel.isNotEmpty
+          ? live.vehicleModel
+          : vehicleModel,
+      vehicleNumber: live.vehicleNumber.isNotEmpty
+          ? live.vehicleNumber
+          : vehicleNumber,
       startHub: live.startHub.isNotEmpty ? live.startHub : startHub,
-      pickupHubName:
-          live.pickupHubName.isNotEmpty ? live.pickupHubName : pickupHubName,
+      pickupHubName: live.pickupHubName.isNotEmpty
+          ? live.pickupHubName
+          : pickupHubName,
       city: live.city.isNotEmpty ? live.city : city,
-      securityDeposit:
-          live.securityDeposit > 0.009 ? live.securityDeposit : securityDeposit,
+      securityDeposit: live.securityDeposit > 0.009
+          ? live.securityDeposit
+          : securityDeposit,
       latitude: live.latitude ?? latitude,
       longitude: live.longitude ?? longitude,
       razorpayPaymentId: live.razorpayPaymentId.isNotEmpty
           ? live.razorpayPaymentId
           : razorpayPaymentId,
       message: message.isNotEmpty ? message : live.message,
-      completedAtMs: live.completedAtMs > 0 ? live.completedAtMs : completedAtMs,
+      completedAtMs: live.completedAtMs > 0
+          ? live.completedAtMs
+          : completedAtMs,
+      rentalEndDate: live.rentalEndDate ?? rentalEndDate,
+      rentalHours: live.rentalHours > 0 ? live.rentalHours : rentalHours,
+      pickupOtpTestMode: live.pickupOtpTestMode || pickupOtpTestMode,
     );
   }
 }
@@ -1971,7 +2117,13 @@ class RazorpayOrder {
     }
 
     String pickKey() {
-      final raw = pick(['keyId', 'key', 'key_id', 'razorpayKeyId', 'razorpay_key']);
+      final raw = pick([
+        'keyId',
+        'key',
+        'key_id',
+        'razorpayKeyId',
+        'razorpay_key',
+      ]);
       return raw.startsWith('rzp_') ? raw : '';
     }
 
@@ -2008,7 +2160,7 @@ class RazorpayOrder {
     if (raw <= 0) return expected;
     if (raw == expected) return raw;
     if (raw == rupeesPaid.round()) return expected;
-    // Server may echo total payable (paise) while the rider chose a partial amount (e.g. ₹1).
+    // Server may echo total payable (paise) while the rider chose a partial amount.
     if (raw > expected + 1) return expected;
     return expected;
   }
@@ -2093,14 +2245,16 @@ class RiderLookup {
   const RiderLookup.missing() : this(found: false);
 
   factory RiderLookup.fromData(Map d, {String? message}) {
-    final status = (d['approvalStatus'] ??
-            d['riderStatus'] ??
-            d['status'] ??
-            d['kycStatus'] ??
-            d['riderApprovalStatus'] ??
-            '')
-        .toString();
-    final enabled = d['bookingEnabled'] == true ||
+    final status =
+        (d['approvalStatus'] ??
+                d['riderStatus'] ??
+                d['status'] ??
+                d['kycStatus'] ??
+                d['riderApprovalStatus'] ??
+                '')
+            .toString();
+    final enabled =
+        d['bookingEnabled'] == true ||
         d['canBook'] == true ||
         d['bookingAllowed'] == true ||
         d['isApproved'] == true ||
@@ -2116,7 +2270,8 @@ class RiderLookup {
       instagramId: d['instagramId']?.toString(),
       facebookId: d['facebookId']?.toString(),
       message: message,
-      walletAvailable: _asDouble(d['walletAvailable'] ?? d['walletBalance']) ?? 0,
+      walletAvailable:
+          _asDouble(d['walletAvailable'] ?? d['walletBalance']) ?? 0,
       walletStatus: d['walletStatus']?.toString() ?? '',
     );
   }
@@ -2166,8 +2321,7 @@ class RiderLookup {
   final double walletAvailable;
   final String walletStatus;
 
-  bool get walletBlocked =>
-      walletStatus.toLowerCase().contains('block');
+  bool get walletBlocked => walletStatus.toLowerCase().contains('block');
 }
 
 class RegisterResult {

@@ -16,13 +16,15 @@ class TripCountdownStore {
   DateTime? tripEndsAt;
   DateTime? reminderAt;
 
-  bool get active =>
-      bookingId.isNotEmpty && tripEndsAt != null && tripEndsAt!.isAfter(DateTime.now());
+  bool get active => bookingId.isNotEmpty && tripEndsAt != null;
+
+  bool get overdue =>
+      tripEndsAt != null && !tripEndsAt!.isAfter(DateTime.now());
 
   Duration? get timeUntilEnd {
     if (tripEndsAt == null) return null;
     final d = tripEndsAt!.difference(DateTime.now());
-    return d.isNegative ? Duration.zero : d;
+    return d;
   }
 
   Duration? get timeUntilReminder {
@@ -42,11 +44,7 @@ class TripCountdownStore {
       durationLabel = m['durationLabel']?.toString() ?? '';
       tripEndsAt = DateTime.tryParse(m['tripEndsAt']?.toString() ?? '');
       reminderAt = DateTime.tryParse(m['reminderAt']?.toString() ?? '');
-      if (tripEndsAt != null && tripEndsAt!.isBefore(DateTime.now())) {
-        await clear();
-      } else {
-        _pulse();
-      }
+      _pulse();
     } catch (_) {}
   }
 
@@ -94,9 +92,10 @@ class TripCountdownStore {
   void _pulse() => tick.value++;
 
   static String formatDuration(Duration d) {
-    final h = d.inHours;
-    final m = d.inMinutes.remainder(60);
-    final s = d.inSeconds.remainder(60);
+    final seconds = d.inSeconds.abs();
+    final h = seconds ~/ 3600;
+    final m = (seconds ~/ 60).remainder(60);
+    final s = seconds.remainder(60);
     if (h > 0) {
       return '${h}h ${m.toString().padLeft(2, '0')}m ${s.toString().padLeft(2, '0')}s';
     }

@@ -7,7 +7,7 @@ class BookingEndSchedule {
   static int maxUnits(String duration) {
     switch (duration) {
       case 'Hourly':
-        return 12;
+        return 72;
       case 'Daily':
         return 14;
       case 'Weekly':

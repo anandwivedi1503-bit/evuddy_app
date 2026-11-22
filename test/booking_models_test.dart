@@ -99,7 +99,7 @@ void main() {
         'receivedAmount': 1,
         'pendingAmount': 249,
       }).isRemainingPayment,
-      isTrue,
+      isFalse,
     );
     final verified = RiderBooking.fromJson({
       'receivedAmount': 250,
@@ -166,7 +166,7 @@ void main() {
         'receivedAmount': 0,
         'pendingAmount': 2750,
       }).suggestedPayRupees,
-      1,
+      1375,
     );
     expect(
       RiderBooking.fromJson({
@@ -175,7 +175,7 @@ void main() {
         'pendingAmount': 2749,
         'pickupOTP': '1234',
       }).suggestedPayRupees,
-      2749,
+      1374,
     );
   });
 

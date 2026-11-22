@@ -1,5 +1,8 @@
-/// Keep in sync with pubspec.yaml version line.
-const String kEvuddyAppVersion = '1.0.40';
-const int kEvuddyAppBuild = 41;
+import 'package:package_info_plus/package_info_plus.dart';
 
-String get evuddyVersionLabel => 'Evuddy $kEvuddyAppVersion ($kEvuddyAppBuild)';
+Future<String> loadEvuddyVersionLabel() async {
+  final info = await PackageInfo.fromPlatform();
+  final build = info.buildNumber.trim();
+  final buildLabel = build.isEmpty ? '' : ' ($build)';
+  return 'Evuddy ${info.version}$buildLabel';
+}
