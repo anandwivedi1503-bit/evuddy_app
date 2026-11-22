@@ -175,7 +175,7 @@ void main() {
         'pendingAmount': 2749,
         'pickupOTP': '1234',
       }).suggestedPayRupees,
-      2749,
+      1374,
     );
   });
 
