@@ -341,6 +341,9 @@ class EvuddyApi {
       _u('/api/riders'),
       headers: {
         'Content-Type': 'application/json',
+        'X-Evuddy-Client': 'app',
+        if ((body['pickupCityAck']?.toString() ?? '').isNotEmpty)
+          'X-Evuddy-Client-Capabilities': 'pickupCityAck',
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
       },
       body: jsonEncode(body),

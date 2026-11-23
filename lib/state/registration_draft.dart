@@ -20,6 +20,8 @@ class RegistrationDraft {
   String fullName = '';
   String email = '';
   String comingThrough = 'Direct / Evuddy';
+  /// LUCKNOW | OTHER | empty until the rider answers.
+  String pickupCityAck = '';
 
   String aadhaar = '';
   String drivingLicense = '';
@@ -119,6 +121,7 @@ class RegistrationDraft {
     fullName = '';
     email = '';
     comingThrough = 'Direct / Evuddy';
+    pickupCityAck = '';
     aadhaar = '';
     drivingLicense = '';
     instagramId = '';
@@ -373,6 +376,7 @@ class RegistrationDraft {
       instagramId = m['instagramId']?.toString() ?? instagramId;
       facebookId = m['facebookId']?.toString() ?? facebookId;
       comingThrough = m['comingThrough']?.toString() ?? comingThrough;
+      pickupCityAck = m['pickupCityAck']?.toString() ?? pickupCityAck;
       riderId = m['riderId']?.toString();
       approvalStatus = m['approvalStatus']?.toString() ?? approvalStatus;
       bookingEnabled = m['bookingEnabled'] == true;
@@ -434,6 +438,7 @@ class RegistrationDraft {
           'instagramId': instagramId,
           'facebookId': facebookId,
           'comingThrough': comingThrough,
+          'pickupCityAck': pickupCityAck,
           'riderId': riderId,
           'approvalStatus': approvalStatus,
           'bookingEnabled': bookingEnabled,
