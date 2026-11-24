@@ -42,9 +42,9 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
                 Text(
                   'Add photo',
                   style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: Evuddy.ink,
-                      ),
+                    fontWeight: FontWeight.w800,
+                    color: Evuddy.ink,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 ListTile(
@@ -132,6 +132,7 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
         'instagramId': d.instagramId,
         'facebookId': d.facebookId,
         'comingThrough': d.comingThrough,
+        'pickupCityAck': d.pickupCityAck,
         'reference1Name': d.reference1Name,
         'reference1Phone': d.reference1Phone,
         'reference2Name': d.reference2Name,

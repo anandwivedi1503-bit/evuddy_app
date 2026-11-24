@@ -24,6 +24,7 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
   late final TextEditingController r1p;
   late final TextEditingController r2n;
   late final TextEditingController r2p;
+  String pickupCityAck = registrationDraft.pickupCityAck;
   String? error;
 
   @override
@@ -48,7 +49,15 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
     super.dispose();
   }
 
-  void _continue() {
+  Future<void> _continue() async {
+    if (pickupCityAck != 'LUCKNOW') {
+      setState(() {
+        error = pickupCityAck == 'OTHER'
+            ? 'EVUDDY currently accepts new rider registrations for Lucknow pickups only. Select Lucknow only if you plan to collect from a Lucknow hub. Your current location and Aadhaar address may be elsewhere.'
+            : 'Select Lucknow as your intended pickup city to register. Your current location and Aadhaar address may be elsewhere.';
+      });
+      return;
+    }
     final a = aadhaar.text.replaceAll(RegExp(r'\D'), '');
     if (!RegExp(r'^\d{12}$').hasMatch(a)) {
       setState(() => error = 'Aadhaar number must be exactly 12 digits.');
@@ -80,6 +89,7 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
       return;
     }
     registrationDraft
+      ..pickupCityAck = pickupCityAck
       ..aadhaar = a
       ..drivingLicense = dl
       ..instagramId = ig.text.trim()
@@ -88,7 +98,62 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
       ..reference1Phone = r1p.text.replaceAll(RegExp(r'\D'), '')
       ..reference2Name = r2n.text.trim()
       ..reference2Phone = r2p.text.replaceAll(RegExp(r'\D'), '');
+    await registrationDraft.persist();
+    if (!mounted) return;
     Navigator.push(context, evuddyRoute(const UploadDocumentsScreen()));
+  }
+
+  Widget _serviceCityOption({
+    required String value,
+    required String title,
+    String? subtitle,
+  }) {
+    final selected = pickupCityAck == value;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => setState(() {
+        pickupCityAck = value;
+        error = null;
+      }),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(
+            color: selected ? const Color(0xFF18B368) : const Color(0xFFE5E7EB),
+          ),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Icon(
+              selected
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              color: selected
+                  ? const Color(0xFF18B368)
+                  : const Color(0xFF737373),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 3),
+                    Text(subtitle, style: const TextStyle(height: 1.35)),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -102,6 +167,30 @@ class _KycDetailsScreenState extends State<KycDetailsScreen> {
       error: error,
       footer: EvuddyButton(sun: true, label: 'Continue', onPressed: _continue),
       children: [
+        FormDeck(
+          eyebrow: 'Service area',
+          title: 'Where will you pick up?',
+          icon: Icons.location_on_rounded,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text(
+                'New rider registration is currently for Lucknow pickups. You can register while elsewhere if you plan to collect from a Lucknow hub. Your Aadhaar address does not need to be in Lucknow.',
+                style: TextStyle(height: 1.45),
+              ),
+            ),
+            _serviceCityOption(
+              value: 'LUCKNOW',
+              title: 'I plan to pick up from a Lucknow, Uttar Pradesh hub',
+            ),
+            _serviceCityOption(
+              value: 'OTHER',
+              title: 'I plan to pick up in another city',
+              subtitle: 'New rider registration is not open there yet.',
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
         FormDeck(
           eyebrow: 'Identity',
           title: 'Government IDs',

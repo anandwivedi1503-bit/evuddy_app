@@ -340,7 +340,7 @@ class EvuddyApi {
     final r = await _post(
       _u('/api/riders'),
       headers: {
-        'Content-Type': 'application/json',
+        ..._publicHeaders,
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
       },
       body: jsonEncode(body),

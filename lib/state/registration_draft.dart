@@ -20,6 +20,7 @@ class RegistrationDraft {
   String fullName = '';
   String email = '';
   String comingThrough = 'Direct / Evuddy';
+  String pickupCityAck = '';
 
   String aadhaar = '';
   String drivingLicense = '';
@@ -93,15 +94,15 @@ class RegistrationDraft {
   bool rtoAgreed = false;
 
   RtoAgreement get rtoAgreement => RtoAgreement(
-        nomineeName: rtoNomineeName,
-        nomineeRelation: rtoNomineeRelation,
-        guardianName: rtoGuardianName,
-        emergencyPhone: rtoEmergencyPhone,
-        email: email,
-        address: rtoAddress,
-        occupation: rtoOccupation,
-        agreed: rtoAgreed,
-      );
+    nomineeName: rtoNomineeName,
+    nomineeRelation: rtoNomineeRelation,
+    guardianName: rtoGuardianName,
+    emergencyPhone: rtoEmergencyPhone,
+    email: email,
+    address: rtoAddress,
+    occupation: rtoOccupation,
+    agreed: rtoAgreed,
+  );
 
   bool get hasPersonalProfile {
     final n = fullName.trim().replaceAll(RegExp(r'\s+'), ' ');
@@ -119,6 +120,7 @@ class RegistrationDraft {
     fullName = '';
     email = '';
     comingThrough = 'Direct / Evuddy';
+    pickupCityAck = '';
     aadhaar = '';
     drivingLicense = '';
     instagramId = '';
@@ -373,6 +375,7 @@ class RegistrationDraft {
       instagramId = m['instagramId']?.toString() ?? instagramId;
       facebookId = m['facebookId']?.toString() ?? facebookId;
       comingThrough = m['comingThrough']?.toString() ?? comingThrough;
+      pickupCityAck = m['pickupCityAck']?.toString() ?? pickupCityAck;
       riderId = m['riderId']?.toString();
       approvalStatus = m['approvalStatus']?.toString() ?? approvalStatus;
       bookingEnabled = m['bookingEnabled'] == true;
@@ -434,6 +437,7 @@ class RegistrationDraft {
           'instagramId': instagramId,
           'facebookId': facebookId,
           'comingThrough': comingThrough,
+          'pickupCityAck': pickupCityAck,
           'riderId': riderId,
           'approvalStatus': approvalStatus,
           'bookingEnabled': bookingEnabled,
