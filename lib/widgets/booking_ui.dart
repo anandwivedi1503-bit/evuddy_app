@@ -16,6 +16,7 @@ class BookStage extends StatelessWidget {
     this.kicker = 'BOOK EV',
     this.subtitle,
     this.showBack = true,
+    this.onBack,
     this.footer,
     this.step,
     this.of = 4,
@@ -27,6 +28,7 @@ class BookStage extends StatelessWidget {
   final String kicker;
   final String? subtitle;
   final bool showBack;
+  final VoidCallback? onBack;
   final List<Widget> children;
   final Widget? footer;
   final int? step;
@@ -49,6 +51,7 @@ class BookStage extends StatelessWidget {
           children: [
             _YellowHero(
               showBack: showBack,
+              onBack: onBack,
               kicker: kicker,
               title: title,
               subtitle: subtitle,
@@ -111,6 +114,7 @@ class BookStage extends StatelessWidget {
 class _YellowHero extends StatelessWidget {
   const _YellowHero({
     required this.showBack,
+    required this.onBack,
     required this.kicker,
     required this.title,
     required this.subtitle,
@@ -119,6 +123,7 @@ class _YellowHero extends StatelessWidget {
   });
 
   final bool showBack;
+  final VoidCallback? onBack;
   final String kicker;
   final String title;
   final String? subtitle;
@@ -144,7 +149,7 @@ class _YellowHero extends StatelessWidget {
                 children: [
                   if (showBack)
                     _HeroIcon(
-                      onTap: () {
+                      onTap: onBack ?? () {
                         if (Navigator.canPop(context)) Navigator.pop(context);
                       },
                     )

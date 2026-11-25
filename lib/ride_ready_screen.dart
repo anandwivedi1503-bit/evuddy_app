@@ -44,6 +44,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   String duration = registrationDraft.chosenDuration ?? 'Daily';
   int rentalUnits = registrationDraft.rentalUnits;
   int wizard = 2;
+  bool? firstRideFree;
+  bool _firstRideEligibilityRequested = false;
   List<EvuddyVehicle> vehicles = [];
   List<EvuddyHub> listedHubs = [];
   EvuddyHub? hub;
@@ -94,11 +96,20 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
 
   String get durationKey => rental ? duration : 'Rent To Own';
 
-  int get catalogFare =>
-      CatalogRates.amountForDuration(durationKey, units: rentalUnits);
+  bool get firstRideFreeApplies => rental && firstRideFree == true;
 
-  int get catalogPayable =>
-      CatalogRates.payableForDuration(durationKey, units: rentalUnits);
+  int get catalogFare => firstRideFreeApplies
+      ? 0
+      : CatalogRates.amountForDuration(durationKey, units: rentalUnits);
+
+  double get catalogSecurityDeposit {
+    final configured = selected?.securityDeposit;
+    return configured != null && configured > 0.009
+        ? configured
+        : CatalogRates.securityDeposit.toDouble();
+  }
+
+  double get catalogPayable => catalogFare + catalogSecurityDeposit;
 
   GstSplit get gst => CatalogRates.gstInclusive(catalogFare);
 
@@ -449,6 +460,17 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       RiderBooking? mine = booking;
       final token = await _token(force: !silent, prompt: false);
       if (token != null) {
+        if (!_firstRideEligibilityRequested) {
+          _firstRideEligibilityRequested = true;
+          try {
+            firstRideFree = await EvuddyApi.firstRideFree(
+              idToken: token,
+              phone: registrationDraft.phone,
+            );
+          } catch (_) {
+            // Retry before review; the booking API remains authoritative.
+          }
+        }
         try {
           final snap = await EvuddyApi.fetchMine(token);
           mine = _resolveMine(snap);
@@ -971,6 +993,53 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     }
   }
 
+  void _handleBack() {
+    if (booking == null && wizard == 3) {
+      setState(() => wizard = 2);
+      return;
+    }
+    if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+  }
+
+  Future<void> _continueToReview() async {
+    selected ??= vehicles.isEmpty ? null : vehicles.first;
+    if (selected == null) {
+      setState(() => error = 'Select an available scooter first.');
+      return;
+    }
+    if (rental && firstRideFree == null) {
+      final token = await _token(force: false, prompt: false);
+      if (token == null) {
+        setState(() => error = 'Sign in again to confirm your booking price.');
+        return;
+      }
+      try {
+        final eligibility = await EvuddyApi.firstRideFree(
+          idToken: token,
+          phone: registrationDraft.phone,
+        );
+        if (eligibility == null) {
+          throw ApiException('Could not confirm the first-ride price.');
+        }
+        if (!mounted) return;
+        setState(() {
+          firstRideFree = eligibility;
+          error = null;
+          wizard = 3;
+        });
+        return;
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => error = userFacingError(e));
+        return;
+      }
+    }
+    setState(() {
+      error = null;
+      wizard = 3;
+    });
+  }
+
   Future<void> _resendOtp() async {
     final token = await _token();
     final id = booking?.bookingId;
@@ -1168,8 +1237,16 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     final d = registrationDraft;
     final b = booking;
     final step = b != null && b.bookingId.isNotEmpty ? 4 : wizard;
-    return BookStage(
+    return PopScope<void>(
+      canPop: !(b == null && wizard == 3),
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && b == null && wizard == 3 && mounted) {
+          setState(() => wizard = 2);
+        }
+      },
+      child: BookStage(
       showBack: widget.showBack,
+      onBack: _handleBack,
       step: b != null && b.bookingId.isNotEmpty ? null : step,
       of: 4,
       kicker: b != null && b.bookingId.isNotEmpty
@@ -1211,7 +1288,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                             ? 'Pay any remaining on Razorpay or as cash at the yard before ride-end OTP.'
                             : 'Pay at least 50% of the total with Razorpay to get pickup OTP. Remaining can be paid during the ride.')))
           : (wizard == 3
-                ? 'GST included fare + refundable deposit. Then Razorpay — same as evuddy.com.'
+                ? (rental && firstRideFree == null
+                      ? 'Confirming first-ride eligibility and the scooter deposit before reservation.'
+                      : firstRideFreeApplies
+                      ? 'First standard rental fare is free. The scooter’s refundable deposit is payable; pickup-payment rules still apply.'
+                      : 'GST included fare + refundable deposit. Then Razorpay — same as evuddy.com.')
                 : (rental
                       ? 'Hourly ₹60 · Daily ₹250 GST included. Deposit ₹2,500 held until return.'
                       : '${CatalogRates.inr(CatalogRates.rtoDaily)}/day · ${CatalogRates.rtoMonths} months · ${CatalogRates.inr(CatalogRates.securityDeposit)} hold.')),
@@ -1296,7 +1377,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
               child: ScooterPickCard(
                 vehicle: v,
                 selected: selected?.vehicleId == v.vehicleId,
-                fareLabel: '${CatalogRates.inr(catalogFare)} GST included',
+                fareLabel: rental && firstRideFree == null
+                    ? 'Confirming first-ride price'
+                    : firstRideFreeApplies
+                    ? 'First standard ride free'
+                    : '${CatalogRates.inr(catalogFare)} GST included',
                 onTap: () => setState(() {
                   selected = v;
                   for (final x in listedHubs) {
@@ -1322,6 +1407,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           InfoNote(text: note!),
         ],
       ],
+      ),
     );
   }
 
@@ -1338,7 +1424,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                CatalogRates.inr(catalogPayable),
+                rental && firstRideFree == null
+                    ? 'Checking price…'
+                    : CatalogRates.inr(catalogPayable),
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 36,
                   fontWeight: FontWeight.w800,
@@ -1347,7 +1435,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'GST included in the fare. ₹2,500 refundable deposit is added — same as evuddy.com.',
+                rental && firstRideFree == null
+                    ? 'The server is confirming first-ride eligibility and the scooter deposit.'
+                    : firstRideFreeApplies
+                    ? 'Your first standard rental fare is free. The refundable security deposit is still payable.'
+                    : 'GST is included in the fare. The refundable security deposit is added — same as evuddy.com.',
                 style: GoogleFonts.plusJakartaSans(
                   color: Evuddy.muted,
                   height: 1.4,
@@ -1378,12 +1470,17 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                   'Plan length',
                   '$rentalUnits ${BookingEndSchedule.unitLabel(duration)}',
                 ),
-              _ReviewRow('Fare (GST included)', CatalogRates.inr(catalogFare)),
+              _ReviewRow(
+                firstRideFreeApplies
+                    ? 'First standard ride fare (free)'
+                    : 'Fare (GST included)',
+                CatalogRates.inr(catalogFare),
+              ),
               _ReviewRow('Taxable', CatalogRates.inr(gst.taxable)),
               _ReviewRow('CGST 2.5% + SGST 2.5%', CatalogRates.inr(gst.gst)),
               _ReviewRow(
                 'Security deposit',
-                CatalogRates.inr(CatalogRates.securityDeposit),
+                CatalogRates.inr(catalogSecurityDeposit),
               ),
               _ReviewRow('Total', CatalogRates.inr(catalogPayable)),
             ],
@@ -1900,10 +1997,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       return EvuddyButton(
         sun: true,
         label: 'Continue to review',
-        onPressed: () {
-          selected ??= vehicles.first;
-          setState(() => wizard = 3);
-        },
+        onPressed: _continueToReview,
       );
     }
     if (b.completed) {

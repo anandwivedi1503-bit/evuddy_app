@@ -303,6 +303,27 @@ class EvuddyApi {
     }
   }
 
+  /// Mirrors the website's server-calculated first-standard-ride offer.
+  /// The booking API remains authoritative when the reservation is created.
+  static Future<bool?> firstRideFree({
+    required String idToken,
+    required String phone,
+  }) async {
+    final r = await _get(
+      _u('/api/riders', {'phone': phone.trim()}),
+      headers: _auth(idToken),
+      timeout: const Duration(seconds: 15),
+    );
+    final j = _json(r);
+    final data = j['data'];
+    if (j['success'] != true ||
+        data is! Map ||
+        !data.containsKey('firstRideFree')) {
+      return null;
+    }
+    return data['firstRideFree'] == true;
+  }
+
   static Future<String> uploadFile({
     required File file,
     required String idToken,
@@ -1516,6 +1537,7 @@ class EvuddyVehicle {
     required this.batteryPercentage,
     this.hourlyRate,
     this.dailyRate,
+    this.securityDeposit,
     this.vehicleStatus = 'Available',
     this.latitude,
     this.longitude,
@@ -1535,6 +1557,7 @@ class EvuddyVehicle {
       batteryPercentage: _asDouble(e['batteryPercentage']) ?? 0,
       hourlyRate: _asDouble(e['hourlyRate']),
       dailyRate: _asDouble(e['dailyRate']),
+      securityDeposit: _asDouble(e['securityDeposit']),
       vehicleStatus: e['vehicleStatus']?.toString() ?? 'Available',
       latitude: _asDouble(
         e['latitude'] ?? e['gpsLat'] ?? e['lat'] ?? e['lastLatitude'],
@@ -1553,6 +1576,7 @@ class EvuddyVehicle {
   final double batteryPercentage;
   final double? hourlyRate;
   final double? dailyRate;
+  final double? securityDeposit;
   final String vehicleStatus;
   final double? latitude;
   final double? longitude;
