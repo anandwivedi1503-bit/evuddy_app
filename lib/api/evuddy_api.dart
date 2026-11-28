@@ -328,12 +328,14 @@ class EvuddyApi {
     required File file,
     required String idToken,
     String filename = 'document',
+    String purpose = 'kyc-document',
   }) async {
     final bytes = await file.readAsBytes();
     final kind = sniffImageBytes(bytes);
     final req = http.MultipartRequest('POST', _u('/api/upload'))
       ..headers['Authorization'] = 'Bearer $idToken'
       ..fields['firebaseIdToken'] = idToken
+      ..fields['purpose'] = purpose
       ..files.add(
         http.MultipartFile.fromBytes(
           'file',
@@ -440,32 +442,38 @@ class EvuddyApi {
     String? city,
     String? hub,
   }) async {
-    Future<List<EvuddyVehicle>> fetch(Map<String, String>? query) async {
-      final r = await _get(_u('/api/vehicles', query));
-      final j = _json(r);
-      final data = j['data'];
-      if (j['success'] != true || data is! List) return [];
-      return data
+    final page = await vehiclesPage(city: city, hub: hub);
+    return page.items;
+  }
+
+  static Future<ApiListPage<EvuddyVehicle>> vehiclesPage({
+    String? city,
+    String? hub,
+    String? cursor,
+    int limit = 200,
+  }) async {
+    final query = <String, String>{
+      'limit': '$limit',
+      if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
+      if (hub != null && hub.trim().isNotEmpty) 'hub': hub.trim().toUpperCase(),
+      if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+    };
+    final r = await _get(_u('/api/vehicles', query));
+    final j = _json(r);
+    final data = j['data'];
+    if (j['success'] != true || data is! List) {
+      throw ApiException(_message(j, 'Unable to load available scooters.'));
+    }
+    final pagination = j['pagination'];
+    return ApiListPage<EvuddyVehicle>(
+      items: data
           .whereType<Map>()
           .map(EvuddyVehicle.fromJson)
           .where((v) => v.isBookable)
-          .toList();
-    }
-
-    final query = <String, String>{
-      if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
-      if (hub != null && hub.trim().isNotEmpty) 'hub': hub.trim().toUpperCase(),
-    };
-    var list = await fetch(query.isEmpty ? null : query);
-    if (list.isEmpty && query.isNotEmpty) {
-      list = await fetch(
-        city != null && city.trim().isNotEmpty ? {'city': city.trim()} : null,
-      );
-    }
-    if (list.isEmpty && query.isNotEmpty) {
-      list = await fetch(null);
-    }
-    return list;
+          .toList(),
+      hasMore: pagination is Map && pagination['hasMore'] == true,
+      nextCursor: pagination is Map ? pagination['nextCursor']?.toString() ?? '' : '',
+    );
   }
 
   static const _clientHeaders = {
@@ -507,9 +515,17 @@ class EvuddyApi {
     return mine.active;
   }
 
-  static Future<List<RideReview>> myReviews(String idToken) async {
+  static Future<List<RideReview>> myReviews(
+    String idToken, {
+    String? bookingId,
+  }) async {
+    final uri = _u('/api/reviews/mine').replace(
+      queryParameters: bookingId == null || bookingId.trim().isEmpty
+          ? null
+          : {'bookingId': bookingId.trim()},
+    );
     final r = await _get(
-      _u('/api/reviews/mine'),
+      uri,
       headers: _auth(idToken),
       timeout: const Duration(seconds: 15),
     );
@@ -727,27 +743,65 @@ class EvuddyApi {
   }
 
   static Future<List<RideHistoryItem>> bookingHistory(String idToken) async {
+    final page = await bookingHistoryPage(idToken);
+    return page.items;
+  }
+
+  static Future<ApiListPage<RideHistoryItem>> bookingHistoryPage(
+    String idToken, {
+    String? cursor,
+    int limit = 40,
+  }) async {
     final r = await _get(
-      _u('/api/bookings/history'),
+      _u('/api/bookings/history', {
+        'limit': '$limit',
+        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+      }),
       headers: _auth(idToken),
       timeout: const Duration(seconds: 15),
     );
     final j = _json(r);
     final data = j['data'];
-    if (j['success'] != true || data is! List) return [];
-    return data.whereType<Map>().map(RideHistoryItem.fromJson).toList();
+    if (j['success'] != true || data is! List) {
+      throw ApiException(_message(j, 'Unable to load ride history.'));
+    }
+    final pagination = j['pagination'];
+    return ApiListPage<RideHistoryItem>(
+      items: data.whereType<Map>().map(RideHistoryItem.fromJson).toList(),
+      hasMore: pagination is Map && pagination['hasMore'] == true,
+      nextCursor: pagination is Map ? pagination['nextCursor']?.toString() ?? '' : '',
+    );
   }
 
   static Future<List<PaymentReceipt>> myReceipts(String idToken) async {
+    final page = await myReceiptsPage(idToken);
+    return page.items;
+  }
+
+  static Future<ApiListPage<PaymentReceipt>> myReceiptsPage(
+    String idToken, {
+    String? cursor,
+    int limit = 40,
+  }) async {
     final r = await _get(
-      _u('/api/receipts/mine'),
+      _u('/api/receipts/mine', {
+        'limit': '$limit',
+        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+      }),
       headers: _auth(idToken),
       timeout: const Duration(seconds: 15),
     );
     final j = _json(r);
     final data = j['data'];
-    if (j['success'] != true || data is! List) return [];
-    return data.whereType<Map>().map(PaymentReceipt.fromJson).toList();
+    if (j['success'] != true || data is! List) {
+      throw ApiException(_message(j, 'Unable to load payment receipts.'));
+    }
+    final pagination = j['pagination'];
+    return ApiListPage<PaymentReceipt>(
+      items: data.whereType<Map>().map(PaymentReceipt.fromJson).toList(),
+      hasMore: pagination is Map && pagination['hasMore'] == true,
+      nextCursor: pagination is Map ? pagination['nextCursor']?.toString() ?? '' : '',
+    );
   }
 
   static Future<RideReview> submitReview({
@@ -990,7 +1044,7 @@ class EvuddyApi {
         'bookingId': bookingId,
         'latitude': latitude,
         'longitude': longitude,
-        if (accuracyMeters != null) 'accuracyMeters': accuracyMeters,
+        ...?(accuracyMeters == null ? null : {'accuracyMeters': accuracyMeters}),
         'source': 'phone_gps',
         'firebaseIdToken': idToken,
       }),
@@ -1696,7 +1750,7 @@ class RiderBooking {
     this.completedAtMs = 0,
     this.rentalEndDate,
     this.rentalHours = 1,
-    this.pickupOtpTestMode = false,
+    this.firstRideFree = false,
   });
 
   factory RiderBooking.fromJson(Map e) {
@@ -1807,8 +1861,8 @@ class RiderBooking {
           .round()
           .clamp(1, 72)
           .toInt(),
-      pickupOtpTestMode:
-          m['pickupOtpTestMode'] == true || e['pickupOtpTestMode'] == true,
+      firstRideFree:
+          m['firstRideFree'] == true || e['firstRideFree'] == true,
     );
   }
 
@@ -1855,7 +1909,7 @@ class RiderBooking {
   final int completedAtMs;
   final DateTime? rentalEndDate;
   final int rentalHours;
-  final bool pickupOtpTestMode;
+  final bool firstRideFree;
 
   bool get isOpenRide {
     if (mongoId.isEmpty || bookingId.isEmpty || vehicleId.isEmpty) return false;
@@ -1938,7 +1992,11 @@ class RiderBooking {
     final total = totalPayable;
     if (total <= 0.009) return 0;
     if (isRentToOwn) return total;
-    if (pickupOtpTestMode) return total < 1 ? total : 1;
+    if (firstRideFree) {
+      return securityDeposit > 0.009
+          ? (securityDeposit < total ? securityDeposit : total)
+          : total;
+    }
     final half = double.parse((total * 0.5).toStringAsFixed(2));
     return half < 1 ? 1 : (half > total ? total : half);
   }
@@ -2033,7 +2091,7 @@ class RiderBooking {
       completedAtMs: completedAtMs,
       rentalEndDate: rentalEndDate,
       rentalHours: rentalHours,
-      pickupOtpTestMode: pickupOtpTestMode,
+      firstRideFree: firstRideFree,
     );
   }
 
@@ -2064,7 +2122,7 @@ class RiderBooking {
     'message': message,
     'rentalEndDate': rentalEndDate?.toIso8601String(),
     'rentalHours': rentalHours,
-    'pickupOtpTestMode': pickupOtpTestMode,
+    'firstRideFree': firstRideFree,
   };
 
   RiderBooking mergedWith(RiderBooking live) {
@@ -2110,7 +2168,7 @@ class RiderBooking {
           : completedAtMs,
       rentalEndDate: live.rentalEndDate ?? rentalEndDate,
       rentalHours: live.rentalHours > 0 ? live.rentalHours : rentalHours,
-      pickupOtpTestMode: live.pickupOtpTestMode || pickupOtpTestMode,
+      firstRideFree: live.firstRideFree,
     );
   }
 }
@@ -2230,6 +2288,18 @@ double? _asDouble(dynamic v) {
   if (v == null) return null;
   if (v is num) return v.toDouble();
   return double.tryParse(v.toString());
+}
+
+class ApiListPage<T> {
+  const ApiListPage({
+    required this.items,
+    required this.hasMore,
+    required this.nextCursor,
+  });
+
+  final List<T> items;
+  final bool hasMore;
+  final String nextCursor;
 }
 
 class ApiException implements Exception {

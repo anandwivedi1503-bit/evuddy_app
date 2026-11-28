@@ -111,6 +111,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         file: File(picked.path),
         idToken: token,
         filename: 'profile',
+        purpose: 'profile-photo',
       );
       if (!mounted) return;
       setState(() {

@@ -310,27 +310,30 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
                                 ],
                               ),
                             ),
-                            if (!narrow) ...[
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                width: 92,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: ad.darkText ? 0.55 : 0.18),
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(6),
-                                    child: Image.asset(
-                                      Evuddy.yellowScooterAsset,
-                                      fit: BoxFit.contain,
-                                      alignment: Alignment.center,
-                                      filterQuality: FilterQuality.high,
+                            const SizedBox(width: 6),
+                            SizedBox(
+                              width: narrow ? 94 : 116,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: ad.darkText ? 0.55 : 0.18),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Image.asset(
+                                    Evuddy.yellowScooterAsset,
+                                    fit: BoxFit.contain,
+                                    alignment: Alignment.center,
+                                    filterQuality: FilterQuality.high,
+                                    errorBuilder: (context, error, stackTrace) => Icon(
+                                      Icons.electric_scooter_rounded,
+                                      size: 42,
+                                      color: ink.withValues(alpha: 0.72),
                                     ),
                                   ),
                                 ),
                               ),
-                            ],
+                            ),
                           ],
                         ),
                       ),

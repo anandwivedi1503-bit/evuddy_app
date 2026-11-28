@@ -80,6 +80,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   Timer? _tokenKeepalive;
   String? _bookingRequestId;
   bool cityWideScooters = false;
+  bool bikesHaveMore = false;
+  bool loadingMoreBikes = false;
+  bool _loadedOlderBikes = false;
+  String bikeCursor = '';
+  bool _bikeCityWideQuery = false;
 
   bool get rental {
     if (registrationDraft.chosenPlan == 'rto') return false;
@@ -97,6 +102,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
   String get durationKey => rental ? duration : 'Rent To Own';
 
   bool get firstRideFreeApplies => rental && firstRideFree == true;
+  bool get firstRideFreeForBooking =>
+      booking?.firstRideFree ?? firstRideFreeApplies;
 
   int get catalogFare => firstRideFreeApplies
       ? 0
@@ -152,6 +159,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
 
   double _firstPaymentMinimum(double total) {
     if (total <= 0.009) return 0;
+    if (firstRideFreeForBooking) {
+      return catalogSecurityDeposit < total ? catalogSecurityDeposit : total;
+    }
     if (total <= 1) return total;
     final half = double.parse((total * 0.5).toStringAsFixed(2));
     return half < 1 ? 1 : half;
@@ -378,7 +388,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
 
   Future<void> _loadReviews(String token, String bookingId) async {
     try {
-      final rows = await EvuddyApi.myReviews(token);
+      final rows = await EvuddyApi.myReviews(token, bookingId: bookingId);
       RideReview? hit;
       for (final row in rows) {
         if (row.bookingId == bookingId) {
@@ -429,8 +439,10 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
     }
     try {
       final city = registrationDraft.chosenCity;
-      var allHubs = await EvuddyApi.hubs(city: city);
-      if (allHubs.isEmpty) allHubs = await EvuddyApi.hubs();
+      if (city == null || city.trim().isEmpty) {
+        throw ApiException('Choose a service city and pickup hub before browsing scooters.');
+      }
+      final allHubs = await EvuddyApi.hubs(city: city);
       EvuddyHub? h;
       for (final x in allHubs) {
         if (x.id == registrationDraft.chosenHubId) {
@@ -438,24 +450,22 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           break;
         }
       }
-      h ??= allHubs.isEmpty ? null : allHubs.first;
-      final bikes = await EvuddyApi.vehicles(
+      var bikePage = await EvuddyApi.vehiclesPage(
         city: city,
         hub: h?.code.isNotEmpty == true ? h!.code : h?.name,
       );
-      var atHub =
-          bikes.where((v) {
-            if (h == null) return true;
-            return hubMatches(v.currentHub, h);
-          }).toList()..sort(
-            (a, b) => b.batteryPercentage.compareTo(a.batteryPercentage),
-          );
-      var wide = false;
-      if (atHub.isEmpty && bikes.isNotEmpty) {
-        atHub = List<EvuddyVehicle>.from(bikes)
-          ..sort((a, b) => b.batteryPercentage.compareTo(a.batteryPercentage));
-        wide = true;
+      var cityWideQuery = false;
+      if (bikePage.items.isEmpty && h != null && city.trim().isNotEmpty) {
+        // Hub-code/name mismatches may occur in legacy records. Retry within the
+        // rider's selected service city only; never widen to every operating city.
+        bikePage = await EvuddyApi.vehiclesPage(city: city);
+        cityWideQuery = true;
       }
+      final atHub = bikePage.items
+          .where((v) => h == null || hubMatches(v.currentHub, h))
+          .toList()
+        ..sort((a, b) => b.batteryPercentage.compareTo(a.batteryPercentage));
+      final wide = h == null;
 
       RiderBooking? mine = booking;
       final token = await _token(force: !silent, prompt: false);
@@ -475,9 +485,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           final snap = await EvuddyApi.fetchMine(token);
           mine = _resolveMine(snap);
           if (mine != null) {
-            await _maybeRecoverPayment(token, mine!);
-            if (mine!.completed) {
-              await _loadReviews(token, mine!.bookingId);
+            await _maybeRecoverPayment(token, mine);
+            if (mine.completed) {
+              await _loadReviews(token, mine.bookingId);
             }
           }
         } catch (_) {
@@ -494,11 +504,22 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       setState(() {
         hub = h;
         listedHubs = allHubs;
-        vehicles = atHub;
+        final firstPageIds = atHub.map((vehicle) => vehicle.vehicleId).toSet();
+        vehicles = _loadedOlderBikes
+            ? [
+                ...atHub,
+                ...vehicles.where((vehicle) => !firstPageIds.contains(vehicle.vehicleId)),
+              ]
+            : atHub;
         cityWideScooters = wide;
+        _bikeCityWideQuery = cityWideQuery;
+        if (!_loadedOlderBikes) {
+          bikeCursor = bikePage.nextCursor;
+          bikesHaveMore = bikePage.hasMore;
+        }
         if (selected == null ||
-            !atHub.any((v) => v.vehicleId == selected!.vehicleId)) {
-          selected = atHub.isEmpty ? null : atHub.first;
+            !vehicles.any((v) => v.vehicleId == selected!.vehicleId)) {
+          selected = vehicles.isEmpty ? null : vehicles.first;
         }
         final jumpPay =
             mine != null &&
@@ -524,6 +545,44 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         loading = false;
         error = userFacingError(e);
       });
+    }
+  }
+
+  Future<void> _loadOlderBikes() async {
+    if (loadingMoreBikes || !bikesHaveMore || bikeCursor.isEmpty) return;
+    final city = registrationDraft.chosenCity;
+    final selectedHub = hub;
+    if (city == null || city.trim().isEmpty) {
+      setState(() => error = 'Choose a service city before loading more scooters.');
+      return;
+    }
+    setState(() => loadingMoreBikes = true);
+    try {
+      final page = await EvuddyApi.vehiclesPage(
+        city: city,
+        hub: _bikeCityWideQuery
+            ? null
+            : (selectedHub?.code.isNotEmpty == true
+                  ? selectedHub!.code
+                  : selectedHub?.name),
+        cursor: bikeCursor,
+      );
+      if (!mounted) return;
+      final atHub = page.items
+          .where((vehicle) => selectedHub == null || hubMatches(vehicle.currentHub, selectedHub))
+          .toList();
+      setState(() {
+        final known = vehicles.map((vehicle) => vehicle.vehicleId).toSet();
+        vehicles = [...vehicles, ...atHub.where((vehicle) => !known.contains(vehicle.vehicleId))]
+          ..sort((a, b) => b.batteryPercentage.compareTo(a.batteryPercentage));
+        bikeCursor = page.nextCursor;
+        bikesHaveMore = page.hasMore;
+        _loadedOlderBikes = true;
+      });
+    } catch (e) {
+      if (mounted) setState(() => error = userFacingError(e));
+    } finally {
+      if (mounted) setState(() => loadingMoreBikes = false);
     }
   }
 
@@ -663,9 +722,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         busy = false;
         wizard = 4;
         note = created.message.isEmpty
-            ? (rental
-                  ? 'Scooter reserved. Pay at least 50% of the total to get pickup OTP. Remaining can be paid during the ride.'
-                  : 'Agreement saved. Pay today’s GST-included fare plus the ₹2,500 refundable deposit in one Razorpay payment.')
+            ? (created.firstRideFree
+                  ? 'First rental fare is free. Pay the full refundable security deposit to unlock pickup.'
+                  : (rental
+                        ? 'Scooter reserved. Pay at least 50% of the total to get pickup OTP. Remaining can be paid during the ride.'
+                        : 'Agreement saved. Pay today’s GST-included fare plus the ₹2,500 refundable deposit in one Razorpay payment.'))
             : created.message;
         _fillAmount(created);
       });
@@ -724,9 +785,11 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       setState(
         () => error = b.isRentToOwn
             ? 'Rent to Own needs today’s full GST-included amount plus deposit in one payment.'
-            : (b.receivedAmount > 0.009 && !b.pickupPaymentMet
-                  ? 'Pay at least ${CatalogRates.inr(firstPaymentMinimum)} more to reach 50% of the total, up to ${CatalogRates.inr(maxDue)}.'
-                  : 'First payment must be at least ${CatalogRates.inr(firstPaymentMinimum)} (50% of the total), up to ${CatalogRates.inr(maxDue)}.'),
+            : (b.firstRideFree
+                  ? 'Pay the full refundable security deposit (${CatalogRates.inr(firstPaymentMinimum)}) to unlock pickup.'
+                  : (b.receivedAmount > 0.009 && !b.pickupPaymentMet
+                        ? 'Pay at least ${CatalogRates.inr(firstPaymentMinimum)} more to reach 50% of the total, up to ${CatalogRates.inr(maxDue)}.'
+                        : 'First payment must be at least ${CatalogRates.inr(firstPaymentMinimum)} (50% of the total), up to ${CatalogRates.inr(maxDue)}.')),
       );
       return;
     }
@@ -1281,17 +1344,23 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
                 : remainingPay
                 ? (b.hasPickupOtp || b.pickupOtpVerified
                       ? 'Pickup OTP is issued. Razorpay will charge only the remaining due.'
-                      : 'The 50% pickup payment is met. Pickup OTP is being prepared; the balance can be paid during the ride.')
+                      : (b.firstRideFree
+                            ? 'The refundable security deposit is paid. Pickup OTP is being prepared.'
+                            : 'The 50% pickup payment is met. Pickup OTP is being prepared; the balance can be paid during the ride.'))
                 : (b.receivedAmount > 0.009 && !b.pickupPaymentMet
-                      ? 'Pay at least ${CatalogRates.inr(b.pickupPaymentTopUp)} more to unlock pickup OTP. The rest can be paid during the ride.'
+                      ? (b.firstRideFree
+                            ? 'Pay the remaining refundable security deposit (${CatalogRates.inr(b.pickupPaymentTopUp)}) to unlock pickup OTP.'
+                            : 'Pay at least ${CatalogRates.inr(b.pickupPaymentTopUp)} more to unlock pickup OTP. The rest can be paid during the ride.')
                       : (b.receivedAmount > 0.009
                             ? 'Pay any remaining on Razorpay or as cash at the yard before ride-end OTP.'
-                            : 'Pay at least 50% of the total with Razorpay to get pickup OTP. Remaining can be paid during the ride.')))
+                            : (b.firstRideFree
+                                  ? 'Your first rental fare is free. Pay the full refundable security deposit with Razorpay to get pickup OTP.'
+                                  : 'Pay at least 50% of the total with Razorpay to get pickup OTP. Remaining can be paid during the ride.'))))
           : (wizard == 3
                 ? (rental && firstRideFree == null
                       ? 'Confirming first-ride eligibility and the scooter deposit before reservation.'
                       : firstRideFreeApplies
-                      ? 'First standard rental fare is free. The scooter’s refundable deposit is payable; pickup-payment rules still apply.'
+                      ? 'First standard rental fare is free. Pay the full refundable scooter deposit before pickup.'
                       : 'GST included fare + refundable deposit. Then Razorpay — same as evuddy.com.')
                 : (rental
                       ? 'Hourly ₹60 · Daily ₹250 GST included. Deposit ₹2,500 held until return.'
@@ -1362,13 +1431,21 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
           const SizedBox(height: 10),
           if (!loading && vehicles.isEmpty)
             const InfoNote(
-              text: 'No scooters are marked Available on evuddy.com right now. Pull to refresh, or ask the yard to set bikes to Available — then they appear here instantly.',
+              text: 'No scooters are marked Available at the selected service city or hub. Pull to refresh or ask the yard to check the fleet status.',
             ),
           if (cityWideScooters && vehicles.isNotEmpty)
             const Padding(
               padding: EdgeInsets.only(bottom: 10),
               child: InfoNote(
                 text: 'Showing every Available scooter in this city. Tap one to book it at its hub — same catalog as evuddy.com/book-bike.',
+              ),
+            ),
+          if (vehicles.isNotEmpty && bikesHaveMore)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: EvuddyGhostButton(
+                label: loadingMoreBikes ? 'Loading scooters…' : 'Load more scooters',
+                onPressed: loadingMoreBikes ? null : _loadOlderBikes,
               ),
             ),
           for (final v in vehicles)
@@ -1572,9 +1649,9 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
-          color: tone.withOpacity(0.08),
+          color: tone.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: tone.withOpacity(0.2)),
+          border: Border.all(color: tone.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1706,14 +1783,12 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         ] else if (b.pickupOtpVerified && b.pickupPaymentMet && !b.inRide) ...[
           const SizedBox(height: 12),
           const InfoNote(
-            text: 'Yard confirmed pickup and unlocked the scooter. Slide to start your ride.',
+            text: 'The yard confirmed your pickup OTP. Confirm the scooter is physically unlocked with the yard, then slide to start your ride.',
           ),
         ] else if (b.receivedAmount > 0.009 && !b.pickupPaymentMet) ...[
           const SizedBox(height: 12),
           InfoNote(
-            text: b.pickupOtpTestMode
-                ? 'Pay ${CatalogRates.inr(b.pickupPaymentTopUp)} to issue the pickup OTP for this test booking.'
-                : 'Pay at least ${CatalogRates.inr(b.pickupPaymentTopUp)} more to reach 50% of the total and unlock the pickup OTP.',
+            text: 'Pay at least ${CatalogRates.inr(b.pickupPaymentTopUp)} more to reach 50% of the total and unlock the pickup OTP.',
           ),
         ] else if (!b.hasPickupOtp &&
             !b.pickupOtpVerified &&
@@ -1769,8 +1844,8 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
       ] else if (!b.completed && b.receivedAmount <= 0.009) ...[
         const SizedBox(height: 12),
         InfoNote(
-          text: b.pickupOtpTestMode
-              ? 'Test booking: pay ₹1 to get the pickup OTP.'
+          text: b.firstRideFree
+              ? 'Your first rental fare is free. Pay the full refundable security deposit to get pickup OTP.'
               : 'Reserve is holding the scooter. Pay at least 50% of the total to get pickup OTP.',
         ),
       ],
@@ -1830,9 +1905,7 @@ class _RideReadyScreenState extends State<RideReadyScreen> {
         else
           EvuddyField(
             label: 'PAY AMOUNT',
-            hint: b.pickupOtpTestMode
-                ? 'Test booking: first payment is ₹1.'
-                : 'First payment must be at least ${CatalogRates.inr(_firstPaymentMinimum(b.due))} (50% of total).',
+            hint: 'First payment must be at least ${CatalogRates.inr(_firstPaymentMinimum(b.due))}.',
             controller: amount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
