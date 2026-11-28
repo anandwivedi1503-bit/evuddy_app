@@ -77,7 +77,12 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
     });
   }
 
-  Future<String> _up(String? path, String label, String filename) async {
+  Future<String> _up(
+    String? path,
+    String label,
+    String filename, {
+    String purpose = 'kyc-document',
+  }) async {
     if (path == null) return '';
     setState(() => progress = 'Uploading $label…');
     final token = await _token();
@@ -85,6 +90,7 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
       file: File(path),
       idToken: token,
       filename: filename,
+      purpose: purpose,
     );
   }
 
@@ -114,7 +120,12 @@ class _UploadDocumentsScreenState extends State<UploadDocumentsScreen> {
       final back = await _up(d.aadhaarBackPath, 'Aadhaar back', 'aadhaar-back');
       final lf = await _up(d.licenseFrontPath, 'licence front', 'dl-front');
       final lb = await _up(d.licenseBackPath, 'licence back', 'dl-back');
-      final photo = await _up(d.profilePhotoPath, 'profile photo', 'profile');
+      final photo = await _up(
+        d.profilePhotoPath,
+        'profile photo',
+        'profile',
+        purpose: 'profile-photo',
+      );
       setState(() => progress = 'Creating your rider account…');
       final token = await _token();
       final body = <String, dynamic>{

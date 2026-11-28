@@ -18,6 +18,14 @@ class RideHistoryScreen extends StatefulWidget {
 class _RideHistoryScreenState extends State<RideHistoryScreen> {
   List<RideHistoryItem> rides = [];
   List<PaymentReceipt> receipts = [];
+  String rideCursor = '';
+  String receiptCursor = '';
+  bool ridesHaveMore = false;
+  bool receiptsHaveMore = false;
+  bool loadingMoreRides = false;
+  bool loadingMoreReceipts = false;
+  bool _loadedOlderRides = false;
+  bool _loadedOlderReceipts = false;
   bool loading = true;
   String? error;
   String? reviewNote;
@@ -52,15 +60,33 @@ class _RideHistoryScreenState extends State<RideHistoryScreen> {
       return;
     }
     try {
-      final history = await EvuddyApi.bookingHistory(token);
-      List<PaymentReceipt> rec = [];
+      final historyPage = await EvuddyApi.bookingHistoryPage(token);
+      ApiListPage<PaymentReceipt>? receiptPage;
       try {
-        rec = await EvuddyApi.myReceipts(token);
+        receiptPage = await EvuddyApi.myReceiptsPage(token);
       } catch (_) {}
       if (!mounted) return;
       setState(() {
-        rides = history;
-        receipts = rec;
+        final firstRideIds = historyPage.items.map((item) => item.bookingId).toSet();
+        rides = _loadedOlderRides
+            ? [
+                ...historyPage.items,
+                ...rides.where((item) => !firstRideIds.contains(item.bookingId)),
+              ]
+            : historyPage.items;
+        if (!_loadedOlderRides) rideCursor = historyPage.nextCursor;
+        ridesHaveMore = _loadedOlderRides ? ridesHaveMore : historyPage.hasMore;
+        if (receiptPage != null) {
+          final firstReceiptIds = receiptPage.items.map((item) => item.transactionId).toSet();
+          receipts = _loadedOlderReceipts
+              ? [
+                  ...receiptPage.items,
+                  ...receipts.where((item) => !firstReceiptIds.contains(item.transactionId)),
+                ]
+              : receiptPage.items;
+          if (!_loadedOlderReceipts) receiptCursor = receiptPage.nextCursor;
+          receiptsHaveMore = _loadedOlderReceipts ? receiptsHaveMore : receiptPage.hasMore;
+        }
         loading = false;
       });
     } catch (e) {
@@ -69,6 +95,50 @@ class _RideHistoryScreenState extends State<RideHistoryScreen> {
         loading = false;
         error = e.toString();
       });
+    }
+  }
+
+  Future<void> _loadOlderRides() async {
+    if (loadingMoreRides || !ridesHaveMore || rideCursor.isEmpty) return;
+    setState(() => loadingMoreRides = true);
+    try {
+      final token = await registrationDraft.freshToken(force: true);
+      if (token == null) throw ApiException('Sign in again to load older rides.');
+      final page = await EvuddyApi.bookingHistoryPage(token, cursor: rideCursor);
+      if (!mounted) return;
+      setState(() {
+        final known = rides.map((item) => item.bookingId).toSet();
+        rides = [...rides, ...page.items.where((item) => !known.contains(item.bookingId))];
+        rideCursor = page.nextCursor;
+        ridesHaveMore = page.hasMore;
+        _loadedOlderRides = true;
+      });
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => loadingMoreRides = false);
+    }
+  }
+
+  Future<void> _loadOlderReceipts() async {
+    if (loadingMoreReceipts || !receiptsHaveMore || receiptCursor.isEmpty) return;
+    setState(() => loadingMoreReceipts = true);
+    try {
+      final token = await registrationDraft.freshToken(force: true);
+      if (token == null) throw ApiException('Sign in again to load older receipts.');
+      final page = await EvuddyApi.myReceiptsPage(token, cursor: receiptCursor);
+      if (!mounted) return;
+      setState(() {
+        final known = receipts.map((item) => item.transactionId).toSet();
+        receipts = [...receipts, ...page.items.where((item) => !known.contains(item.transactionId))];
+        receiptCursor = page.nextCursor;
+        receiptsHaveMore = page.hasMore;
+        _loadedOlderReceipts = true;
+      });
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => loadingMoreReceipts = false);
     }
   }
 
@@ -195,6 +265,14 @@ class _RideHistoryScreenState extends State<RideHistoryScreen> {
               ),
             ),
           ),
+        if (ridesHaveMore)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: EvuddyGhostButton(
+              label: loadingMoreRides ? 'Loading older rides…' : 'Load older rides',
+              onPressed: loadingMoreRides ? null : _loadOlderRides,
+            ),
+          ),
         if (receipts.isNotEmpty) ...[
           const SectionLabel('Payment receipts · download PDF'),
           const SizedBox(height: 10),
@@ -232,6 +310,11 @@ class _RideHistoryScreenState extends State<RideHistoryScreen> {
                   ],
                 ),
               ),
+            ),
+          if (receiptsHaveMore)
+            EvuddyGhostButton(
+              label: loadingMoreReceipts ? 'Loading older receipts…' : 'Load older receipts',
+              onPressed: loadingMoreReceipts ? null : _loadOlderReceipts,
             ),
         ],
       ],

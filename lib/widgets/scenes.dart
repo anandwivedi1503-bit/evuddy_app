@@ -312,7 +312,7 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
                             ),
                             const SizedBox(width: 6),
                             SizedBox(
-                              width: narrow ? 54 : 92,
+                              width: narrow ? 94 : 116,
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: ad.darkText ? 0.55 : 0.18),
@@ -325,6 +325,11 @@ class _OfferAdCarouselState extends State<OfferAdCarousel> {
                                     fit: BoxFit.contain,
                                     alignment: Alignment.center,
                                     filterQuality: FilterQuality.high,
+                                    errorBuilder: (context, error, stackTrace) => Icon(
+                                      Icons.electric_scooter_rounded,
+                                      size: 42,
+                                      color: ink.withValues(alpha: 0.72),
+                                    ),
                                   ),
                                 ),
                               ),

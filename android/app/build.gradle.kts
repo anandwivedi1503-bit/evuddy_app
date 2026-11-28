@@ -11,6 +11,13 @@ if (keystorePropertiesFile.exists()) {
     }
 }
 
+val releaseSigningKeys = listOf("keyAlias", "keyPassword", "storePassword")
+val releaseStoreFile = keystoreProperties.getProperty("storeFile")?.trim().orEmpty()
+val releaseSigningConfigured = keystorePropertiesFile.isFile &&
+    releaseStoreFile.isNotBlank() &&
+    file(releaseStoreFile).isFile &&
+    releaseSigningKeys.all { !keystoreProperties.getProperty(it).isNullOrBlank() }
+
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
@@ -37,11 +44,11 @@ android {
     }
 
     signingConfigs {
-        if (keystorePropertiesFile.exists()) {
+        if (releaseSigningConfigured) {
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
+                storeFile = file(releaseStoreFile)
                 storePassword = keystoreProperties["storePassword"] as String
             }
         }
@@ -49,16 +56,28 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
             }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
         }
+    }
+}
+
+gradle.taskGraph.whenReady { graph ->
+    val releasePackagingRequested = graph.allTasks.any { task ->
+        task.name.startsWith("assembleRelease") ||
+            task.name.startsWith("bundleRelease") ||
+            task.name.startsWith("packageRelease")
+    }
+    if (releasePackagingRequested && !releaseSigningConfigured) {
+        throw GradleException(
+            "A Play-ready release requires android/app/key.properties and its matching upload keystore. " +
+                "Release builds will not fall back to debug signing."
+        )
     }
 }
 
