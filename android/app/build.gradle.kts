@@ -1,6 +1,7 @@
 
 import java.util.Properties
 import java.io.FileInputStream
+import com.android.build.api.dsl.ApplicationExtension
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("app/key.properties")
@@ -24,7 +25,7 @@ plugins {
     id("com.google.gms.google-services")
 }
 
-android {
+extensions.configure<ApplicationExtension> {
     namespace = "com.evuddy.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
@@ -67,17 +68,20 @@ android {
     }
 }
 
-gradle.taskGraph.whenReady { graph ->
-    val releasePackagingRequested = graph.allTasks.any { task ->
-        task.name.startsWith("assembleRelease") ||
-            task.name.startsWith("bundleRelease") ||
-            task.name.startsWith("packageRelease")
-    }
-    if (releasePackagingRequested && !releaseSigningConfigured) {
-        throw GradleException(
-            "A Play-ready release requires android/app/key.properties and its matching upload keystore. " +
-                "Release builds will not fall back to debug signing."
-        )
+tasks.configureEach {
+    if (
+        name.startsWith("assembleRelease") ||
+        name.startsWith("bundleRelease") ||
+        name.startsWith("packageRelease")
+    ) {
+        doFirst {
+            if (!releaseSigningConfigured) {
+                throw GradleException(
+                    "A Play-ready release requires android/app/key.properties and its matching upload keystore. " +
+                        "Release builds will not fall back to debug signing."
+                )
+            }
+        }
     }
 }
 
